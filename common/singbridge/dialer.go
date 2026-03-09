@@ -7,7 +7,6 @@ import (
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
 	"github.com/xtls/xray-core/common/net"
-	"github.com/xtls/xray-core/common/net/cnc"
 	"github.com/xtls/xray-core/common/session"
 	"github.com/xtls/xray-core/proxy"
 	"github.com/xtls/xray-core/transport"
@@ -52,11 +51,14 @@ func (d *XrayOutboundDialer) DialContext(ctx context.Context, network string, de
 	ob.Target = ToDestination(destination, ToNetwork(network))
 
 	opts := []pipe.Option{pipe.WithSizeLimit(64 * 1024)}
-	uplinkReader, uplinkWriter := pipe.New(opts...)
-	downlinkReader, downlinkWriter := pipe.New(opts...)
-	conn := cnc.NewConnection(cnc.ConnectionInputMulti(downlinkWriter), cnc.ConnectionOutputMulti(uplinkReader))
-	go d.outbound.Process(ctx, &transport.Link{Reader: downlinkReader, Writer: uplinkWriter}, d.dialer)
-	return conn, nil
+	return transport.NewDispatchConn(
+		ctx,
+		opts,
+		transport.DispatchConnOutputStream,
+		func(ctx context.Context, link *transport.Link) {
+			d.outbound.Process(ctx, link, d.dialer)
+		},
+	), nil
 }
 
 func (d *XrayOutboundDialer) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
