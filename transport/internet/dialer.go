@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/dice"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/net"
-	"github.com/xtls/xray-core/common/net/cnc"
 	"github.com/xtls/xray-core/common/session"
 	"github.com/xtls/xray-core/features/dns"
 	"github.com/xtls/xray-core/features/outbound"
@@ -117,22 +115,16 @@ func redirect(ctx context.Context, dst net.Destination, obt string, h outbound.H
 		Tag:     obt,
 	})) // add another outbound in session ctx
 
-	ur, uw := pipe.New(pipe.OptionsFromContext(ctx)...)
-	dr, dw := pipe.New(pipe.OptionsFromContext(ctx)...)
-
-	go h.Dispatch(context.WithoutCancel(ctx), &transport.Link{Reader: ur, Writer: dw})
-	var readerOpt cnc.ConnectionOption
-	if dst.Network == net.Network_TCP {
-		readerOpt = cnc.ConnectionOutputMulti(dr)
-	} else {
-		readerOpt = cnc.ConnectionOutputMultiUDP(dr)
+	output := transport.DispatchConnOutputStream
+	if dst.Network != net.Network_TCP {
+		output = transport.DispatchConnOutputPacket
 	}
-	nc := cnc.NewConnection(
-		cnc.ConnectionInputMulti(uw),
-		readerOpt,
-		cnc.ConnectionOnClose(common.ChainedClosable{uw, dw}),
+	return transport.NewDispatchConn(
+		context.WithoutCancel(ctx),
+		pipe.OptionsFromContext(ctx),
+		output,
+		h.Dispatch,
 	)
-	return nc
 
 }
 
