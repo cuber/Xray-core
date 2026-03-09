@@ -286,7 +286,7 @@ func (h *Handler) Dial(ctx context.Context, dest net.Destination) (stat.Connecti
 				uplinkReader, uplinkWriter := pipe.New(opts...)
 				downlinkReader, downlinkWriter := pipe.New(opts...)
 
-				go handler.Dispatch(ctx, &transport.Link{Reader: uplinkReader, Writer: downlinkWriter})
+				go handler.Dispatch(ctx, &transport.Link{Reader: &proxyPipeReader{uplinkReader}, Writer: downlinkWriter})
 				conn := cnc.NewConnection(cnc.ConnectionInputMulti(uplinkWriter), cnc.ConnectionOutputMulti(downlinkReader))
 
 				if config := tls.ConfigFromStreamSettings(h.streamSettings); config != nil {
@@ -393,6 +393,13 @@ func (h *Handler) SenderSettings() *serial.TypedMessage {
 // ProxySettings implements outbound.Handler.
 func (h *Handler) ProxySettings() *serial.TypedMessage {
 	return serial.ToTypedMessage(h.proxyConfig)
+}
+
+// proxyPipeReader wraps buf.Reader without exposing io.Closer or common.Interruptible,
+// so common.Close/Interrupt are no-ops. This prevents the inner Dispatch goroutine
+// from prematurely closing the shared pipe when used in proxy chain (proxySettings).
+type proxyPipeReader struct {
+	buf.Reader
 }
 
 func ParseRandomIP(addr net.Address, prefix string) net.Address {
