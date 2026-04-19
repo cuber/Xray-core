@@ -47,12 +47,13 @@ type strategyLeastLoadConfig struct {
 
 // healthCheckSettings holds settings for health Checker
 type healthCheckSettings struct {
-	Destination   string            `json:"destination"`
-	Connectivity  string            `json:"connectivity"`
-	Interval      duration.Duration `json:"interval"`
-	SamplingCount int               `json:"sampling"`
-	Timeout       duration.Duration `json:"timeout"`
-	HttpMethod    string            `json:"httpMethod"`
+	Destination          string            `json:"destination"`
+	Connectivity         string            `json:"connectivity"`
+	Interval             duration.Duration `json:"interval"`
+	SamplingCount        int               `json:"sampling"`
+	Timeout              duration.Duration `json:"timeout"`
+	HttpMethod           string            `json:"httpMethod"`
+	DestinationsByPrefix map[string]string `json:"destinationsByPrefix,omitempty"`
 }
 
 func (h healthCheckSettings) Build() (proto.Message, error) {
@@ -63,12 +64,13 @@ func (h healthCheckSettings) Build() (proto.Message, error) {
 		httpMethod = strings.TrimSpace(h.HttpMethod)
 	}
 	return &burst.HealthPingConfig{
-		Destination:   h.Destination,
-		Connectivity:  h.Connectivity,
-		Interval:      int64(h.Interval),
-		Timeout:       int64(h.Timeout),
-		SamplingCount: int32(h.SamplingCount),
-		HttpMethod:    httpMethod,
+		Destination:          h.Destination,
+		Connectivity:         h.Connectivity,
+		Interval:             int64(h.Interval),
+		Timeout:              int64(h.Timeout),
+		SamplingCount:        int32(h.SamplingCount),
+		HttpMethod:           httpMethod,
+		DestinationsByPrefix: h.DestinationsByPrefix,
 	}, nil
 }
 

@@ -20,6 +20,10 @@ type HealthPingSettings struct {
 	SamplingCount int           `json:"sampling"`
 	Timeout       time.Duration `json:"timeout"`
 	HttpMethod    string        `json:"httpMethod"`
+	// DestinationsByPrefix overrides the probe URL for outbound tags matching
+	// the given prefix. Longest matching prefix wins; empty map means all tags
+	// use Destination.
+	DestinationsByPrefix map[string]string `json:"destinationsByPrefix,omitempty"`
 }
 
 // HealthPing is the health checker for balancers
@@ -46,13 +50,21 @@ func NewHealthPing(ctx context.Context, dispatcher routing.Dispatcher, config *H
 			httpMethod = strings.TrimSpace(config.HttpMethod)
 		}
 
+		var destByPrefix map[string]string
+		if len(config.DestinationsByPrefix) > 0 {
+			destByPrefix = make(map[string]string, len(config.DestinationsByPrefix))
+			for k, v := range config.DestinationsByPrefix {
+				destByPrefix[k] = strings.TrimSpace(v)
+			}
+		}
 		settings = &HealthPingSettings{
-			Connectivity:  strings.TrimSpace(config.Connectivity),
-			Destination:   strings.TrimSpace(config.Destination),
-			Interval:      time.Duration(config.Interval),
-			SamplingCount: int(config.SamplingCount),
-			Timeout:       time.Duration(config.Timeout),
-			HttpMethod:    httpMethod,
+			Connectivity:         strings.TrimSpace(config.Connectivity),
+			Destination:          strings.TrimSpace(config.Destination),
+			Interval:             time.Duration(config.Interval),
+			SamplingCount:        int(config.SamplingCount),
+			Timeout:              time.Duration(config.Timeout),
+			HttpMethod:           httpMethod,
+			DestinationsByPrefix: destByPrefix,
 		}
 	}
 	if settings.Destination == "" {
@@ -160,10 +172,11 @@ func (h *HealthPing) doCheck(tags []string, duration time.Duration, rounds int) 
 
 	for _, tag := range tags {
 		handler := tag
+		destination := h.Settings.destinationFor(tag)
 		client := newPingClient(
 			h.ctx,
 			h.dispatcher,
-			h.Settings.Destination,
+			destination,
 			h.Settings.Timeout,
 			handler,
 		)
@@ -192,7 +205,7 @@ func (h *HealthPing) doCheck(tags []string, duration time.Duration, rounds int) 
 				}
 				errors.LogWarning(h.ctx, fmt.Sprintf(
 					"error ping %s with %s: %s",
-					h.Settings.Destination,
+					destination,
 					handler,
 					err,
 				))
@@ -249,6 +262,30 @@ func (h *HealthPing) Cleanup(tags []string) {
 			delete(h.Results, tag)
 		}
 	}
+}
+
+// destinationFor returns the probe URL for the given outbound tag. It picks
+// the longest DestinationsByPrefix entry whose key is a prefix of tag; if no
+// prefix matches it returns the global Destination.
+func (s *HealthPingSettings) destinationFor(tag string) string {
+	if len(s.DestinationsByPrefix) == 0 {
+		return s.Destination
+	}
+	bestKey := ""
+	bestVal := ""
+	for prefix, url := range s.DestinationsByPrefix {
+		if url == "" {
+			continue
+		}
+		if strings.HasPrefix(tag, prefix) && len(prefix) >= len(bestKey) {
+			bestKey = prefix
+			bestVal = url
+		}
+	}
+	if bestVal == "" {
+		return s.Destination
+	}
+	return bestVal
 }
 
 // checkConnectivity checks the network connectivity, it returns
