@@ -28,5 +28,8 @@ message HealthPingConfig {
   int64 timeout = 5;
   // http method to make request
   string httpMethod = 6;
-
+  // optional per-prefix destination overrides. key is an outbound tag prefix,
+  // value is the probe URL to use for outbounds whose tag matches that prefix.
+  // longest matching prefix wins; no match falls back to `destination`.
+  map<string, string> destinations_by_prefix = 7;
 }
