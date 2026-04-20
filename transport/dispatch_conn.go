@@ -21,23 +21,23 @@ const (
 )
 
 // NewDispatchConn runs transport handler logic behind a net.Conn backed by two
-// pipes. The request reader passed to the handler is borrowed: it preserves
-// buf.TimeoutReader, but intentionally hides Close/Interrupt so ownership stays
-// with the returned connection.
+// pipes. The request reader passed to the handler borrows the real pipe reader:
+// it preserves buf.TimeoutReader and forwards common.Interruptible so
+// timeout-based teardown in singbridge/PipeConnWrapper can abort the
+// underlying pipe. Pipe ownership stays with the returned connection —
+// ConnectionOnClose tears the pipes down when the caller closes the conn.
+// The runner's exit is NOT a signal to tear down pending writes: self-loop /
+// fast-path runners can return before the caller has written the first byte,
+// and preemptively closing the response pipe there delivers a zero-payload
+// FIN to the caller before any data flowed.
 func NewDispatchConn(ctx context.Context, opts []pipe.Option, output DispatchConnOutput, run func(context.Context, *Link)) xnet.Conn {
 	requestReader, requestWriter := pipe.New(opts...)
 	responseReader, responseWriter := pipe.New(opts...)
 
-	go func() {
-		run(ctx, &Link{
-			Reader: &borrowedReader{Reader: requestReader},
-			Writer: responseWriter,
-		})
-		// The runner no longer owns the request side. Once it exits, fail pending
-		// and future client writes promptly and close the response side.
-		common.Interrupt(requestWriter)
-		common.Close(responseWriter)
-	}()
+	go run(ctx, &Link{
+		Reader: &borrowedReader{Reader: requestReader},
+		Writer: responseWriter,
+	})
 
 	readerOpt := cnc.ConnectionOutputMulti(responseReader)
 	if output == DispatchConnOutputPacket {
@@ -60,4 +60,11 @@ func (r *borrowedReader) ReadMultiBufferTimeout(d time.Duration) (buf.MultiBuffe
 		return timeoutReader.ReadMultiBufferTimeout(d)
 	}
 	return nil, buf.ErrNotTimeoutReader
+}
+
+// Interrupt forwards to the underlying reader so callers that use
+// common.Interrupt(linkReader) (e.g. singbridge/PipeConnWrapper on read
+// timeout) actually abort the pipe instead of no-oping.
+func (r *borrowedReader) Interrupt() {
+	common.Interrupt(r.Reader)
 }
