@@ -34,6 +34,12 @@ type HealthPing struct {
 	ticker      *time.Ticker
 	tickerClose chan struct{}
 
+	// Selector is the tag-prefix selector this HealthPing owns. Set by
+	// Manager when building multi-group observatories; unused by legacy
+	// single-group callers (who pass the selector via StartScheduler's
+	// closure instead).
+	Selector []string
+
 	Settings *HealthPingSettings
 	Results  map[string]*HealthPingRTTS
 }
