@@ -38,8 +38,7 @@ func (o *Observer) Check(tag []string) {
 
 func (o *Observer) createResult() []*observatory.OutboundStatus {
 	var result []*observatory.OutboundStatus
-	o.hpm.WalkResults(func(name string, value *HealthPingRTTS) {
-		stats := value.getStatistics()
+	o.hpm.WalkResults(func(name string, stats HealthPingStats) {
 		status := observatory.OutboundStatus{
 			Alive:           stats.All != stats.Fail,
 			Delay:           stats.Average.Milliseconds(),

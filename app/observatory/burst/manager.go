@@ -88,15 +88,37 @@ func (m *Manager) findGroup(tag string) *HealthPing {
 	return best
 }
 
-// WalkResults invokes fn(tag, rtts) for every measurement across all
-// groups, holding each group's lock for the iteration of its own map.
-func (m *Manager) WalkResults(fn func(tag string, rtts *HealthPingRTTS)) {
+// WalkResults invokes fn(tag, stats) for every measurement across all
+// groups. Stats are computed (and cached) under each group's lock, but fn
+// runs *after* the lock is released — so a slow reader (e.g. gRPC
+// GetObservation on a busy dispatcher) cannot block probe scheduling or
+// result writes on the hot path.
+//
+// Rationale: `leastPing` strategy calls GetObservation per dispatched
+// connection, which fans out to WalkResults. Previously fn ran inside
+// hp.access and also called the O(sampling) `getStatistics` under the
+// lock, serializing every PutResult / Cleanup / dispatcher goroutine
+// behind stats computation. On a busy node that pegs CPU.
+func (m *Manager) WalkResults(fn func(tag string, stats HealthPingStats)) {
+	type entry struct {
+		tag   string
+		stats HealthPingStats
+	}
+	var snapshot []entry
 	for _, hp := range m.groups {
 		hp.access.Lock()
+		if cap(snapshot) < len(snapshot)+len(hp.Results) {
+			grown := make([]entry, len(snapshot), len(snapshot)+len(hp.Results))
+			copy(grown, snapshot)
+			snapshot = grown
+		}
 		for t, r := range hp.Results {
-			fn(t, r)
+			snapshot = append(snapshot, entry{tag: t, stats: *r.GetWithCache()})
 		}
 		hp.access.Unlock()
+	}
+	for _, e := range snapshot {
+		fn(e.tag, e.stats)
 	}
 }
 
