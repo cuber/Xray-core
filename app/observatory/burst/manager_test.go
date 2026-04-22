@@ -2,7 +2,9 @@ package burst
 
 import (
 	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestValidatePingGroups_NoOverlap(t *testing.T) {
@@ -111,6 +113,72 @@ func TestResolvePingGroups_LegacyWithSelectorBuildsOneGroup(t *testing.T) {
 	if len(got) != 1 || len(got[0].GetSubjectSelector()) != 1 || got[0].GetSubjectSelector()[0] != "sjw-" {
 		t.Fatalf("expected single-group fallback with sjw- selector, got: %+v", got)
 	}
+}
+
+// TestManagerWalkResults_CallbackRunsOutsideLock is a regression test for
+// the CPU-100% lockup caused by running stats computation + the user
+// callback under hp.access. If fn holds that lock, everything serializes;
+// we fix that by snapshotting under the lock and calling fn afterwards.
+//
+// The test proves fn runs outside the lock by having fn try to PutResult
+// on the same HealthPing it's walking. If fn ran under hp.access, PutResult
+// would deadlock (the test times out). If fn runs outside, PutResult
+// completes immediately.
+func TestManagerWalkResults_CallbackRunsOutsideLock(t *testing.T) {
+	hp := &HealthPing{
+		Selector: []string{"sjw-"},
+		Settings: &HealthPingSettings{SamplingCount: 2, Interval: time.Second},
+	}
+	// seed a result so WalkResults has something to visit
+	hp.PutResult("sjw-ss", 10*time.Millisecond)
+	m := &Manager{groups: []*HealthPing{hp}}
+
+	done := make(chan struct{})
+	go func() {
+		m.WalkResults(func(tag string, _ HealthPingStats) {
+			// If this line ran under hp.access, PutResult would deadlock on
+			// sync.Mutex.Lock() since the goroutine already owns it.
+			hp.PutResult(tag+"-echo", 20*time.Millisecond)
+		})
+		close(done)
+	}()
+	select {
+	case <-done:
+		// ok
+	case <-time.After(2 * time.Second):
+		t.Fatal("WalkResults callback appears to hold hp.access — deadlock")
+	}
+	// Sanity: the echo write succeeded.
+	hp.access.Lock()
+	_, ok := hp.Results["sjw-ss-echo"]
+	hp.access.Unlock()
+	if !ok {
+		t.Fatal("PutResult inside callback did not take effect")
+	}
+}
+
+// TestManagerWalkResults_StatsAreSnapshot verifies fn receives a value
+// copy, so the caller can't race with a concurrent PutResult through a
+// live pointer.
+func TestManagerWalkResults_StatsAreSnapshot(t *testing.T) {
+	hp := &HealthPing{
+		Selector: []string{"a-"},
+		Settings: &HealthPingSettings{SamplingCount: 3, Interval: time.Second},
+	}
+	hp.PutResult("a-x", 5*time.Millisecond)
+	m := &Manager{groups: []*HealthPing{hp}}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		m.WalkResults(func(tag string, s HealthPingStats) {
+			if s.All == 0 {
+				t.Errorf("expected at least one sample, got 0")
+			}
+		})
+	}()
+	wg.Wait()
 }
 
 func TestManagerFindGroup_LongestPrefixWins(t *testing.T) {
