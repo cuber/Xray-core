@@ -7,11 +7,28 @@ option java_package = "com.xray.app.observatory.burst";
 option java_multiple_files = true;
 
 message Config {
-  /* @Document The selectors for outbound under observation
-  */
+  // Legacy single-group selector. Kept for backward compat. When `ping_groups`
+  // is set, this is ignored.
   repeated string subject_selector = 2;
 
+  // Legacy single-group ping config. Kept for backward compat. When
+  // `ping_groups` is set, this is ignored.
   HealthPingConfig ping_config = 3;
+
+  // One or more probe groups. Each group has its own subjectSelector plus a
+  // fully independent HealthPingConfig (destination / interval / timeout /
+  // samplingCount / httpMethod). Selectors across groups must not overlap: a
+  // given outbound tag must belong to at most one group, otherwise config
+  // load fails.
+  repeated HealthPingGroup ping_groups = 4;
+}
+
+message HealthPingGroup {
+  // Tag-prefix selectors this group applies to. `strings.HasPrefix(tag, s)`
+  // against the outbound tag.
+  repeated string subject_selector = 1;
+  // Probe configuration for outbounds in this group.
+  HealthPingConfig ping_config = 2;
 }
 
 message HealthPingConfig {
@@ -28,8 +45,7 @@ message HealthPingConfig {
   int64 timeout = 5;
   // http method to make request
   string httpMethod = 6;
-  // optional per-prefix destination overrides. key is an outbound tag prefix,
-  // value is the probe URL to use for outbounds whose tag matches that prefix.
-  // longest matching prefix wins; no match falls back to `destination`.
+  // DEPRECATED: prefer using multiple `ping_groups` with independent
+  // destinations. Per-prefix destination override.
   map<string, string> destinations_by_prefix = 7;
 }
