@@ -14,6 +14,7 @@ import (
 	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/geodata"
 	"github.com/xtls/xray-core/common/net"
+	"github.com/xtls/xray-core/common/serial"
 	"github.com/xtls/xray-core/features/routing"
 	"github.com/xtls/xray-core/testing/mocks"
 	"google.golang.org/grpc"
@@ -493,5 +494,64 @@ func TestServiceListRuleReturnsDetailedRules(t *testing.T) {
 		geodata.CIDR{},
 	)); diff != "" {
 		t.Fatal(diff)
+	}
+}
+
+func TestServiceListRuleReturnsDetailedRulesAfterAddRule(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	r := new(router.Router)
+	common.Must(r.Init(context.TODO(), &router.Config{}, mocks.NewDNSClient(mockCtl), mocks.NewOutboundManager(mockCtl), nil))
+
+	rule := &router.RoutingRule{
+		RuleTag: "dynamic-rhk",
+		TargetTag: &router.RoutingRule_Tag{
+			Tag: "chk",
+		},
+		InboundTag: []string{"ss-in-512", "ss-in-1024"},
+		UserEmail:  []string{"domain:rhk"},
+		Domain: []*geodata.DomainRule{{
+			Value: &geodata.DomainRule_Custom{
+				Custom: &geodata.Domain{Type: geodata.Domain_Domain, Value: "anthropic.com"},
+			},
+		}},
+		Networks: []net.Network{net.Network_TCP},
+	}
+
+	svc := NewRoutingServer(r, nil)
+	_, err := svc.AddRule(context.Background(), &AddRuleRequest{
+		Config:       serial.ToTypedMessage(&router.Config{Rule: []*router.RoutingRule{rule}}),
+		ShouldAppend: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := svc.ListRule(context.Background(), &ListRuleRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.GetRules()) != 1 {
+		t.Fatalf("ListRule returned %d rules, want 1", len(resp.GetRules()))
+	}
+	gotRule := resp.GetRules()[0].GetRule()
+	if diff := cmp.Diff(rule, gotRule, cmpopts.IgnoreUnexported(
+		router.RoutingRule{},
+		router.RoutingRule_Tag{},
+		geodata.DomainRule{},
+		geodata.DomainRule_Custom{},
+		geodata.Domain{},
+	)); diff != "" {
+		t.Fatal(diff)
+	}
+
+	gotRule.UserEmail[0] = "domain:mutated"
+	resp, err = svc.ListRule(context.Background(), &ListRuleRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := resp.GetRules()[0].GetRule().GetUserEmail()[0]; got != "domain:rhk" {
+		t.Fatalf("ListRule returned mutable internal rule state: got user %q", got)
 	}
 }
