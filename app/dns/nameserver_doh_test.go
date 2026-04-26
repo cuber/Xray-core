@@ -13,8 +13,13 @@ import (
 	dns_feature "github.com/xtls/xray-core/features/dns"
 )
 
+const (
+	aliDNSDoHURL            = "https+local://dns.alidns.com/dns-query"
+	aliDNSDoHIPv6TestDomain = "dns.alidns.com"
+)
+
 func TestDOHNameServer(t *testing.T) {
-	url, err := url.Parse("https+local://1.1.1.1/dns-query")
+	url, err := url.Parse(aliDNSDoHURL)
 	common.Must(err)
 
 	s := NewDoHNameServer(url, nil, false, false, false, 0, net.IP(nil))
@@ -31,7 +36,7 @@ func TestDOHNameServer(t *testing.T) {
 }
 
 func TestDOHNameServerWithCache(t *testing.T) {
-	url, err := url.Parse("https+local://1.1.1.1/dns-query")
+	url, err := url.Parse(aliDNSDoHURL)
 	common.Must(err)
 
 	s := NewDoHNameServer(url, nil, false, false, false, 0, net.IP(nil))
@@ -59,7 +64,7 @@ func TestDOHNameServerWithCache(t *testing.T) {
 }
 
 func TestDOHNameServerWithIPv4Override(t *testing.T) {
-	url, err := url.Parse("https+local://1.1.1.1/dns-query")
+	url, err := url.Parse(aliDNSDoHURL)
 	common.Must(err)
 
 	s := NewDoHNameServer(url, nil, false, false, false, 0, net.IP(nil))
@@ -82,12 +87,12 @@ func TestDOHNameServerWithIPv4Override(t *testing.T) {
 }
 
 func TestDOHNameServerWithIPv6Override(t *testing.T) {
-	url, err := url.Parse("https+local://1.1.1.1/dns-query")
+	url, err := url.Parse(aliDNSDoHURL)
 	common.Must(err)
 
 	s := NewDoHNameServer(url, nil, false, false, false, 0, net.IP(nil))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	ips, _, err := s.QueryIP(ctx, "google.com", dns_feature.IPOption{
+	ips, _, err := s.QueryIP(ctx, aliDNSDoHIPv6TestDomain, dns_feature.IPOption{
 		IPv4Enable: false,
 		IPv6Enable: true,
 	})

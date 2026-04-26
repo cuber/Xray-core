@@ -432,3 +432,66 @@ func TestServiceTestRoute(t *testing.T) {
 		}
 	}
 }
+
+func TestServiceListRuleReturnsDetailedRules(t *testing.T) {
+	mockCtl := gomock.NewController(t)
+	defer mockCtl.Finish()
+
+	rule := &router.RoutingRule{
+		RuleTag: "rule-ai",
+		TargetTag: &router.RoutingRule_Tag{
+			Tag: "out-ai",
+		},
+		InboundTag: []string{"ss-in-512"},
+		UserEmail:  []string{"domain:la.att"},
+		Domain: []*geodata.DomainRule{{
+			Value: &geodata.DomainRule_Custom{
+				Custom: &geodata.Domain{Type: geodata.Domain_Domain, Value: "openai.com"},
+			},
+		}},
+		Ip: []*geodata.IPRule{{
+			Value: &geodata.IPRule_Custom{
+				Custom: &geodata.CIDRRule{
+					Cidr: &geodata.CIDR{Ip: []byte{10, 0, 0, 0}, Prefix: 8},
+				},
+			},
+		}},
+		Networks: []net.Network{net.Network_TCP, net.Network_UDP},
+	}
+
+	r := new(router.Router)
+	common.Must(r.Init(context.TODO(), &router.Config{
+		Rule: []*router.RoutingRule{rule},
+	}, mocks.NewDNSClient(mockCtl), mocks.NewOutboundManager(mockCtl), nil))
+
+	resp, err := NewRoutingServer(r, nil).ListRule(context.Background(), &ListRuleRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.GetRules()) != 1 {
+		t.Fatalf("ListRule returned %d rules, want 1", len(resp.GetRules()))
+	}
+
+	got := resp.GetRules()[0]
+	if got.GetTag() != "out-ai" || got.GetRuleTag() != "rule-ai" {
+		t.Fatalf("ListRule basic fields = (%q, %q), want (%q, %q)", got.GetTag(), got.GetRuleTag(), "out-ai", "rule-ai")
+	}
+
+	gotRule := got.GetRule()
+	if gotRule == nil {
+		t.Fatal("ListRule rule detail is nil")
+	}
+	if diff := cmp.Diff(rule, gotRule, cmpopts.IgnoreUnexported(
+		router.RoutingRule{},
+		router.RoutingRule_Tag{},
+		geodata.DomainRule{},
+		geodata.DomainRule_Custom{},
+		geodata.Domain{},
+		geodata.IPRule{},
+		geodata.IPRule_Custom{},
+		geodata.CIDRRule{},
+		geodata.CIDR{},
+	)); diff != "" {
+		t.Fatal(diff)
+	}
+}

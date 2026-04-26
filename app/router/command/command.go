@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	routerConfig "github.com/xtls/xray-core/app/router"
 	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/core"
@@ -72,10 +73,16 @@ func (s *routingServer) ListRule(ctx context.Context, request *ListRuleRequest) 
 	if bo, ok := s.router.(routing.Router); ok {
 		response := &ListRuleResponse{}
 		for _, v := range bo.ListRule() {
-			response.Rules = append(response.Rules, &ListRuleItem{
+			item := &ListRuleItem{
 				Tag:     v.GetOutboundTag(),
 				RuleTag: v.GetRuleTag(),
-			})
+			}
+			if detailed, ok := v.(interface {
+				GetRule() *routerConfig.RoutingRule
+			}); ok {
+				item.Rule = detailed.GetRule()
+			}
+			response.Rules = append(response.Rules, item)
 		}
 		return response, nil
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/xtls/xray-core/features/outbound"
 	"github.com/xtls/xray-core/features/routing"
 	routing_dns "github.com/xtls/xray-core/features/routing/dns"
+	"google.golang.org/protobuf/proto"
 )
 
 // Router is an implementation of routing.Router.
@@ -33,6 +34,14 @@ type Route struct {
 	outboundGroupTags []string
 	outboundTag       string
 	ruleTag           string
+	rule              *RoutingRule
+}
+
+func cloneRoutingRule(rule *RoutingRule) *RoutingRule {
+	if rule == nil {
+		return nil
+	}
+	return proto.Clone(rule).(*RoutingRule)
 }
 
 // Init initializes the Router.
@@ -64,6 +73,7 @@ func (r *Router) Init(ctx context.Context, config *Config, d dns.Client, ohm out
 			Condition: cond,
 			Tag:       rule.GetTag(),
 			RuleTag:   rule.GetRuleTag(),
+			Config:    cloneRoutingRule(rule),
 		}
 		if wh := rule.GetWebhook(); wh != nil {
 			notifier, err := NewWebhookNotifier(wh)
@@ -105,7 +115,7 @@ func (r *Router) PickRoute(ctx routing.Context) (routing.Route, error) {
 	if rule.Webhook != nil {
 		rule.Webhook.Fire(originalCtx, tag)
 	}
-	return &Route{Context: ctx, outboundTag: tag, ruleTag: rule.RuleTag}, nil
+	return &Route{Context: ctx, outboundTag: tag, ruleTag: rule.RuleTag, rule: rule.Config}, nil
 }
 
 // AddRule implements routing.Router.
@@ -171,6 +181,7 @@ func (r *Router) ReloadRules(config *Config, shouldAppend bool) error {
 			Condition: cond,
 			Tag:       rule.GetTag(),
 			RuleTag:   rule.GetRuleTag(),
+			Config:    cloneRoutingRule(rule),
 		}
 		if wh := rule.GetWebhook(); wh != nil {
 			notifier, err := NewWebhookNotifier(wh)
@@ -239,6 +250,7 @@ func (r *Router) ListRule() []routing.Route {
 		ruleList = append(ruleList, &Route{
 			outboundTag: rule.Tag,
 			ruleTag:     rule.RuleTag,
+			rule:        rule.Config,
 		})
 	}
 	return ruleList
@@ -315,6 +327,10 @@ func (r *Route) GetOutboundTag() string {
 
 func (r *Route) GetRuleTag() string {
 	return r.ruleTag
+}
+
+func (r *Route) GetRule() *RoutingRule {
+	return cloneRoutingRule(r.rule)
 }
 
 func init() {

@@ -178,6 +178,35 @@ func TestRoutingRule(t *testing.T) {
 		},
 		{
 			rule: &RoutingRule{
+				UserEmail: []string{
+					"domain:la.att",
+				},
+			},
+			test: []ruleTest{
+				{
+					input:  withInbound(&session.Inbound{User: &protocol.MemoryUser{Email: "douzi@la.att"}}),
+					output: true,
+				},
+				{
+					input:  withInbound(&session.Inbound{User: &protocol.MemoryUser{Email: "douzi@gmail.com@la.att"}}),
+					output: true,
+				},
+				{
+					input:  withInbound(&session.Inbound{User: &protocol.MemoryUser{Email: "douzi@LA.ATT"}}),
+					output: true,
+				},
+				{
+					input:  withInbound(&session.Inbound{User: &protocol.MemoryUser{Email: "douzi@rhk"}}),
+					output: false,
+				},
+				{
+					input:  withBackground(),
+					output: false,
+				},
+			},
+		},
+		{
+			rule: &RoutingRule{
 				Protocol: []string{"http"},
 			},
 			test: []ruleTest{
