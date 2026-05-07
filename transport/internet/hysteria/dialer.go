@@ -433,11 +433,26 @@ type clientManager struct {
 
 func (m *clientManager) clean() {
 	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
+	clients := make([]*client, 0, len(m.m))
 	for _, c := range m.m {
+		clients = append(clients, c)
+	}
+	m.mutex.Unlock()
+
+	for _, c := range clients {
 		c.clean()
 	}
+}
+
+func (m *clientManager) getOrCreate(conf dialerConf, create func() *client) *client {
+	m.mutex.Lock()
+	c, ok := m.m[conf]
+	if !ok {
+		c = create()
+		m.m[conf] = c
+	}
+	m.mutex.Unlock()
+	return c
 }
 
 var manager *clientManager
@@ -466,10 +481,9 @@ func Dial(ctx context.Context, dest net.Destination, streamSettings *internet.Me
 		}).Start()
 	})
 
-	manager.mutex.Lock()
-	c, ok := manager.m[dialerConf{Destination: dest, MemoryStreamConfig: streamSettings}]
-	if !ok {
-		c = &client{
+	conf := dialerConf{Destination: dest, MemoryStreamConfig: streamSettings}
+	c := manager.getOrCreate(conf, func() *client {
+		return &client{
 			ctx:            ctx,
 			dest:           dest,
 			config:         config,
@@ -478,10 +492,8 @@ func Dial(ctx context.Context, dest net.Destination, streamSettings *internet.Me
 			udpmaskManager: streamSettings.UdpmaskManager,
 			quicParams:     streamSettings.QuicParams,
 		}
-		manager.m[dialerConf{Destination: dest, MemoryStreamConfig: streamSettings}] = c
-	}
+	})
 	c.setCtx(ctx)
-	manager.mutex.Unlock()
 
 	if requireDatagram {
 		return c.udp()
