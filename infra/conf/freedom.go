@@ -143,22 +143,35 @@ func (c *FreedomConfig) Build() (proto.Message, error) {
 
 	config.UserLevel = c.UserLevel
 	if len(c.Redirect) > 0 {
-		host, portStr, err := net.SplitHostPort(c.Redirect)
-		if err != nil {
-			return nil, errors.New("invalid redirect address: ", c.Redirect, ": ", err).Base(err)
-		}
-		port, err := v2net.PortFromString(portStr)
-		if err != nil {
-			return nil, errors.New("invalid redirect port: ", c.Redirect, ": ", err).Base(err)
-		}
-		config.DestinationOverride = &freedom.DestinationOverride{
-			Server: &protocol.ServerEndpoint{
-				Port: uint32(port),
-			},
-		}
+		if strings.HasPrefix(c.Redirect, "unix:") {
+			dest, err := v2net.ParseDestination(c.Redirect)
+			if err != nil {
+				return nil, errors.New("invalid unix redirect address: ", c.Redirect, ": ", err).Base(err)
+			}
+			config.DestinationOverride = &freedom.DestinationOverride{
+				Network: dest.Network,
+				Server: &protocol.ServerEndpoint{
+					Address: v2net.NewIPOrDomain(dest.Address),
+				},
+			}
+		} else {
+			host, portStr, err := net.SplitHostPort(c.Redirect)
+			if err != nil {
+				return nil, errors.New("invalid redirect address: ", c.Redirect, ": ", err).Base(err)
+			}
+			port, err := v2net.PortFromString(portStr)
+			if err != nil {
+				return nil, errors.New("invalid redirect port: ", c.Redirect, ": ", err).Base(err)
+			}
+			config.DestinationOverride = &freedom.DestinationOverride{
+				Server: &protocol.ServerEndpoint{
+					Port: uint32(port),
+				},
+			}
 
-		if len(host) > 0 {
-			config.DestinationOverride.Server.Address = v2net.NewIPOrDomain(v2net.ParseAddress(host))
+			if len(host) > 0 {
+				config.DestinationOverride.Server.Address = v2net.NewIPOrDomain(v2net.ParseAddress(host))
+			}
 		}
 	}
 	if c.ProxyProtocol > 0 && c.ProxyProtocol <= 2 {
