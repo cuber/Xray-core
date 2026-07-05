@@ -53,6 +53,7 @@ type healthCheckSettings struct {
 	SamplingCount        int               `json:"sampling"`
 	Timeout              duration.Duration `json:"timeout"`
 	HttpMethod           string            `json:"httpMethod"`
+	KeepAlive            bool              `json:"keepAlive"`
 	DestinationsByPrefix map[string]string `json:"destinationsByPrefix,omitempty"`
 }
 
@@ -70,6 +71,7 @@ func (h healthCheckSettings) Build() (proto.Message, error) {
 		Timeout:              int64(h.Timeout),
 		SamplingCount:        int32(h.SamplingCount),
 		HttpMethod:           httpMethod,
+		KeepAlive:            h.KeepAlive,
 		DestinationsByPrefix: h.DestinationsByPrefix,
 	}, nil
 }

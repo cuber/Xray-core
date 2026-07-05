@@ -23,6 +23,7 @@ func TestBurstObservatoryConfigPingGroupsBuild(t *testing.T) {
 							"destination": "http://us.example/generate_204",
 							"sampling": 3,
 							"httpMethod": "GET",
+							"keepAlive": true,
 							"destinationsByPrefix": {
 								"us-la-": "http://la.example/generate_204"
 							}
@@ -45,6 +46,7 @@ func TestBurstObservatoryConfigPingGroupsBuild(t *testing.T) {
 							Destination:   "http://us.example/generate_204",
 							SamplingCount: 3,
 							HttpMethod:    "GET",
+							KeepAlive:     true,
 							DestinationsByPrefix: map[string]string{
 								"us-la-": "http://la.example/generate_204",
 							},

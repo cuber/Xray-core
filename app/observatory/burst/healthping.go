@@ -20,6 +20,7 @@ type HealthPingSettings struct {
 	SamplingCount int           `json:"sampling"`
 	Timeout       time.Duration `json:"timeout"`
 	HttpMethod    string        `json:"httpMethod"`
+	KeepAlive     bool          `json:"keepAlive"`
 	// DestinationsByPrefix overrides the probe URL for outbound tags matching
 	// the given prefix. Longest matching prefix wins; empty map means all tags
 	// use Destination.
@@ -70,6 +71,7 @@ func NewHealthPing(ctx context.Context, dispatcher routing.Dispatcher, config *H
 			SamplingCount:        int(config.SamplingCount),
 			Timeout:              time.Duration(config.Timeout),
 			HttpMethod:           httpMethod,
+			KeepAlive:            config.KeepAlive,
 			DestinationsByPrefix: destByPrefix,
 		}
 	}
@@ -185,7 +187,9 @@ func (h *HealthPing) doCheck(tags []string, duration time.Duration, rounds int) 
 			destination,
 			h.Settings.Timeout,
 			handler,
+			h.Settings.KeepAlive,
 		)
+		defer client.CloseIdleConnections()
 		for i := 0; i < rounds; i++ {
 			delay := time.Duration(0)
 			if duration > 0 {

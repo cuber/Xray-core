@@ -163,8 +163,11 @@ type HealthPingConfig struct {
 	// DEPRECATED: prefer using multiple `ping_groups` with independent
 	// destinations. Per-prefix destination override.
 	DestinationsByPrefix map[string]string `protobuf:"bytes,7,rep,name=destinations_by_prefix,json=destinationsByPrefix,proto3" json:"destinations_by_prefix,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Enable HTTP keep-alive for this ping group. Disabled by default to keep
+	// legacy burst observatory behavior unchanged.
+	KeepAlive     bool `protobuf:"varint,8,opt,name=keep_alive,json=keepAlive,proto3" json:"keep_alive,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *HealthPingConfig) Reset() {
@@ -246,6 +249,13 @@ func (x *HealthPingConfig) GetDestinationsByPrefix() map[string]string {
 	return nil
 }
 
+func (x *HealthPingConfig) GetKeepAlive() bool {
+	if x != nil {
+		return x.KeepAlive
+	}
+	return false
+}
+
 var File_app_observatory_burst_config_proto protoreflect.FileDescriptor
 
 const file_app_observatory_burst_config_proto_rawDesc = "" +
@@ -260,7 +270,7 @@ const file_app_observatory_burst_config_proto_rawDesc = "" +
 	"\x0fHealthPingGroup\x12)\n" +
 	"\x10subject_selector\x18\x01 \x03(\tR\x0fsubjectSelector\x12R\n" +
 	"\vping_config\x18\x02 \x01(\v21.xray.core.app.observatory.burst.HealthPingConfigR\n" +
-	"pingConfig\"\xa1\x03\n" +
+	"pingConfig\"\xc0\x03\n" +
 	"\x10HealthPingConfig\x12 \n" +
 	"\vdestination\x18\x01 \x01(\tR\vdestination\x12\"\n" +
 	"\fconnectivity\x18\x02 \x01(\tR\fconnectivity\x12\x1a\n" +
@@ -270,7 +280,9 @@ const file_app_observatory_burst_config_proto_rawDesc = "" +
 	"\n" +
 	"httpMethod\x18\x06 \x01(\tR\n" +
 	"httpMethod\x12\x81\x01\n" +
-	"\x16destinations_by_prefix\x18\a \x03(\v2K.xray.core.app.observatory.burst.HealthPingConfig.DestinationsByPrefixEntryR\x14destinationsByPrefix\x1aG\n" +
+	"\x16destinations_by_prefix\x18\a \x03(\v2K.xray.core.app.observatory.burst.HealthPingConfig.DestinationsByPrefixEntryR\x14destinationsByPrefix\x12\x1d\n" +
+	"\n" +
+	"keep_alive\x18\b \x01(\bR\tkeepAlive\x1aG\n" +
 	"\x19DestinationsByPrefixEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01Bp\n" +

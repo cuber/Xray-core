@@ -17,10 +17,10 @@ type pingClient struct {
 	httpClient  *http.Client
 }
 
-func newPingClient(ctx context.Context, dispatcher routing.Dispatcher, destination string, timeout time.Duration, handler string) *pingClient {
+func newPingClient(ctx context.Context, dispatcher routing.Dispatcher, destination string, timeout time.Duration, handler string, keepAlive bool) *pingClient {
 	return &pingClient{
 		destination: destination,
-		httpClient:  newHTTPClient(ctx, dispatcher, handler, timeout),
+		httpClient:  newHTTPClient(ctx, dispatcher, handler, timeout, keepAlive),
 	}
 }
 
@@ -31,9 +31,9 @@ func newDirectPingClient(destination string, timeout time.Duration) *pingClient 
 	}
 }
 
-func newHTTPClient(ctxv context.Context, dispatcher routing.Dispatcher, handler string, timeout time.Duration) *http.Client {
+func newHTTPClient(ctxv context.Context, dispatcher routing.Dispatcher, handler string, timeout time.Duration, keepAlive bool) *http.Client {
 	tr := &http.Transport{
-		DisableKeepAlives: true,
+		DisableKeepAlives: !keepAlive,
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			dest, err := net.ParseDestination(network + ":" + addr)
 			if err != nil {
@@ -50,6 +50,13 @@ func newHTTPClient(ctxv context.Context, dispatcher routing.Dispatcher, handler 
 			return http.ErrUseLastResponse
 		},
 	}
+}
+
+func (s *pingClient) CloseIdleConnections() {
+	if s == nil || s.httpClient == nil {
+		return
+	}
+	s.httpClient.CloseIdleConnections()
 }
 
 // MeasureDelay returns the delay time of the request to dest

@@ -48,4 +48,7 @@ message HealthPingConfig {
   // DEPRECATED: prefer using multiple `ping_groups` with independent
   // destinations. Per-prefix destination override.
   map<string, string> destinations_by_prefix = 7;
+  // Enable HTTP keep-alive for this ping group. Disabled by default to keep
+  // legacy burst observatory behavior unchanged.
+  bool keep_alive = 8;
 }
