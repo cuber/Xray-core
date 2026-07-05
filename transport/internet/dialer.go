@@ -44,7 +44,7 @@ func RegisterTransportDialer(protocol string, dialer dialFunc) error {
 
 // Dial dials a internet connection towards the given destination.
 func Dial(ctx context.Context, dest net.Destination, streamSettings *MemoryStreamConfig) (stat.Connection, error) {
-	if dest.Network == net.Network_TCP {
+	if isStreamNetwork(dest.Network) {
 		if streamSettings == nil {
 			s, err := ToMemoryStreamConfig(nil)
 			if err != nil {
@@ -70,6 +70,10 @@ func Dial(ctx context.Context, dest net.Destination, streamSettings *MemoryStrea
 	}
 
 	return nil, errors.New("unknown network ", dest.Network)
+}
+
+func isStreamNetwork(network net.Network) bool {
+	return network == net.Network_TCP || network == net.Network_UNIX
 }
 
 // DestIpAddress returns the ip of proxy server. It is useful in case of Android client, which prepare an IP before proxy connection is established
@@ -116,7 +120,7 @@ func redirect(ctx context.Context, dst net.Destination, obt string, h outbound.H
 	})) // add another outbound in session ctx
 
 	output := transport.DispatchConnOutputStream
-	if dst.Network != net.Network_TCP {
+	if !isStreamNetwork(dst.Network) {
 		output = transport.DispatchConnOutputPacket
 	}
 	return transport.NewDispatchConn(
