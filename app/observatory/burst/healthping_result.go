@@ -16,12 +16,22 @@ type HealthPingStats struct {
 	Min       time.Duration
 }
 
+type healthPingState uint8
+
+const (
+	healthPingWarming healthPingState = iota
+	healthPingHealthy
+	healthPingRecovering
+)
+
 // HealthPingRTTS holds ping rtts for health Checker
 type HealthPingRTTS struct {
-	idx      int
-	cap      int
-	validity time.Duration
-	rtts     []*pingRTT
+	idx                   int
+	cap                   int
+	validity              time.Duration
+	rtts                  []*pingRTT
+	state                 healthPingState
+	successesSinceFailure int
 
 	lastUpdateAt time.Time
 	stats        *HealthPingStats
@@ -34,6 +44,9 @@ type pingRTT struct {
 
 // NewHealthPingResult returns a *HealthPingResult with specified capacity
 func NewHealthPingResult(cap int, validity time.Duration) *HealthPingRTTS {
+	if cap < 1 {
+		cap = 1
+	}
 	return &HealthPingRTTS{cap: cap, validity: validity}
 }
 
@@ -57,17 +70,48 @@ func (h *HealthPingRTTS) GetWithCache() *HealthPingStats {
 
 // Put puts a new rtt to the HealthPingResult
 func (h *HealthPingRTTS) Put(d time.Duration) {
+	now := time.Now()
 	if h.rtts == nil {
 		h.rtts = make([]*pingRTT, h.cap)
 		for i := 0; i < h.cap; i++ {
 			h.rtts[i] = &pingRTT{}
 		}
 		h.idx = -1
+	} else {
+		latest := h.rtts[h.idx]
+		if latest.value == 0 || now.Sub(latest.time) > h.validity {
+			h.state = healthPingRecovering
+			h.successesSinceFailure = 0
+		}
 	}
 	h.idx = h.calcIndex(1)
-	now := time.Now()
 	h.rtts[h.idx].time = now
 	h.rtts[h.idx].value = d
+
+	// Warmup accepts its first success. A failure or stale gap switches to
+	// fail-fast recovery, which requires a short consecutive success streak.
+	switch {
+	case d == 0:
+		return
+	case d == rttFailed:
+		h.state = healthPingRecovering
+		h.successesSinceFailure = 0
+	case h.state == healthPingWarming:
+		h.state = healthPingHealthy
+	case h.state == healthPingRecovering:
+		h.successesSinceFailure++
+		if h.successesSinceFailure >= h.recoveryThreshold() {
+			h.state = healthPingHealthy
+			h.successesSinceFailure = 0
+		}
+	}
+}
+
+func (h *HealthPingRTTS) recoveryThreshold() int {
+	if h.cap < 3 {
+		return h.cap
+	}
+	return 3
 }
 
 func (h *HealthPingRTTS) calcIndex(step int) int {
@@ -84,7 +128,7 @@ func (h *HealthPingRTTS) getStatistics() *HealthPingStats {
 	if h.rtts != nil && h.idx >= 0 {
 		latest := h.rtts[h.idx]
 		if latest.value != 0 && time.Since(latest.time) <= h.validity {
-			stats.Alive = latest.value != rttFailed
+			stats.Alive = h.state == healthPingHealthy
 		}
 	}
 	stats.Fail = 0

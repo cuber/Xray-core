@@ -2,6 +2,7 @@ package burst
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -65,20 +66,80 @@ func TestMeasureDelayRequiresNoContent(t *testing.T) {
 	}
 }
 
-func TestHealthPingAliveFollowsLatestResult(t *testing.T) {
+func TestHealthPingWarmupAcceptsFirstCleanSample(t *testing.T) {
+	result := NewHealthPingResult(25, time.Hour)
+	if stats := result.Get(); stats.Alive {
+		t.Fatalf("empty result stats = %+v, want not alive", stats)
+	}
+
+	result.Put(10 * time.Millisecond)
+	if stats := result.Get(); !stats.Alive || stats.All != 1 || stats.Fail != 0 {
+		t.Fatalf("first successful sample stats = %+v, want alive warmup", stats)
+	}
+}
+
+func TestHealthPingRecoveryRequiresConsecutiveSuccesses(t *testing.T) {
 	result := NewHealthPingResult(4, time.Hour)
 	result.Put(rttFailed)
 	if stats := result.Get(); stats.Alive || stats.All != 1 || stats.Fail != 1 {
 		t.Fatalf("first failed sample stats = %+v, want dead with 1/1 failures", stats)
 	}
 
+	for success := 1; success < 3; success++ {
+		result.Put(10 * time.Millisecond)
+		if stats := result.Get(); stats.Alive {
+			t.Fatalf("recovery success %d stats = %+v, want dead", success, stats)
+		}
+	}
 	result.Put(10 * time.Millisecond)
 	if stats := result.Get(); !stats.Alive {
-		t.Fatalf("recovery sample stats = %+v, want alive", stats)
+		t.Fatalf("third consecutive success stats = %+v, want alive", stats)
 	}
 
 	result.Put(rttFailed)
 	if stats := result.Get(); stats.Alive || stats.Fail == stats.All {
 		t.Fatalf("latest failed sample stats = %+v, want dead before the whole window fails", stats)
+	}
+}
+
+func TestHealthPingRecoveryThresholdUsesWindowCapacity(t *testing.T) {
+	for _, test := range []struct {
+		capacity int
+		want     int
+	}{
+		{capacity: 1, want: 1},
+		{capacity: 2, want: 2},
+		{capacity: 3, want: 3},
+		{capacity: 25, want: 3},
+	} {
+		t.Run(fmt.Sprintf("capacity_%d", test.capacity), func(t *testing.T) {
+			result := NewHealthPingResult(test.capacity, time.Hour)
+			result.Put(rttFailed)
+			for success := 1; success <= test.want; success++ {
+				result.Put(10 * time.Millisecond)
+				wantAlive := success == test.want
+				if got := result.Get().Alive; got != wantAlive {
+					t.Fatalf("success %d alive = %v, want %v", success, got, wantAlive)
+				}
+			}
+		})
+	}
+}
+
+func TestHealthPingFailureResetsRecoveryStreak(t *testing.T) {
+	result := NewHealthPingResult(3, time.Hour)
+	result.Put(rttFailed)
+	result.Put(10 * time.Millisecond)
+	result.Put(10 * time.Millisecond)
+	result.Put(rttFailed)
+
+	result.Put(10 * time.Millisecond)
+	result.Put(10 * time.Millisecond)
+	if stats := result.Get(); stats.Alive {
+		t.Fatalf("two successes after reset stats = %+v, want dead", stats)
+	}
+	result.Put(10 * time.Millisecond)
+	if stats := result.Get(); !stats.Alive {
+		t.Fatalf("three successes after reset stats = %+v, want alive", stats)
 	}
 }
