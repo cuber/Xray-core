@@ -1,27 +1,30 @@
 package conf
 
 import (
-	"google.golang.org/protobuf/proto"
 	"strings"
 
 	"github.com/xtls/xray-core/app/observatory/burst"
 	"github.com/xtls/xray-core/app/router"
+	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/infra/conf/cfgcommon/duration"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
-	strategyRandom     string = "random"
-	strategyLeastPing  string = "leastping"
-	strategyRoundRobin string = "roundrobin"
-	strategyLeastLoad  string = "leastload"
+	strategyRandom            string = "random"
+	strategyLeastPing         string = "leastping"
+	strategyRoundRobin        string = "roundrobin"
+	strategyLeastLoad         string = "leastload"
+	strategyWeightedLeastPing string = "weightedleastping"
 )
 
 var (
 	strategyConfigLoader = NewJSONConfigLoader(ConfigCreatorCache{
-		strategyRandom:     func() interface{} { return new(strategyEmptyConfig) },
-		strategyLeastPing:  func() interface{} { return new(strategyEmptyConfig) },
-		strategyRoundRobin: func() interface{} { return new(strategyEmptyConfig) },
-		strategyLeastLoad:  func() interface{} { return new(strategyLeastLoadConfig) },
+		strategyRandom:            func() interface{} { return new(strategyEmptyConfig) },
+		strategyLeastPing:         func() interface{} { return new(strategyEmptyConfig) },
+		strategyRoundRobin:        func() interface{} { return new(strategyEmptyConfig) },
+		strategyLeastLoad:         func() interface{} { return new(strategyLeastLoadConfig) },
+		strategyWeightedLeastPing: func() interface{} { return new(strategyWeightedLeastPingConfig) },
 	}, "type", "settings")
 )
 
@@ -43,6 +46,14 @@ type strategyLeastLoadConfig struct {
 	MaxRTT duration.Duration `json:"maxRTT,omitempty"`
 	// acceptable failure rate
 	Tolerance float64 `json:"tolerance,omitempty"`
+}
+
+type strategyWeightedLeastPingConfig struct {
+	Weights      []*router.StrategyWeight `json:"weights,omitempty"`
+	MaxRTT       duration.Duration        `json:"maxRTT,omitempty"`
+	RTTTolerance duration.Duration        `json:"rttTolerance,omitempty"`
+	Tolerance    float64                  `json:"tolerance,omitempty"`
+	MinSamples   int32                    `json:"minSamples,omitempty"`
 }
 
 // healthCheckSettings holds settings for health Checker
@@ -101,6 +112,41 @@ func (v *strategyLeastLoadConfig) Build() (proto.Message, error) {
 			continue
 		}
 		config.Baselines = append(config.Baselines, int64(b))
+	}
+	return config, nil
+}
+
+func (v *strategyWeightedLeastPingConfig) Build() (proto.Message, error) {
+	for _, weight := range v.Weights {
+		if weight == nil || strings.TrimSpace(weight.Match) == "" {
+			return nil, errors.New("weightedLeastPing weight match must not be empty")
+		}
+		if weight.Value <= 0 {
+			return nil, errors.New("weightedLeastPing weight value must be greater than zero")
+		}
+	}
+
+	config := &router.StrategyWeightedLeastPingConfig{
+		Weights:      v.Weights,
+		MaxRTT:       int64(v.MaxRTT),
+		RttTolerance: int64(v.RTTTolerance),
+		Tolerance:    float32(v.Tolerance),
+		MinSamples:   v.MinSamples,
+	}
+	if config.MaxRTT < 0 {
+		config.MaxRTT = 0
+	}
+	if config.RttTolerance < 0 {
+		config.RttTolerance = 0
+	}
+	if config.Tolerance < 0 {
+		config.Tolerance = 0
+	}
+	if config.Tolerance > 1 {
+		config.Tolerance = 1
+	}
+	if config.MinSamples < 0 {
+		config.MinSamples = 0
 	}
 	return config, nil
 }

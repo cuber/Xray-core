@@ -151,6 +151,21 @@ func (br *BalancingRule) Build(ohm outbound.Manager, dispatcher routing.Dispatch
 			fallbackTag: br.FallbackTag,
 			strategy:    leastLoadStrategy,
 		}, nil
+	case "weightedleastping":
+		i, err := br.StrategySettings.GetInstance()
+		if err != nil {
+			return nil, err
+		}
+		s, ok := i.(*StrategyWeightedLeastPingConfig)
+		if !ok {
+			return nil, errors.New("not a StrategyWeightedLeastPingConfig").AtError()
+		}
+		return &Balancer{
+			selectors:   br.OutboundSelector,
+			ohm:         ohm,
+			fallbackTag: br.FallbackTag,
+			strategy:    NewWeightedLeastPingStrategy(s),
+		}, nil
 	case "random":
 		fallthrough
 	case "":
