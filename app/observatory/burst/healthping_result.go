@@ -7,6 +7,7 @@ import (
 
 // HealthPingStats is the statistics of HealthPingRTTS
 type HealthPingStats struct {
+	Alive     bool
 	All       int
 	Fail      int
 	Deviation time.Duration
@@ -80,6 +81,12 @@ func (h *HealthPingRTTS) calcIndex(step int) int {
 
 func (h *HealthPingRTTS) getStatistics() *HealthPingStats {
 	stats := &HealthPingStats{}
+	if h.rtts != nil && h.idx >= 0 {
+		latest := h.rtts[h.idx]
+		if latest.value != 0 && time.Since(latest.time) <= h.validity {
+			stats.Alive = latest.value != rttFailed
+		}
+	}
 	stats.Fail = 0
 	stats.Max = 0
 	stats.Min = rttFailed

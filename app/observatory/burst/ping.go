@@ -2,6 +2,7 @@ package burst
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -79,10 +80,14 @@ func (s *pingClient) MeasureDelay(httpMethod string) (time.Duration, error) {
 	if httpMethod == http.MethodGet {
 		_, err = io.Copy(io.Discard, resp.Body)
 		if err != nil {
+			resp.Body.Close()
 			return rttFailed, err
 		}
 	}
 	resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		return rttFailed, fmt.Errorf("unexpected health check HTTP status: %s", resp.Status)
+	}
 
 	return time.Since(start), nil
 }

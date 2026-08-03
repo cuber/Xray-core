@@ -40,7 +40,7 @@ func (o *Observer) createResult() []*observatory.OutboundStatus {
 	var result []*observatory.OutboundStatus
 	o.hpm.WalkResults(func(name string, stats HealthPingStats) {
 		status := observatory.OutboundStatus{
-			Alive:           stats.All != stats.Fail,
+			Alive:           stats.Alive,
 			Delay:           stats.Average.Milliseconds(),
 			LastErrorReason: "",
 			OutboundTag:     name,
