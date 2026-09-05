@@ -6,6 +6,9 @@ import (
 	. "github.com/xtls/xray-core/app/dispatcher"
 	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/buf"
+	xnet "github.com/xtls/xray-core/common/net"
+	"github.com/xtls/xray-core/common/session"
+	stats "github.com/xtls/xray-core/features/stats"
 )
 
 type TestCounter int64
@@ -40,5 +43,40 @@ func TestStatsWriter(t *testing.T) {
 
 	if c.Value() != 7 {
 		t.Fatal("unexpected counter value. want 7, but got ", c.Value())
+	}
+}
+
+type domainTrafficRecorder struct {
+	domain        string
+	uplinkBytes   uint64
+	downlinkBytes uint64
+}
+
+func (r *domainTrafficRecorder) DomainTrafficEnabled() bool { return true }
+
+func (r *domainTrafficRecorder) RecordDomainTraffic(domain string, uplinkBytes, downlinkBytes uint64) {
+	r.domain = domain
+	r.uplinkBytes += uplinkBytes
+	r.downlinkBytes += downlinkBytes
+}
+
+func (*domainTrafficRecorder) DomainTrafficBuckets(string, uint64, uint32) stats.DomainTrafficSnapshot {
+	return stats.DomainTrafficSnapshot{}
+}
+
+func TestDomainTrafficWriterUsesResolvedRouteDomain(t *testing.T) {
+	recorder := new(domainTrafficRecorder)
+	writer := &DomainTrafficWriter{
+		Recorder: recorder,
+		Outbound: []*session.Outbound{{
+			Target:      xnet.TCPDestination(xnet.IPAddress([]byte{127, 0, 0, 1}), 443),
+			RouteTarget: xnet.TCPDestination(xnet.DomainAddress("Example.COM"), 443),
+		}},
+		Uplink: true,
+		Writer: buf.Discard,
+	}
+	common.Must(writer.WriteMultiBuffer(buf.MergeBytes(nil, []byte("payload"))))
+	if recorder.domain != "Example.COM" || recorder.uplinkBytes != 7 || recorder.downlinkBytes != 0 {
+		t.Fatalf("unexpected domain traffic record: %+v", recorder)
 	}
 }
