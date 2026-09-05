@@ -227,6 +227,7 @@ func WrapLink(ctx context.Context, policyManager policy.Manager, statsManager st
 	}
 	if domainTraffic, ok := statsManager.(stats.DomainTrafficManager); ok && domainTraffic.DomainTrafficEnabled() {
 		outbounds := session.OutboundsFromContext(ctx)
+		link.Reader = &DomainTrafficReader{Recorder: domainTraffic, Outbound: outbounds, Reader: link.Reader}
 		link.Writer = &DomainTrafficWriter{Recorder: domainTraffic, Outbound: outbounds, Writer: link.Writer}
 	}
 

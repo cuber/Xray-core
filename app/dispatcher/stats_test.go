@@ -1,6 +1,7 @@
 package dispatcher_test
 
 import (
+	"strings"
 	"testing"
 
 	. "github.com/xtls/xray-core/app/dispatcher"
@@ -77,6 +78,23 @@ func TestDomainTrafficWriterUsesResolvedRouteDomain(t *testing.T) {
 	}
 	common.Must(writer.WriteMultiBuffer(buf.MergeBytes(nil, []byte("payload"))))
 	if recorder.domain != "Example.COM" || recorder.uplinkBytes != 7 || recorder.downlinkBytes != 0 {
+		t.Fatalf("unexpected domain traffic record: %+v", recorder)
+	}
+}
+
+func TestDomainTrafficReaderCountsUplink(t *testing.T) {
+	recorder := new(domainTrafficRecorder)
+	reader := &DomainTrafficReader{
+		Recorder: recorder,
+		Outbound: []*session.Outbound{{
+			OriginalTarget: xnet.TCPDestination(xnet.DomainAddress("example.com"), 443),
+		}},
+		Reader: buf.NewReader(strings.NewReader("payload")),
+	}
+	mb, err := reader.ReadMultiBuffer()
+	common.Must(err)
+	buf.ReleaseMulti(mb)
+	if recorder.domain != "example.com" || recorder.uplinkBytes != 7 || recorder.downlinkBytes != 0 {
 		t.Fatalf("unexpected domain traffic record: %+v", recorder)
 	}
 }
