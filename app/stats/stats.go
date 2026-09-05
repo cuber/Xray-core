@@ -11,11 +11,12 @@ import (
 
 // Manager is an implementation of stats.Manager.
 type Manager struct {
-	access     sync.RWMutex
-	counters   map[string]*Counter
-	onlineMaps map[string]*OnlineMap
-	channels   map[string]*Channel
-	running    bool
+	access        sync.RWMutex
+	counters      map[string]*Counter
+	onlineMaps    map[string]*OnlineMap
+	channels      map[string]*Channel
+	running       bool
+	domainTraffic *domainTraffic
 }
 
 // NewManager creates an instance of Statistics Manager.
@@ -25,8 +26,43 @@ func NewManager(ctx context.Context, config *Config) (*Manager, error) {
 		onlineMaps: make(map[string]*OnlineMap),
 		channels:   make(map[string]*Channel),
 	}
+	if config != nil {
+		if err := validateDomainTrafficConfig(config.DomainTraffic); err != nil {
+			return nil, err
+		}
+		m.domainTraffic = newDomainTraffic(config.DomainTraffic)
+	}
 
 	return m, nil
+}
+
+func validateDomainTrafficConfig(config *DomainTrafficConfig) error {
+	if config == nil || !config.Enabled {
+		return nil
+	}
+	if config.MaxDomains > defaultDomainTrafficMaxDomains {
+		return errors.New("domain traffic max_domains must be <= ", defaultDomainTrafficMaxDomains)
+	}
+	if config.BucketIntervalSeconds > 0 && config.RetentionSeconds > 0 &&
+		config.RetentionSeconds < config.BucketIntervalSeconds {
+		return errors.New("domain traffic retention_seconds must be >= bucket_interval_seconds")
+	}
+	return nil
+}
+
+func (m *Manager) DomainTrafficEnabled() bool { return m.domainTraffic != nil }
+
+func (m *Manager) RecordDomainTraffic(domain string, uplinkBytes, downlinkBytes uint64) {
+	if m.domainTraffic != nil {
+		m.domainTraffic.Record(domain, uplinkBytes, downlinkBytes)
+	}
+}
+
+func (m *Manager) DomainTrafficBuckets(afterBootID string, afterSequence uint64, maxBuckets uint32) DomainTrafficSnapshot {
+	if m.domainTraffic == nil {
+		return DomainTrafficSnapshot{}
+	}
+	return m.domainTraffic.Snapshot(afterBootID, afterSequence, maxBuckets)
 }
 
 // Type implements common.HasType.

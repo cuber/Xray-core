@@ -93,11 +93,12 @@ func (r *cachedReader) Interrupt() {
 
 // DefaultDispatcher is a default implementation of Dispatcher.
 type DefaultDispatcher struct {
-	ohm    outbound.Manager
-	router routing.Router
-	policy policy.Manager
-	stats  stats.Manager
-	fdns   dns.FakeDNSEngine
+	ohm           outbound.Manager
+	router        routing.Router
+	policy        policy.Manager
+	stats         stats.Manager
+	domainTraffic stats.DomainTrafficManager
+	fdns          dns.FakeDNSEngine
 }
 
 func init() {
@@ -121,6 +122,9 @@ func (d *DefaultDispatcher) Init(config *Config, om outbound.Manager, router rou
 	d.router = router
 	d.policy = pm
 	d.stats = sm
+	if domainTraffic, ok := sm.(stats.DomainTrafficManager); ok && domainTraffic.DomainTrafficEnabled() {
+		d.domainTraffic = domainTraffic
+	}
 	return nil
 }
 
@@ -183,6 +187,10 @@ func (d *DefaultDispatcher) getLink(ctx context.Context) (*transport.Link, *tran
 			trackOnlineIP(ctx, d.stats, user.Email, sessionInbound.Source.Address.String())
 		}
 	}
+	if d.domainTraffic != nil {
+		inboundLink.Writer = &DomainTrafficWriter{Recorder: d.domainTraffic, Outbound: session.OutboundsFromContext(ctx), Uplink: true, Writer: inboundLink.Writer}
+		outboundLink.Writer = &DomainTrafficWriter{Recorder: d.domainTraffic, Outbound: session.OutboundsFromContext(ctx), Writer: outboundLink.Writer}
+	}
 
 	return inboundLink, outboundLink
 }
@@ -216,6 +224,10 @@ func WrapLink(ctx context.Context, policyManager policy.Manager, statsManager st
 		if p.Stats.UserOnline {
 			trackOnlineIP(ctx, statsManager, user.Email, sessionInbound.Source.Address.String())
 		}
+	}
+	if domainTraffic, ok := statsManager.(stats.DomainTrafficManager); ok && domainTraffic.DomainTrafficEnabled() {
+		outbounds := session.OutboundsFromContext(ctx)
+		link.Writer = &DomainTrafficWriter{Recorder: domainTraffic, Outbound: outbounds, Writer: link.Writer}
 	}
 
 	return link

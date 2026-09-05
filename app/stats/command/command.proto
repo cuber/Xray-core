@@ -82,6 +82,39 @@ message GetUsersStatsResponse {
   repeated UserStat users = 1;
 }
 
+message GetDomainTrafficBucketsRequest {
+  string after_boot_id = 1;
+  uint64 after_sequence = 2;
+  uint32 max_buckets = 3;
+}
+
+message DomainTrafficEntry {
+  string domain = 1;
+  uint64 uplink_bytes = 2;
+  uint64 downlink_bytes = 3;
+}
+
+message DomainTrafficBucket {
+  string boot_id = 1;
+  uint64 sequence = 2;
+  int64 start_unix = 3;
+  int64 end_unix = 4;
+  repeated DomainTrafficEntry entries = 5;
+  uint64 other_uplink_bytes = 6;
+  uint64 other_downlink_bytes = 7;
+  uint64 unknown_uplink_bytes = 8;
+  uint64 unknown_downlink_bytes = 9;
+}
+
+message GetDomainTrafficBucketsResponse {
+  bool enabled = 1;
+  string boot_id = 2;
+  uint64 oldest_sequence = 3;
+  uint64 latest_sequence = 4;
+  bool has_gap = 5;
+  repeated DomainTrafficBucket buckets = 6;
+}
+
 service StatsService {
   rpc GetStats(GetStatsRequest) returns (GetStatsResponse) {}
   rpc GetStatsOnline(GetStatsRequest) returns (GetStatsResponse) {}
@@ -90,6 +123,7 @@ service StatsService {
   rpc GetStatsOnlineIpList(GetStatsRequest) returns (GetStatsOnlineIpListResponse) {}
   rpc GetAllOnlineUsers(GetAllOnlineUsersRequest) returns (GetAllOnlineUsersResponse) {}
   rpc GetUsersStats(GetUsersStatsRequest) returns (GetUsersStatsResponse) {}
+  rpc GetDomainTrafficBuckets(GetDomainTrafficBucketsRequest) returns (GetDomainTrafficBucketsResponse) {}
 }
 
 message Config {}

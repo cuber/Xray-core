@@ -161,6 +161,42 @@ func (s *statsServer) GetUsersStats(ctx context.Context, request *GetUsersStatsR
 	return resp, nil
 }
 
+func (s *statsServer) GetDomainTrafficBuckets(ctx context.Context, request *GetDomainTrafficBucketsRequest) (*GetDomainTrafficBucketsResponse, error) {
+	domainTraffic, ok := s.stats.(feature_stats.DomainTrafficManager)
+	if !ok || !domainTraffic.DomainTrafficEnabled() {
+		return &GetDomainTrafficBucketsResponse{Enabled: false}, nil
+	}
+	snapshot := domainTraffic.DomainTrafficBuckets(request.AfterBootId, request.AfterSequence, request.MaxBuckets)
+	response := &GetDomainTrafficBucketsResponse{
+		Enabled:        snapshot.Enabled,
+		BootId:         snapshot.BootID,
+		OldestSequence: snapshot.OldestSequence,
+		LatestSequence: snapshot.LatestSequence,
+		HasGap:         snapshot.HasGap,
+	}
+	for _, bucket := range snapshot.Buckets {
+		item := &DomainTrafficBucket{
+			BootId:               bucket.BootID,
+			Sequence:             bucket.Sequence,
+			StartUnix:            bucket.StartUnix,
+			EndUnix:              bucket.EndUnix,
+			OtherUplinkBytes:     bucket.OtherUplinkBytes,
+			OtherDownlinkBytes:   bucket.OtherDownlinkBytes,
+			UnknownUplinkBytes:   bucket.UnknownUplinkBytes,
+			UnknownDownlinkBytes: bucket.UnknownDownlinkBytes,
+		}
+		for _, entry := range bucket.Entries {
+			item.Entries = append(item.Entries, &DomainTrafficEntry{
+				Domain:        entry.Domain,
+				UplinkBytes:   entry.UplinkBytes,
+				DownlinkBytes: entry.DownlinkBytes,
+			})
+		}
+		response.Buckets = append(response.Buckets, item)
+	}
+	return response, nil
+}
+
 func (s *statsServer) QueryStats(ctx context.Context, request *QueryStatsRequest) (*QueryStatsResponse, error) {
 	response := &QueryStatsResponse{}
 
