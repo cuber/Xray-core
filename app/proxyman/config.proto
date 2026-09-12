@@ -43,6 +43,8 @@ message ReceiverConfig {
   bool receive_original_destination = 4;
   reserved 5;
   SniffingConfig sniffing_settings = 6;
+  // Explicit IP listeners sharing one inbound. Mutually exclusive with listen.
+  repeated xray.common.net.IPOrDomain listen_addresses = 7;
 }
 
 message InboundHandlerConfig {

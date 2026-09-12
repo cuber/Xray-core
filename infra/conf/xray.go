@@ -123,18 +123,82 @@ func (m *MuxConfig) Build() (*proxyman.MultiplexingConfig, error) {
 }
 
 type InboundDetourConfig struct {
-	Protocol       string           `json:"protocol"`
-	PortList       *PortList        `json:"port"`
-	ListenOn       *Address         `json:"listen"`
-	Settings       *json.RawMessage `json:"settings"`
-	Tag            string           `json:"tag"`
-	StreamSetting  *StreamConfig    `json:"streamSettings"`
-	SniffingConfig *SniffingConfig  `json:"sniffing"`
+	Protocol        string           `json:"protocol"`
+	PortList        *PortList        `json:"port"`
+	ListenOn        *Address         `json:"listen"`
+	ListenAddresses []*Address       `json:"-"`
+	Settings        *json.RawMessage `json:"settings"`
+	Tag             string           `json:"tag"`
+	StreamSetting   *StreamConfig    `json:"streamSettings"`
+	SniffingConfig  *SniffingConfig  `json:"sniffing"`
+}
+
+// UnmarshalJSON preserves the legacy single-address API while accepting IP lists.
+func (c *InboundDetourConfig) UnmarshalJSON(data []byte) error {
+	type plain InboundDetourConfig
+	var v struct {
+		plain
+		Listen json.RawMessage `json:"listen"`
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	*c = InboundDetourConfig(v.plain)
+	if len(v.Listen) == 0 || string(v.Listen) == "null" {
+		return nil
+	}
+	if v.Listen[0] != '[' {
+		return json.Unmarshal(v.Listen, &c.ListenOn)
+	}
+	if err := json.Unmarshal(v.Listen, &c.ListenAddresses); err != nil {
+		return err
+	}
+	return c.validateListenAddresses()
+}
+
+func (c InboundDetourConfig) MarshalJSON() ([]byte, error) {
+	type plain InboundDetourConfig
+	if c.ListenAddresses == nil {
+		return json.Marshal(plain(c))
+	}
+	return json.Marshal(struct {
+		plain
+		Listen []*Address `json:"listen"`
+	}{plain(c), c.ListenAddresses})
+}
+
+func (c *InboundDetourConfig) validateListenAddresses() error {
+	if len(c.ListenAddresses) == 0 {
+		return errors.New("listen array must not be empty")
+	}
+	seen := make(map[string]bool)
+	for _, address := range c.ListenAddresses {
+		if address == nil || !address.Family().IsIP() || address.IP().IsUnspecified() {
+			return errors.New("listen array requires explicit IP addresses")
+		}
+		key := address.IP().String()
+		if seen[key] {
+			return errors.New("duplicate listen address: ", key)
+		}
+		seen[key] = true
+	}
+	return nil
 }
 
 // Build implements Buildable.
 func (c *InboundDetourConfig) Build() (*core.InboundHandlerConfig, error) {
 	receiverSettings := &proxyman.ReceiverConfig{}
+	if c.ListenAddresses != nil {
+		if err := c.validateListenAddresses(); err != nil {
+			return nil, err
+		}
+		if c.ListenOn != nil || strings.ToLower(c.Protocol) == "tun" || c.PortList == nil {
+			return nil, errors.New("listen array requires ports, a non-TUN inbound and no single listen address")
+		}
+		for _, address := range c.ListenAddresses {
+			receiverSettings.ListenAddresses = append(receiverSettings.ListenAddresses, address.Build())
+		}
+	}
 
 	// TUN inbound doesn't need port configuration as it uses network interface instead
 	if strings.ToLower(c.Protocol) == "tun" {
