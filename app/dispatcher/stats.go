@@ -11,6 +11,7 @@ import (
 )
 
 type DomainTrafficWriter struct {
+	User     string
 	Recorder stats.DomainTrafficManager
 	Outbound []*session.Outbound
 	Uplink   bool
@@ -18,6 +19,7 @@ type DomainTrafficWriter struct {
 }
 
 type DomainTrafficReader struct {
+	User     string
 	Recorder stats.DomainTrafficManager
 	Outbound []*session.Outbound
 	Reader   buf.Reader
@@ -28,7 +30,7 @@ func (r *DomainTrafficReader) record(mb buf.MultiBuffer) {
 	if bytes == 0 {
 		return
 	}
-	r.Recorder.RecordDomainTraffic(outboundDomain(r.Outbound), bytes, 0)
+	r.Recorder.RecordDomainTraffic(outboundDomain(r.Outbound), bytes, 0, r.User)
 }
 
 func (r *DomainTrafficReader) ReadMultiBuffer() (buf.MultiBuffer, error) {
@@ -55,9 +57,9 @@ func (w *DomainTrafficWriter) WriteMultiBuffer(mb buf.MultiBuffer) error {
 	bytes := uint64(mb.Len())
 	domain := outboundDomain(w.Outbound)
 	if w.Uplink {
-		w.Recorder.RecordDomainTraffic(domain, bytes, 0)
+		w.Recorder.RecordDomainTraffic(domain, bytes, 0, w.User)
 	} else {
-		w.Recorder.RecordDomainTraffic(domain, 0, bytes)
+		w.Recorder.RecordDomainTraffic(domain, 0, bytes, w.User)
 	}
 	return w.Writer.WriteMultiBuffer(mb)
 }

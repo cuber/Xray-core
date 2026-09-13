@@ -873,6 +873,7 @@ func (x *GetDomainTrafficBucketsRequest) GetMaxBuckets() uint32 {
 
 type DomainTrafficEntry struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          string                 `protobuf:"bytes,4,opt,name=user,proto3" json:"user,omitempty"`
 	Domain        string                 `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
 	UplinkBytes   uint64                 `protobuf:"varint,2,opt,name=uplink_bytes,json=uplinkBytes,proto3" json:"uplink_bytes,omitempty"`
 	DownlinkBytes uint64                 `protobuf:"varint,3,opt,name=downlink_bytes,json=downlinkBytes,proto3" json:"downlink_bytes,omitempty"`
@@ -908,6 +909,13 @@ func (x *DomainTrafficEntry) ProtoReflect() protoreflect.Message {
 // Deprecated: Use DomainTrafficEntry.ProtoReflect.Descriptor instead.
 func (*DomainTrafficEntry) Descriptor() ([]byte, []int) {
 	return file_app_stats_command_command_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *DomainTrafficEntry) GetUser() string {
+	if x != nil {
+		return x.User
+	}
+	return ""
 }
 
 func (x *DomainTrafficEntry) GetDomain() string {
@@ -1220,8 +1228,9 @@ const file_app_stats_command_command_proto_rawDesc = "" +
 	"\rafter_boot_id\x18\x01 \x01(\tR\vafterBootId\x12%\n" +
 	"\x0eafter_sequence\x18\x02 \x01(\x04R\rafterSequence\x12\x1f\n" +
 	"\vmax_buckets\x18\x03 \x01(\rR\n" +
-	"maxBuckets\"v\n" +
-	"\x12DomainTrafficEntry\x12\x16\n" +
+	"maxBuckets\"\x8a\x01\n" +
+	"\x12DomainTrafficEntry\x12\x12\n" +
+	"\x04user\x18\x04 \x01(\tR\x04user\x12\x16\n" +
 	"\x06domain\x18\x01 \x01(\tR\x06domain\x12!\n" +
 	"\fuplink_bytes\x18\x02 \x01(\x04R\vuplinkBytes\x12%\n" +
 	"\x0edownlink_bytes\x18\x03 \x01(\x04R\rdownlinkBytes\"\x92\x03\n" +

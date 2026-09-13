@@ -187,6 +187,7 @@ func (s *statsServer) GetDomainTrafficBuckets(ctx context.Context, request *GetD
 		}
 		for _, entry := range bucket.Entries {
 			item.Entries = append(item.Entries, &DomainTrafficEntry{
+				User:          entry.User,
 				Domain:        entry.Domain,
 				UplinkBytes:   entry.UplinkBytes,
 				DownlinkBytes: entry.DownlinkBytes,

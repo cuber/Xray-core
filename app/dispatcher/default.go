@@ -188,8 +188,12 @@ func (d *DefaultDispatcher) getLink(ctx context.Context) (*transport.Link, *tran
 		}
 	}
 	if d.domainTraffic != nil {
-		inboundLink.Writer = &DomainTrafficWriter{Recorder: d.domainTraffic, Outbound: session.OutboundsFromContext(ctx), Uplink: true, Writer: inboundLink.Writer}
-		outboundLink.Writer = &DomainTrafficWriter{Recorder: d.domainTraffic, Outbound: session.OutboundsFromContext(ctx), Writer: outboundLink.Writer}
+		email := ""
+		if user != nil {
+			email = user.Email
+		}
+		inboundLink.Writer = &DomainTrafficWriter{User: email, Recorder: d.domainTraffic, Outbound: session.OutboundsFromContext(ctx), Uplink: true, Writer: inboundLink.Writer}
+		outboundLink.Writer = &DomainTrafficWriter{User: email, Recorder: d.domainTraffic, Outbound: session.OutboundsFromContext(ctx), Writer: outboundLink.Writer}
 	}
 
 	return inboundLink, outboundLink
@@ -226,9 +230,13 @@ func WrapLink(ctx context.Context, policyManager policy.Manager, statsManager st
 		}
 	}
 	if domainTraffic, ok := statsManager.(stats.DomainTrafficManager); ok && domainTraffic.DomainTrafficEnabled() {
+		email := ""
+		if user != nil {
+			email = user.Email
+		}
 		outbounds := session.OutboundsFromContext(ctx)
-		link.Reader = &DomainTrafficReader{Recorder: domainTraffic, Outbound: outbounds, Reader: link.Reader}
-		link.Writer = &DomainTrafficWriter{Recorder: domainTraffic, Outbound: outbounds, Writer: link.Writer}
+		link.Reader = &DomainTrafficReader{User: email, Recorder: domainTraffic, Outbound: outbounds, Reader: link.Reader}
+		link.Writer = &DomainTrafficWriter{User: email, Recorder: domainTraffic, Outbound: outbounds, Writer: link.Writer}
 	}
 
 	return link

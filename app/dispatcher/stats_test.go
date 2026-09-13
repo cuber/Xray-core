@@ -48,6 +48,7 @@ func TestStatsWriter(t *testing.T) {
 }
 
 type domainTrafficRecorder struct {
+	user          string
 	domain        string
 	uplinkBytes   uint64
 	downlinkBytes uint64
@@ -55,8 +56,11 @@ type domainTrafficRecorder struct {
 
 func (r *domainTrafficRecorder) DomainTrafficEnabled() bool { return true }
 
-func (r *domainTrafficRecorder) RecordDomainTraffic(domain string, uplinkBytes, downlinkBytes uint64) {
+func (r *domainTrafficRecorder) RecordDomainTraffic(domain string, uplinkBytes, downlinkBytes uint64, user ...string) {
 	r.domain = domain
+	if len(user) > 0 {
+		r.user = user[0]
+	}
 	r.uplinkBytes += uplinkBytes
 	r.downlinkBytes += downlinkBytes
 }
@@ -68,6 +72,7 @@ func (*domainTrafficRecorder) DomainTrafficBuckets(string, uint64, uint32) stats
 func TestDomainTrafficWriterUsesResolvedRouteDomain(t *testing.T) {
 	recorder := new(domainTrafficRecorder)
 	writer := &DomainTrafficWriter{
+		User:     "alice@route",
 		Recorder: recorder,
 		Outbound: []*session.Outbound{{
 			Target:      xnet.TCPDestination(xnet.IPAddress([]byte{127, 0, 0, 1}), 443),
@@ -77,6 +82,9 @@ func TestDomainTrafficWriterUsesResolvedRouteDomain(t *testing.T) {
 		Writer: buf.Discard,
 	}
 	common.Must(writer.WriteMultiBuffer(buf.MergeBytes(nil, []byte("payload"))))
+	if recorder.user != "alice@route" {
+		t.Fatalf("lost writer identity: %+v", recorder)
+	}
 	if recorder.domain != "Example.COM" || recorder.uplinkBytes != 7 || recorder.downlinkBytes != 0 {
 		t.Fatalf("unexpected domain traffic record: %+v", recorder)
 	}
@@ -85,6 +93,7 @@ func TestDomainTrafficWriterUsesResolvedRouteDomain(t *testing.T) {
 func TestDomainTrafficReaderCountsUplink(t *testing.T) {
 	recorder := new(domainTrafficRecorder)
 	reader := &DomainTrafficReader{
+		User:     "bob",
 		Recorder: recorder,
 		Outbound: []*session.Outbound{{
 			OriginalTarget: xnet.TCPDestination(xnet.DomainAddress("example.com"), 443),
@@ -94,6 +103,9 @@ func TestDomainTrafficReaderCountsUplink(t *testing.T) {
 	mb, err := reader.ReadMultiBuffer()
 	common.Must(err)
 	buf.ReleaseMulti(mb)
+	if recorder.user != "bob" {
+		t.Fatalf("lost reader identity: %+v", recorder)
+	}
 	if recorder.domain != "example.com" || recorder.uplinkBytes != 7 || recorder.downlinkBytes != 0 {
 		t.Fatalf("unexpected domain traffic record: %+v", recorder)
 	}

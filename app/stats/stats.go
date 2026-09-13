@@ -52,9 +52,9 @@ func validateDomainTrafficConfig(config *DomainTrafficConfig) error {
 
 func (m *Manager) DomainTrafficEnabled() bool { return m.domainTraffic != nil }
 
-func (m *Manager) RecordDomainTraffic(domain string, uplinkBytes, downlinkBytes uint64) {
+func (m *Manager) RecordDomainTraffic(domain string, uplinkBytes, downlinkBytes uint64, user ...string) {
 	if m.domainTraffic != nil {
-		m.domainTraffic.Record(domain, uplinkBytes, downlinkBytes)
+		m.domainTraffic.Record(domain, uplinkBytes, downlinkBytes, user...)
 	}
 }
 

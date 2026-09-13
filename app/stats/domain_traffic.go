@@ -18,7 +18,7 @@ type DomainTrafficSnapshot = feature_stats.DomainTrafficSnapshot
 const (
 	defaultDomainTrafficInterval   = 5 * time.Second
 	defaultDomainTrafficRetention  = 5 * time.Minute
-	defaultDomainTrafficMaxDomains = 512
+	defaultDomainTrafficMaxDomains = 4096
 )
 
 type domainTrafficBucket struct {
@@ -104,7 +104,7 @@ func (d *domainTraffic) pruneLocked(now time.Time) {
 	}
 }
 
-func (d *domainTraffic) Record(domain string, uplinkBytes, downlinkBytes uint64) {
+func (d *domainTraffic) Record(domain string, uplinkBytes, downlinkBytes uint64, users ...string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	start, key := d.nowBucket()
@@ -116,22 +116,27 @@ func (d *domainTraffic) Record(domain string, uplinkBytes, downlinkBytes uint64)
 		d.buckets[key] = bucket
 	}
 	domain = normalizeDomainTrafficDomain(domain)
-	if domain == "unknown" {
+	user := ""
+	if len(users) > 0 {
+		user = users[0]
+	}
+	if domain == "unknown" && user == "" {
 		bucket.unknown.UplinkBytes = saturatingAdd(bucket.unknown.UplinkBytes, uplinkBytes)
 		bucket.unknown.DownlinkBytes = saturatingAdd(bucket.unknown.DownlinkBytes, downlinkBytes)
 		return
 	}
-	entry, ok := bucket.entries[domain]
+	identity := user + "\x00" + domain
+	entry, ok := bucket.entries[identity]
 	if !ok {
-		if !d.ensureDomainLocked(domain) {
+		if !d.ensureDomainLocked(identity) {
 			bucket.other.UplinkBytes = saturatingAdd(bucket.other.UplinkBytes, uplinkBytes)
 			bucket.other.DownlinkBytes = saturatingAdd(bucket.other.DownlinkBytes, downlinkBytes)
 			return
 		}
-		entry = &DomainTrafficEntry{Domain: domain}
-		bucket.entries[domain] = entry
+		entry = &DomainTrafficEntry{Domain: domain, User: user}
+		bucket.entries[identity] = entry
 	}
-	d.lastSeen[domain] = d.clock()
+	d.lastSeen[identity] = d.clock()
 	entry.UplinkBytes = saturatingAdd(entry.UplinkBytes, uplinkBytes)
 	entry.DownlinkBytes = saturatingAdd(entry.DownlinkBytes, downlinkBytes)
 }

@@ -89,6 +89,7 @@ message GetDomainTrafficBucketsRequest {
 }
 
 message DomainTrafficEntry {
+  string user = 4;
   string domain = 1;
   uint64 uplink_bytes = 2;
   uint64 downlink_bytes = 3;

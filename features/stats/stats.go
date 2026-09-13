@@ -115,7 +115,7 @@ type Manager interface {
 // embedders and test managers do not need to implement it.
 type DomainTrafficManager interface {
 	DomainTrafficEnabled() bool
-	RecordDomainTraffic(domain string, uplinkBytes, downlinkBytes uint64)
+	RecordDomainTraffic(domain string, uplinkBytes, downlinkBytes uint64, user ...string)
 	DomainTrafficBuckets(afterBootID string, afterSequence uint64, maxBuckets uint32) DomainTrafficSnapshot
 }
 
@@ -141,6 +141,7 @@ type DomainTrafficBucket struct {
 }
 
 type DomainTrafficEntry struct {
+	User          string
 	Domain        string
 	UplinkBytes   uint64
 	DownlinkBytes uint64
