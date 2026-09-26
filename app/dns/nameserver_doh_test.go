@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	. "github.com/xtls/xray-core/app/dns"
-	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/net"
 	dns_feature "github.com/xtls/xray-core/features/dns"
 )
@@ -18,63 +17,80 @@ const (
 	aliDNSDoHIPv6TestDomain = "dns.alidns.com"
 )
 
-func TestDOHNameServer(t *testing.T) {
+func TestPublicDOHNameServer(t *testing.T) {
+	requirePublicDNS(t)
 	url, err := url.Parse(aliDNSDoHURL)
-	common.Must(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	s := NewDoHNameServer(url, nil, false, false, false, 0, net.IP(nil))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	ips, _, err := s.QueryIP(ctx, "google.com", dns_feature.IPOption{
+	ips, _, err := s.QueryIP(ctx, "cloudflare.com", dns_feature.IPOption{
 		IPv4Enable: true,
 		IPv6Enable: true,
 	})
 	cancel()
-	common.Must(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(ips) == 0 {
 		t.Error("expect some ips, but got 0")
 	}
 }
 
-func TestDOHNameServerWithCache(t *testing.T) {
+func TestPublicDOHNameServerWithCache(t *testing.T) {
+	requirePublicDNS(t)
 	url, err := url.Parse(aliDNSDoHURL)
-	common.Must(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	s := NewDoHNameServer(url, nil, false, false, false, 0, net.IP(nil))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	ips, _, err := s.QueryIP(ctx, "google.com", dns_feature.IPOption{
+	ips, _, err := s.QueryIP(ctx, "cloudflare.com", dns_feature.IPOption{
 		IPv4Enable: true,
 		IPv6Enable: true,
 	})
 	cancel()
-	common.Must(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(ips) == 0 {
 		t.Error("expect some ips, but got 0")
 	}
 
-	ctx2, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	ips2, _, err := s.QueryIP(ctx2, "google.com", dns_feature.IPOption{
+	ctx2, cancel2 := context.WithTimeout(context.Background(), time.Second*5)
+	ips2, _, err := s.QueryIP(ctx2, "cloudflare.com", dns_feature.IPOption{
 		IPv4Enable: true,
 		IPv6Enable: true,
 	})
-	cancel()
-	common.Must(err)
+	cancel2()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if r := cmp.Diff(ips2, ips); r != "" {
 		t.Fatal(r)
 	}
 }
 
-func TestDOHNameServerWithIPv4Override(t *testing.T) {
+func TestPublicDOHNameServerWithIPv4Override(t *testing.T) {
+	requirePublicDNS(t)
 	url, err := url.Parse(aliDNSDoHURL)
-	common.Must(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	s := NewDoHNameServer(url, nil, false, false, false, 0, net.IP(nil))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	ips, _, err := s.QueryIP(ctx, "google.com", dns_feature.IPOption{
+	ips, _, err := s.QueryIP(ctx, "cloudflare.com", dns_feature.IPOption{
 		IPv4Enable: true,
 		IPv6Enable: false,
 	})
 	cancel()
-	common.Must(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(ips) == 0 {
 		t.Error("expect some ips, but got 0")
 	}
@@ -86,9 +102,12 @@ func TestDOHNameServerWithIPv4Override(t *testing.T) {
 	}
 }
 
-func TestDOHNameServerWithIPv6Override(t *testing.T) {
+func TestPublicDOHNameServerWithIPv6Override(t *testing.T) {
+	requirePublicDNS(t)
 	url, err := url.Parse(aliDNSDoHURL)
-	common.Must(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	s := NewDoHNameServer(url, nil, false, false, false, 0, net.IP(nil))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
@@ -97,7 +116,9 @@ func TestDOHNameServerWithIPv6Override(t *testing.T) {
 		IPv6Enable: true,
 	})
 	cancel()
-	common.Must(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(ips) == 0 {
 		t.Error("expect some ips, but got 0")
 	}

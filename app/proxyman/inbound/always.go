@@ -112,6 +112,14 @@ func NewAlwaysOnInboundHandler(ctx context.Context, tag string, receiverConfig *
 	if err != nil {
 		return nil, errors.New("failed to parse stream config").Base(err).AtWarning()
 	}
+	if validator, ok := p.(interface {
+		ValidateStream(*internet.MemoryStreamConfig) error
+	}); ok {
+		if err := validator.ValidateStream(mss); err != nil {
+			common.Close(p)
+			return nil, err
+		}
+	}
 
 	if receiverConfig.ReceiveOriginalDestination {
 		if mss.SocketSettings == nil {

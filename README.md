@@ -37,6 +37,12 @@
 
 ## Documentation
 
+Local fork: [AnyTLS inbound](proxy/anytls/README.md) configuration, control plane,
+statistics, resource limits and interoperability tests.
+
+Local fork: [regression tests](testing/README.md), deterministic protocol fixtures
+and opt-in public integration tests with SOCKS5 proxy configuration.
+
 [Project X Official Website](https://xtls.github.io)
 
 ## Telegram

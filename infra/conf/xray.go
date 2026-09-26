@@ -28,6 +28,7 @@ var (
 		"vless":         func() interface{} { return new(VLessInboundConfig) },
 		"vmess":         func() interface{} { return new(VMessInboundConfig) },
 		"trojan":        func() interface{} { return new(TrojanServerConfig) },
+		"anytls":        func() interface{} { return new(AnyTLSServerConfig) },
 		"wireguard":     func() interface{} { return &WireGuardConfig{IsClient: false} },
 		"hysteria":      func() interface{} { return new(HysteriaServerConfig) },
 		"tun":           func() interface{} { return new(TunConfig) },
@@ -187,6 +188,9 @@ func (c *InboundDetourConfig) validateListenAddresses() error {
 
 // Build implements Buildable.
 func (c *InboundDetourConfig) Build() (*core.InboundHandlerConfig, error) {
+	if strings.EqualFold(c.Protocol, "anytls") && (c.StreamSetting == nil || c.StreamSetting.Security != "tls" || (c.StreamSetting.Network != nil && string(*c.StreamSetting.Network) != "raw" && string(*c.StreamSetting.Network) != "tcp")) {
+		return nil, errors.New("anytls requires RAW TCP and TLS")
+	}
 	receiverSettings := &proxyman.ReceiverConfig{}
 	if c.ListenAddresses != nil {
 		if err := c.validateListenAddresses(); err != nil {
@@ -630,11 +634,6 @@ func (c *Config) Build() (*core.Config, error) {
 
 	if c.Reverse != nil {
 		return nil, errors.PrintRemovedFeatureError(`"legacy reverse"`, `"VLESS Reverse Proxy"`)
-		r, err := c.Reverse.Build()
-		if err != nil {
-			return nil, errors.New("failed to build reverse configuration").Base(err)
-		}
-		config.App = append(config.App, serial.ToTypedMessage(r))
 	}
 
 	if c.FakeDNS != nil {
