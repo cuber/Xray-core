@@ -45,6 +45,6 @@ func TestAnyTLSJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := outbound.Build(); err == nil {
-		t.Fatal("AnyTLS outbound must remain unsupported")
+		t.Fatal("empty AnyTLS outbound settings must be rejected")
 	}
 }

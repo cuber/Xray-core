@@ -25,7 +25,7 @@ reference sibling repositories as integration evidence, not implementation input
 | [005](005-core-routing-balancing/spec.md) | Routing control API and weighted scheduling |
 | [006](006-user-domain-traffic/spec.md) | Bounded user/domain traffic and consumer contract |
 | [007](007-core-regression/spec.md) | Regression infrastructure and shared fixes |
-| [008](008-anytls-inbound/spec.md) | AnyTLS inbound, routing, statistics and control API |
+| [008](008-anytls/spec.md) | AnyTLS inbound/outbound, routing, statistics and control API |
 
 Each implementation commit owns its corresponding numbered spec; AnyTLS remains
 last. 001 is the cross-feature index, not a separate runtime feature.

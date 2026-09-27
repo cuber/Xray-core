@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"reflect"
 	"sort"
 	"sync"
@@ -24,6 +26,126 @@ import (
 )
 
 type wireDNSFixture struct{ queries atomic.Int32 }
+
+// Own an IPv4 loopback socket for the local fixture. The optional diagnostic
+// retains the wildcard allocator used by quic.DialAddr and 64 occupied ports.
+// quic.Dial creates its single-use Transport with zero-length client CIDs,
+// unlike a default public Transport.Dial. Keep the concrete UDPConn intact so
+// QUIC retains ReadMsgUDP/WriteMsgUDP and its normal OOB-capable socket path.
+func fixtureQUICDialer(t *testing.T, server net.Addr, diagnostic bool) func(context.Context, string, *tls.Config, *quic.Config) (*quic.Conn, error) {
+	t.Helper()
+	started := time.Now()
+	var mu sync.Mutex
+	var records []string
+	var sockets []*net.UDPConn
+	var connections []*quic.Conn
+	var dials, readers, closers sync.WaitGroup
+	closed := false
+	occupied := make(map[int]*net.UDPConn)
+	record := func(format string, args ...any) {
+		mu.Lock()
+		records = append(records, fmt.Sprintf("%s %s", time.Since(started), fmt.Sprintf(format, args...)))
+		mu.Unlock()
+	}
+	t.Cleanup(func() {
+		mu.Lock()
+		closed = true
+		mu.Unlock()
+		// The normal nameserver cleanup runs first and waits for getConnection.
+		// Seal registration too, so late callers cannot escape fixture ownership.
+		dials.Wait()
+		for _, connection := range connections {
+			_ = connection.CloseWithError(0, "fixture complete")
+		}
+		for _, socket := range sockets {
+			_ = socket.Close()
+		}
+		closers.Wait()
+		for _, socket := range occupied {
+			_ = socket.Close()
+		}
+		readers.Wait()
+		mu.Lock()
+		defer mu.Unlock()
+		for _, line := range records {
+			t.Log(line)
+		}
+	})
+	occupiedCount := 0
+	if diagnostic {
+		occupiedCount = 64
+	}
+	for range occupiedCount {
+		socket, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		occupied[socket.LocalAddr().(*net.UDPAddr).Port] = socket
+		readers.Add(1)
+		go func() {
+			defer readers.Done()
+			packet := make([]byte, 65535)
+			for {
+				n, source, err := socket.ReadFromUDP(packet)
+				if err != nil {
+					return
+				}
+				record("OWNED-IPv4-RECEIVE local=%s source=%s bytes=%d prefix=%x", socket.LocalAddr(), source, n, packet[:min(n, 48)])
+			}
+		}()
+	}
+	record("server=%s owned-loopback-listeners=%d", server, len(occupied))
+	return func(ctx context.Context, address string, tlsConfig *tls.Config, config *quic.Config) (*quic.Conn, error) {
+		mu.Lock()
+		if closed {
+			mu.Unlock()
+			return nil, net.ErrClosed
+		}
+		dials.Add(1)
+		mu.Unlock()
+		defer dials.Done()
+		network, bindIP := "udp4", net.IPv4(127, 0, 0, 1)
+		if diagnostic {
+			// Match quic-go/client.go DialAddr's wildcard allocation.
+			network, bindIP = "udp", net.IPv4zero
+		}
+		socket, err := net.ListenUDP(network, &net.UDPAddr{IP: bindIP})
+		if err != nil {
+			return nil, err
+		}
+		mu.Lock()
+		sockets = append(sockets, socket)
+		mu.Unlock()
+		remote, err := net.ResolveUDPAddr(network, address)
+		if err != nil {
+			socket.Close()
+			return nil, err
+		}
+		local := socket.LocalAddr()
+		record("DIAL local=%s remote=%s socketType=%T context=%v", local, remote, socket, ctx.Err())
+		if blocker := occupied[local.(*net.UDPAddr).Port]; blocker != nil {
+			record("COLLISION wildcard=%s existingOwnedIPv4=%s remote=%s", local, blocker.LocalAddr(), remote)
+		}
+		connection, err := quic.Dial(ctx, socket, remote, tlsConfig, config)
+		record("DIAL-RESULT local=%s remote=%s error=%v", local, remote, err)
+		if err != nil {
+			socket.Close()
+			return nil, err
+		}
+		mu.Lock()
+		connections = append(connections, connection)
+		mu.Unlock()
+		// DialAddr owns its UDP socket; quic.Dial does not. Preserve that
+		// ownership explicitly without changing cancellation or retry policy.
+		closers.Add(1)
+		go func() {
+			defer closers.Done()
+			<-connection.Context().Done()
+			socket.Close()
+		}()
+		return connection, nil
+	}
+}
 
 func (f *wireDNSFixture) response(query *mdns.Msg) []byte {
 	f.queries.Add(1)
@@ -160,6 +282,11 @@ func fixtureClient(t *testing.T, protocol string, f *wireDNSFixture) Server {
 		if err != nil {
 			t.Fatal(err)
 		}
+		mode := os.Getenv("XRAY_DNS_QUIC_DIAGNOSTIC")
+		if mode != "" && mode != "wildcard64" {
+			t.Fatalf("unknown XRAY_DNS_QUIC_DIAGNOSTIC mode %q", mode)
+		}
+		s.dial = fixtureQUICDialer(t, listener.Addr(), mode == "wildcard64")
 		t.Cleanup(func() {
 			s.Lock()
 			defer s.Unlock()

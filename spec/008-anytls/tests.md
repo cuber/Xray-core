@@ -1,5 +1,10 @@
 # AnyTLS 入站测试与验收计划
 
+本文件保留原入站验收。新增出站、双向互通、OB 与链式代理测试见
+[出站验证计划](outbound-tests.md)，公共代码回归要求见
+[影响面与 Review 门槛](outbound-impact.md)。已执行与剩余项目见
+[出站实施证据](outbound-implementation.md)。
+
 状态：验收清单；实际执行结果单独记录在 [implementation.md](implementation.md)。
 未列出明确证据的用例仍为待执行，不能把部分通过视为整项通过。
 

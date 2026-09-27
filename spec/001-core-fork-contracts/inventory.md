@@ -14,7 +14,7 @@
   不声称审计 Sidecar 整个提交历史。
 - 范围：21 个提交，累计 147 个变更文件，包括测试、生成 proto、文档、CI 和依赖。
 - K1-K6 定义见 [contracts.md](contracts.md)，验证见 [tests.md](tests.md)；
-  008 指 [AnyTLS spec](../008-anytls-inbound/spec.md)。
+  008 指 [AnyTLS spec](../008-anytls/spec.md)。
 
 ## 提交逐笔归属
 

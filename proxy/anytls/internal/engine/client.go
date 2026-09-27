@@ -36,7 +36,10 @@ type ClientOptions struct {
 	IdleSessionTimeout       time.Duration
 	MinIdleSession           int
 	DisableReuse             bool
-	Logger                   logger.ContextLogger
+	// Core's native outbound must join canceled writes even on dispatch-backed
+	// connections whose SetWriteDeadline is a no-op. Other adapters opt in.
+	CancelableWrites bool
+	Logger           logger.ContextLogger
 }
 
 type Client struct {
@@ -50,6 +53,7 @@ type Client struct {
 	idleTimeout       time.Duration
 	minIdleSession    int
 	disableReuse      bool
+	cancelableWrites  bool
 	closeIdle         atomic.Bool
 
 	access       sync.Mutex
@@ -57,6 +61,7 @@ type Client struct {
 	sessions     map[*session]struct{}
 	idleSessions list.List[*session]
 	idleTimer    *time.Timer
+	readers      sync.WaitGroup
 }
 
 func NewClient(options ClientOptions) (*Client, error) {
@@ -73,6 +78,7 @@ func NewClient(options ClientOptions) (*Client, error) {
 		idleTimeout:       options.IdleSessionTimeout,
 		minIdleSession:    options.MinIdleSession,
 		disableReuse:      options.DisableReuse,
+		cancelableWrites:  options.CancelableWrites,
 		sessions:          make(map[*session]struct{}),
 	}
 	if client.logger == nil {
@@ -88,6 +94,28 @@ func NewClient(options ClientOptions) (*Client, error) {
 	return client, nil
 }
 
+// OpenContext completes the SYN/destination write before admission. It never
+// retries application data, and cancellation cannot leave a half-open pooled
+// session. DialContext remains lazy for existing callers.
+func (c *Client) OpenContext(ctx context.Context, destination M.Socksaddr) (net.Conn, error) {
+	conn, err := c.DialContext(ctx, destination)
+	if err != nil {
+		return nil, err
+	}
+	opened := conn.(*stream)
+	stop := context.AfterFunc(ctx, func() { opened.session.Close() })
+	err = opened.handshake(&opened.writeDeadline)
+	if !stop() || ctx.Err() != nil {
+		err = ctx.Err()
+	}
+	if err != nil {
+		opened.session.Close()
+		opened.Close()
+		return nil, err
+	}
+	return conn, nil
+}
+
 func (c *Client) DialContext(ctx context.Context, destination M.Socksaddr) (net.Conn, error) {
 	if !destination.IsValid() {
 		return nil, E.New("anytls: invalid destination: ", destination)
@@ -99,6 +127,7 @@ func (c *Client) DialContext(ctx context.Context, destination M.Socksaddr) (net.
 	idle := c.takeIdleSession()
 	if idle != nil {
 		opened, err := idle.openStream(destination)
+		c.finishReservation(idle)
 		if err == nil && !idle.IsClosed() {
 			if keepSession {
 				idle.keepOnce.Store(true)
@@ -115,6 +144,7 @@ func (c *Client) DialContext(ctx context.Context, destination M.Socksaddr) (net.
 		return nil, err
 	}
 	opened, err := created.openStream(destination)
+	c.finishReservation(created)
 	if err != nil {
 		created.Close()
 		return nil, err
@@ -136,6 +166,10 @@ func (c *Client) createSession(ctx context.Context) (*session, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Authentication writes (including a lazy TLS handshake) must be cancellable,
+	// but a published session must no longer belong to this first request.
+	stop := context.AfterFunc(ctx, func() { conn.Close() })
+	defer stop()
 	paddingLen := c.padding.Load().GenerateHandshakePaddingSize()
 	request := buf.NewSize(passwordLen + 2 + paddingLen)
 	common.Must1(request.Write(c.password[:]))
@@ -152,6 +186,10 @@ func (c *Client) createSession(ctx context.Context) (*session, error) {
 		return nil, E.Cause(err, "anytls: write request")
 	}
 	conn.SetWriteDeadline(time.Time{})
+	if !stop() || ctx.Err() != nil {
+		conn.Close()
+		return nil, ctx.Err()
+	}
 	created := newClientSession(c, conn)
 	c.access.Lock()
 	if c.closed {
@@ -160,8 +198,11 @@ func (c *Client) createSession(ctx context.Context) (*session, error) {
 		return nil, net.ErrClosed
 	}
 	c.sessions[created] = struct{}{}
+	created.reserved = true
+	c.readers.Add(1)
 	c.access.Unlock()
 	go func() {
+		defer c.readers.Done()
 		loopErr := created.readLoop()
 		created.Close()
 		if !E.IsClosedOrCanceled(loopErr) {
@@ -181,16 +222,36 @@ func (c *Client) takeIdleSession() *session {
 		idle := element.Value
 		c.idleSessions.Remove(element)
 		idle.element = nil
+		idle.reserved = true
 		return idle
 	}
 	return nil
 }
 
-func (c *Client) releaseSession(released *session) {
-	if c.disableReuse {
-		released.Close()
-		return
+func (c *Client) finishReservation(s *session) {
+	c.access.Lock()
+	s.reserved = false
+	c.access.Unlock()
+}
+
+func (c *Client) beginControl(s *session) {
+	c.access.Lock()
+	s.controls++
+	if s.element != nil {
+		c.idleSessions.Remove(s.element)
+		s.element = nil
 	}
+	c.access.Unlock()
+}
+
+func (c *Client) endControl(s *session) {
+	c.access.Lock()
+	s.controls--
+	c.access.Unlock()
+	c.releaseSession(s)
+}
+
+func (c *Client) releaseSession(released *session) {
 	c.access.Lock()
 	if released.IsClosed() || c.closed {
 		if released.element != nil {
@@ -199,6 +260,15 @@ func (c *Client) releaseSession(released *session) {
 		}
 		delete(c.sessions, released)
 		c.access.Unlock()
+		return
+	}
+	if released.reserved || released.controls != 0 {
+		c.access.Unlock()
+		return
+	}
+	if c.disableReuse {
+		c.access.Unlock()
+		released.Close()
 		return
 	}
 	keepOnce := released.keepOnce.Swap(false)
@@ -212,7 +282,7 @@ func (c *Client) releaseSession(released *session) {
 		released.Close()
 		return
 	}
-	if released.element == nil {
+	if !released.hasStreams() && (!c.cancelableWrites || len(released.writeAccess) == 0) && released.element == nil {
 		released.idleSince = time.Now()
 		released.element = c.idleSessions.PushFront(released)
 		if c.idleTimer == nil {
@@ -321,6 +391,7 @@ func (c *Client) Close() error {
 	c.access.Lock()
 	if c.closed {
 		c.access.Unlock()
+		c.readers.Wait()
 		return nil
 	}
 	c.closed = true
@@ -340,5 +411,6 @@ func (c *Client) Close() error {
 	for _, closing := range sessions {
 		err = E.Errors(err, closing.Close())
 	}
+	c.readers.Wait()
 	return err
 }

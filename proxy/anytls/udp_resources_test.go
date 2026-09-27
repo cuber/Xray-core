@@ -103,7 +103,7 @@ func exchangeUoT(c *uot.Conn, target string, payload []byte) error {
 	if err != nil {
 		return err
 	}
-	if from.Fqdn != target || !bytes.Equal(b.Bytes(), payload) {
+	if from != M.ParseSocksaddr(target+":53") || !bytes.Equal(b.Bytes(), payload) {
 		return fmt.Errorf("UDP target/payload mismatch: %v", from)
 	}
 	return nil
