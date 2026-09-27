@@ -65,9 +65,9 @@ func getHTTPClient(ctx context.Context, dest net.Destination, streamSettings *in
 
 	if !found {
 		transportConfig := streamSettings.ProtocolSettings.(*Config)
-		var xmuxConfig XmuxConfig
+		xmuxConfig := new(XmuxConfig)
 		if transportConfig.Xmux != nil {
-			xmuxConfig = *transportConfig.Xmux
+			xmuxConfig = transportConfig.Xmux
 		}
 
 		xmuxManager = NewXmuxManager(xmuxConfig, func() XmuxConn {
@@ -591,8 +591,12 @@ func Dial(ctx context.Context, dest net.Destination, streamSettings *internet.Me
 // bytes than the size limit. We work around this by splitting a potentially
 // too large write up into multiple.
 type uploadWriter struct {
-	*pipe.Writer
+	buf.Writer
 	maxLen int32
+}
+
+func (w uploadWriter) Close() error {
+	return common.Close(w.Writer)
 }
 
 func (w uploadWriter) Write(b []byte) (int, error) {
@@ -608,11 +612,12 @@ func (w uploadWriter) Write(b []byte) (int, error) {
 
 	var writed int
 	for _, buff := range buffer.MultiBuffer {
+		length := int(buff.Len())
 		err := w.WriteMultiBuffer(buf.MultiBuffer{buff})
 		if err != nil {
 			return writed, err
 		}
-		writed += int(buff.Len())
+		writed += length
 	}
 	return writed, nil
 }

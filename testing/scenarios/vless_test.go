@@ -1,8 +1,12 @@
 package scenarios
 
 import (
+	stdtls "crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
+	"github.com/xtls/xray-core/testing/servers/dnsfixture"
+	"net/http"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
@@ -371,6 +375,7 @@ func TestVlessXtlsVision(t *testing.T) {
 }
 
 func TestVlessXtlsVisionReality(t *testing.T) {
+	target := localRealityTarget(t)
 	tcpServer := tcp.Server{
 		MsgProcessor: xor,
 	}
@@ -403,8 +408,8 @@ func TestVlessXtlsVisionReality(t *testing.T) {
 						SecuritySettings: []*serial.TypedMessage{
 							serial.ToTypedMessage(&reality.Config{
 								Show:        true,
-								Dest:        "www.google.com:443", // use google for now, may fail in some region
-								ServerNames: []string{"www.google.com"},
+								Dest:        target,
+								ServerNames: []string{"reality.test"},
 								PrivateKey:  privateKey,
 								ShortIds:    shortIds,
 								Type:        "tcp",
@@ -482,7 +487,7 @@ func TestVlessXtlsVisionReality(t *testing.T) {
 							serial.ToTypedMessage(&reality.Config{
 								Show:        true,
 								Fingerprint: "chrome",
-								ServerName:  "www.google.com",
+								ServerName:  "reality.test",
 								PublicKey:   publicKey,
 								ShortId:     shortIds[0],
 								SpiderX:     "/",
@@ -511,6 +516,7 @@ func TestVlessXtlsVisionReality(t *testing.T) {
 // Beacuse figerprint support may be broken after utls/reality update
 // Known broken fingerprint: android, 360
 func TestVlessRealityFingerprints(t *testing.T) {
+	target := localRealityTarget(t)
 	TestFingerprint := func(fingerprint string) error {
 		tcpServer := tcp.Server{
 			MsgProcessor: xor,
@@ -543,8 +549,8 @@ func TestVlessRealityFingerprints(t *testing.T) {
 							SecuritySettings: []*serial.TypedMessage{
 								serial.ToTypedMessage(&reality.Config{
 									Show:        false,
-									Dest:        "www.google.com:443", // use google for now, may fail in some region
-									ServerNames: []string{"www.google.com"},
+									Dest:        target,
+									ServerNames: []string{"reality.test"},
 									PrivateKey:  privateKey,
 									ShortIds:    shortIds,
 									Type:        "tcp",
@@ -619,7 +625,7 @@ func TestVlessRealityFingerprints(t *testing.T) {
 								serial.ToTypedMessage(&reality.Config{
 									Show:        false,
 									Fingerprint: fingerprint,
-									ServerName:  "www.google.com",
+									ServerName:  "reality.test",
 									PublicKey:   publicKey,
 									ShortId:     shortIds[0],
 									SpiderX:     "/",
@@ -656,4 +662,15 @@ func TestVlessRealityFingerprints(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+func localRealityTarget(t *testing.T) string {
+	t.Helper()
+	certificate, _ := dnsfixture.Certificate(t, "reality.test")
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }))
+	server.EnableHTTP2 = true
+	server.TLS = &stdtls.Config{Certificates: []stdtls.Certificate{certificate}, MinVersion: stdtls.VersionTLS13}
+	server.StartTLS()
+	t.Cleanup(server.Close)
+	return server.Listener.Addr().String()
 }

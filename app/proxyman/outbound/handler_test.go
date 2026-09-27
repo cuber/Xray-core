@@ -112,11 +112,11 @@ func TestTagsCache(t *testing.T) {
 	v.AddFeature(ohm)
 	ctx := context.WithValue(context.Background(), xrayKey, v)
 
-	stop_add_rm := false
+	var stop_add_rm atomic.Bool
 	wg_add_rm := sync.WaitGroup{}
 	addHandlers := func() {
 		defer wg_add_rm.Done()
-		for !stop_add_rm {
+		for !stop_add_rm.Load() {
 			time.Sleep(delay)
 			idx := counter.Add(1)
 			tag := fmt.Sprintf("%s%d", tags_prefix, idx)
@@ -139,7 +139,7 @@ func TestTagsCache(t *testing.T) {
 
 	rmHandlers := func() {
 		defer wg_add_rm.Done()
-		for !stop_add_rm {
+		for !stop_add_rm.Load() {
 			time.Sleep(delay)
 			tags.Range(func(key interface{}, value interface{}) bool {
 				if _, ok := tags.LoadAndDelete(key); ok {
@@ -154,10 +154,10 @@ func TestTagsCache(t *testing.T) {
 
 	selectors := []string{tags_prefix}
 	wg_get := sync.WaitGroup{}
-	stop_get := false
+	var stop_get atomic.Bool
 	getTags := func() {
 		defer wg_get.Done()
-		for !stop_get {
+		for !stop_get.Load() {
 			time.Sleep(delay)
 			_ = ohm.Select(selectors)
 			// t.Logf("get tags: %v", tag)
@@ -173,10 +173,32 @@ func TestTagsCache(t *testing.T) {
 	}
 
 	time.Sleep(test_duration)
-	stop_add_rm = true
+	stop_add_rm.Store(true)
 	wg_add_rm.Wait()
-	stop_get = true
+	stop_get.Store(true)
 	wg_get.Wait()
+}
+
+func TestTagsCacheInvalidated(t *testing.T) {
+	m, err := New(context.Background(), &proxyman.OutboundConfig{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := m.Select([]string{"node"}); len(got) != 0 {
+		t.Fatal(got)
+	}
+	if err := m.AddHandler(context.Background(), &recordingHandler{tag: "node-a"}); err != nil {
+		t.Fatal(err)
+	}
+	if got := m.Select([]string{"node"}); len(got) != 1 || got[0] != "node-a" {
+		t.Fatal(got)
+	}
+	if err := m.RemoveHandler(context.Background(), "node-a"); err != nil {
+		t.Fatal(err)
+	}
+	if got := m.Select([]string{"node"}); len(got) != 0 {
+		t.Fatal(got)
+	}
 }
 
 type recordingHandler struct {

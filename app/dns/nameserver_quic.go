@@ -3,6 +3,7 @@ package dns
 import (
 	"bytes"
 	"context"
+	stdtls "crypto/tls"
 	"encoding/binary"
 	"net/url"
 	"sync"
@@ -33,10 +34,16 @@ type QUICNameServer struct {
 	destination     *net.Destination
 	connection      *quic.Conn
 	clientIP        net.IP
+	tlsConfig       *stdtls.Config
+	dial            func(context.Context, string, *stdtls.Config, *quic.Config) (*quic.Conn, error)
 }
 
 // NewQUICNameServer creates DNS-over-QUIC client object for local resolving
 func NewQUICNameServer(url *url.URL, disableCache bool, serveStale bool, serveExpiredTTL uint32, clientIP net.IP) (*QUICNameServer, error) {
+	return newQUICNameServer(url, disableCache, serveStale, serveExpiredTTL, clientIP, nil)
+}
+
+func newQUICNameServer(url *url.URL, disableCache bool, serveStale bool, serveExpiredTTL uint32, clientIP net.IP, trust *stdtls.Config) (*QUICNameServer, error) {
 	var err error
 	port := net.Port(853)
 	if url.Port() != "" {
@@ -51,6 +58,10 @@ func NewQUICNameServer(url *url.URL, disableCache bool, serveStale bool, serveEx
 		cacheController: NewCacheController(url.String(), disableCache, serveStale, serveExpiredTTL),
 		destination:     &dest,
 		clientIP:        clientIP,
+		dial:            quic.DialAddr,
+	}
+	if trust != nil {
+		s.tlsConfig = trust.Clone()
 	}
 
 	errors.LogInfo(context.Background(), "DNS: created Local DNS-over-QUIC client for ", url.String())
@@ -251,7 +262,13 @@ func (s *QUICNameServer) openConnection() (*quic.Conn, error) {
 		HandshakeIdleTimeout: handshakeTimeout,
 	}
 	tlsConfig.ServerName = s.destination.Address.String()
-	conn, err := quic.DialAddr(context.Background(), s.destination.NetAddr(), tlsConfig.GetTLSConfig(tls.WithNextProto("http/1.1", http2.NextProtoTLS, NextProtoDQ)), quicConfig)
+	config := tlsConfig.GetTLSConfig(tls.WithNextProto("http/1.1", http2.NextProtoTLS, NextProtoDQ))
+	if s.tlsConfig != nil {
+		config = s.tlsConfig.Clone()
+		config.ServerName = s.destination.Address.String()
+		config.NextProtos = []string{NextProtoDQ}
+	}
+	conn, err := s.dial(context.Background(), s.destination.NetAddr(), config, quicConfig)
 	log.Record(&log.AccessMessage{
 		From:   "DNS",
 		To:     s.destination,

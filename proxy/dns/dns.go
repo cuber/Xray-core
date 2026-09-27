@@ -213,7 +213,7 @@ func (h *Handler) Process(ctx context.Context, link *transport.Link, d internet.
 	}
 
 	if session.TimeoutOnlyFromContext(ctx) {
-		ctx, _ = context.WithCancel(context.Background())
+		ctx = context.Background()
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -335,6 +335,9 @@ func (h *Handler) handleIPQuery(id uint16, qType dnsmessage.Type, domain string,
 		return
 	}
 
+	// Lookup results are shared with the DNS cache and asynchronous logger.
+	// Normalize a private slice, never rewrite the published result.
+	ips = append([]net.IP(nil), ips...)
 	switch qType {
 	case dnsmessage.TypeA:
 		for i, ip := range ips {
