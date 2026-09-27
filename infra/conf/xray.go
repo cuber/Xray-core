@@ -35,6 +35,7 @@ var (
 	}, "protocol", "settings")
 
 	outboundConfigLoader = NewJSONConfigLoader(ConfigCreatorCache{
+		"anytls":      func() interface{} { return new(AnyTLSClientConfig) },
 		"block":       func() interface{} { return new(BlackholeConfig) },
 		"blackhole":   func() interface{} { return new(BlackholeConfig) },
 		"loopback":    func() interface{} { return new(LoopbackConfig) },
@@ -394,6 +395,13 @@ func (c *OutboundDetourConfig) Build() (*core.OutboundHandlerConfig, error) {
 	ts, err := rawConfig.(Buildable).Build()
 	if err != nil {
 		return nil, errors.New("failed to build outbound handler for protocol ", c.Protocol).Base(err)
+	}
+	if validator, ok := ts.(interface {
+		ValidateSender(*proxyman.SenderConfig) error
+	}); ok {
+		if err := validator.ValidateSender(senderSettings); err != nil {
+			return nil, err
+		}
 	}
 
 	return &core.OutboundHandlerConfig{

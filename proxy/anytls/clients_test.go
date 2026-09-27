@@ -122,6 +122,7 @@ func TestExternalClients(t *testing.T) {
 				args = []string{"-d", dir, "-f", configPath}
 			}
 			raw, _ := json.Marshal(config)
+			recordAnyTLSFixture(t, kind, raw)
 			if err := os.WriteFile(configPath, raw, 0600); err != nil {
 				t.Fatal(err)
 			}

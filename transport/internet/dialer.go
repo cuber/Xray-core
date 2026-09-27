@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/xtls/xray-core/common/buf"
 	"github.com/xtls/xray-core/common/dice"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/net"
@@ -110,6 +111,18 @@ func LookupForIP(domain string, strategy DomainStrategy, localAddr net.Address) 
 	return ips, err
 }
 
+type redirectConnection struct {
+	net.Conn
+	buf.Reader
+	buf.Writer
+	cancel context.CancelFunc
+}
+
+func (c *redirectConnection) Close() error {
+	c.cancel()
+	return c.Conn.Close()
+}
+
 func redirect(ctx context.Context, dst net.Destination, obt string, h outbound.Handler) net.Conn {
 	errors.LogInfo(ctx, "redirecting request "+dst.String()+" to "+obt)
 	outbounds := session.OutboundsFromContext(ctx)
@@ -123,12 +136,18 @@ func redirect(ctx context.Context, dst net.Destination, obt string, h outbound.H
 	if !isStreamNetwork(dst.Network) {
 		output = transport.DispatchConnOutputPacket
 	}
-	return transport.NewDispatchConn(
-		context.WithoutCancel(ctx),
+	// The physical connection outlives the dialing request, but pending relay
+	// admission must stop when its owner closes the connection, even before the
+	// handler starts reading the pipes. Runner return does not end ownership.
+	ctx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	conn := transport.NewDispatchConn(
+		ctx,
 		pipe.OptionsFromContext(ctx),
 		output,
 		h.Dispatch,
 	)
+	// Preserve NewDispatchConn's multi-buffer interfaces as well as net.Conn.
+	return &redirectConnection{Conn: conn, Reader: conn.(buf.Reader), Writer: conn.(buf.Writer), cancel: cancel}
 
 }
 

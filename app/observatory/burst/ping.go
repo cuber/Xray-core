@@ -19,6 +19,16 @@ type pingClient struct {
 	httpClient  *http.Client
 }
 
+type pingConnection struct {
+	net.Conn
+	cancel context.CancelFunc
+}
+
+func (c *pingConnection) Close() error {
+	c.cancel()
+	return c.Conn.Close()
+}
+
 func newPingClient(ctx context.Context, dispatcher routing.Dispatcher, destination string, timeout time.Duration, handler string, keepAlive bool) *pingClient {
 	return &pingClient{
 		ctx:         ctx,
@@ -42,7 +52,20 @@ func newHTTPClient(ctxv context.Context, dispatcher routing.Dispatcher, handler 
 			if err != nil {
 				return nil, err
 			}
-			return tagged.Dialer(ctxv, dispatcher, dest, handler)
+			// Dispatch returns a pipe before protocol dialing/handshaking finishes.
+			// Closing only that pipe cannot cancel an admission still in progress.
+			dialCtx, cancel := context.WithCancel(ctx)
+			stop := context.AfterFunc(ctxv, cancel)
+			cleanup := func() { stop(); cancel() }
+			conn, err := tagged.Dialer(dialCtx, dispatcher, dest, handler)
+			if err != nil {
+				cleanup()
+				if conn != nil {
+					conn.Close()
+				}
+				return nil, err
+			}
+			return &pingConnection{Conn: conn, cancel: cleanup}, nil
 		},
 	}
 	return &http.Client{

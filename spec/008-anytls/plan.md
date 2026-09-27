@@ -1,4 +1,13 @@
-# Implementation Plan: AnyTLS inbound
+# Implementation Plan: AnyTLS
+
+## Current outbound extension
+
+The original inbound implementation record below remains historical evidence.
+The newly authorized outbound work is governed by [outbound.md](outbound.md),
+[outbound-tests.md](outbound-tests.md), and [outbound-impact.md](outbound-impact.md).
+Its acceptance is pending; old statements excluding an outbound describe the
+original delivery, not the current scope. Do not reuse inbound PASS as outbound PASS.
+Current local implementation and results: [outbound-implementation.md](outbound-implementation.md).
 
 - Spec: [spec.md](spec.md)
 - Status: Implemented / 本地资源与功能验收完成；SHI 最终版本十分钟复验及清理通过，仅内部试点。

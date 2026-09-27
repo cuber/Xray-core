@@ -2,6 +2,7 @@ syntax = "proto3";
 package xray.proxy.anytls;
 option go_package = "github.com/xtls/xray-core/proxy/anytls";
 import "common/protocol/user.proto";
+import "common/protocol/server_spec.proto";
 
 message Account {
   string password = 1;
@@ -12,4 +13,14 @@ message ServerConfig {
   uint32 max_sessions = 3;
   uint32 max_sessions_per_user = 4;
   uint32 max_streams_per_session = 5;
+}
+
+message ClientConfig {
+  xray.common.protocol.ServerEndpoint server = 1;
+  uint32 idle_session_check_interval = 2;
+  uint32 idle_session_timeout = 3;
+  uint32 min_idle_session = 4;
+  uint32 max_sessions = 5;
+  uint32 max_idle_sessions = 6;
+  uint32 max_concurrent_dials = 7;
 }

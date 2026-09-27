@@ -24,6 +24,16 @@ type HandlerSelector interface {
 	Select([]string) []string
 }
 
+// Retirement is optional. Removal stops admission and drains existing streams;
+// the returned channel closes when the removed handler no longer owns resources.
+type Retirement interface {
+	Retire() <-chan struct{}
+}
+
+type RetiringHandler interface {
+	Retirement() Retirement
+}
+
 // Manager is a feature that manages outbound.Handlers.
 //
 // xray:api:stable

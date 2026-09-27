@@ -37,6 +37,7 @@ import (
 )
 
 type integrationFixture struct {
+	instance      *core.Instance
 	address       string
 	api           handler.HandlerServiceClient
 	stats         stats.StatsServiceClient
@@ -180,6 +181,7 @@ func newFixture(t *testing.T, userStats, domainStats bool, customize ...func(map
 		apply(config)
 	}
 	raw, _ := json.Marshal(config)
+	recordAnyTLSFixture(t, "core", raw)
 	x, err := core.StartInstance("json", raw)
 	if err != nil {
 		t.Fatal(err)
@@ -191,7 +193,8 @@ func newFixture(t *testing.T, userStats, domainStats bool, customize ...func(map
 	}
 	t.Cleanup(func() { grpcConn.Close() })
 	f := &integrationFixture{
-		address: fmt.Sprintf("127.0.0.1:%d", p), api: handler.NewHandlerServiceClient(grpcConn),
+		instance: x,
+		address:  fmt.Sprintf("127.0.0.1:%d", p), api: handler.NewHandlerServiceClient(grpcConn),
 		stats: stats.NewStatsServiceClient(grpcConn), tls: &tls.Config{RootCAs: roots, ServerName: "anytls.test"}, inbound: inbound,
 		caPEM: caPEM, caFingerprint: fmt.Sprintf("%x", sha256.Sum256(caDER)),
 	}
@@ -204,6 +207,7 @@ func newFixture(t *testing.T, userStats, domainStats bool, customize ...func(map
 func (f *integrationFixture) addInbound(t *testing.T, value map[string]any) error {
 	t.Helper()
 	raw, _ := json.Marshal(value)
+	recordAnyTLSFixture(t, "core-inbound", raw)
 	var c conf.InboundDetourConfig
 	if err := json.Unmarshal(raw, &c); err != nil {
 		return err

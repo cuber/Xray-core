@@ -1,13 +1,15 @@
-# Feature Specification: AnyTLS 入站与用户可观测性
+# Feature Specification: AnyTLS 入站与出站
 
-- Feature ID: 008-anytls-inbound
+- Feature ID: 008-anytls
 - Renumbered: 2026-09-27，按用户要求由 003 迁至最后编号 008；需求、测试编号及历史部署事实不变。
 - Created: 2026-09-25
-- Status: Implemented (internal pilot only)
-- User intent: 在 Xray-core 增加 AnyTLS 入站，支持按用户分流和统计；明确不需要 outbound。
+- Status: Implemented and locally verified outbound; inbound implemented (internal pilot only)
+- User intent: 原入站范围已完成；2026-09-27 用户追加授权实现 AnyTLS outbound，保留现有流量统计与控制面能力。
 - Baseline: core `1e0c6a30f2a33080b4ce55121e2e414a09f99bec`；sidecar `95d1e30d2327b9ad5d80ed7c1a5f06306a170646`。
-- Implementation status: Core/Sidecar 已有本地实现和测试，已部署 SHI/ZDS 内部使用，未公开发布。
+- Inbound implementation status: Core/Sidecar 已有本地实现和测试，已部署 SHI/ZDS 内部使用，未公开发布。
   实际证据见 [implementation.md](implementation.md)，逐项映射见 [acceptance.md](acceptance.md)。
+- Outbound implementation status: 本地实现、验收与双平台构建通过，尚未发布或部署；最终验证及范围边界见
+  [outbound-final-acceptance.md](outbound-final-acceptance.md)。
 - Authorization: 2026-09-25 用户已授权先整体 commit/push，再开始实现，并使用本地
   sing-box 和一台 RFC TK CO 验证；端口已由最初的 2053 更正为 TCP 2083。
   最初选 `tk.rfc.co.micro.shi`；2026-09-26 用户追加授权 SHI/ZDS 两节点部署，
@@ -18,6 +20,20 @@
 [检查清单](checklists/requirements.md)；远端试点遵循 [试点与验证](pilot.md)。
 
 ## 问题与目标
+
+2026-09-30 安全审计修复与新回归契约见
+[security-hardening.md](security-hardening.md)，包括 padding、入站写超时和出站池上限。
+
+### 出站扩展
+
+出站新增契约、实施步骤和验收矩阵见 [outbound.md](outbound.md)。该扩展属于
+同一 spec，不另行编号。下文和历史证据中的“不实现 outbound”描述原入站交付
+边界，不再限制本次扩展；历史测试通过不代表出站通过。当前仅授权本地实现与
+验证，不自动部署节点、替换生产链路或公开分发。
+
+出站的详细测试方法见 [outbound-tests.md](outbound-tests.md)，公共代码影响面
+与 Review 门槛见 [outbound-impact.md](outbound-impact.md)。2026-09-27 目录由
+`008-anytls-inbound` 改名为 `008-anytls`，编号与历史入站验收保持不变。
 
 通用分叉与附带修复的完整清单见 [001](../001-core-fork-contracts/spec.md)。
 AnyTLS 合并提交中的 DNS、XHTTP、VLESS、manager 和测试设施改动由其 K2/K6

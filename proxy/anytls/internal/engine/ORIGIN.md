@@ -9,5 +9,6 @@ Local changes expose authentication and pre-allocation stream admission hooks,
 bound destination handshakes, and wait for server stream handlers on shutdown.
 Closed streams cancel deadline timers and reject rearming to release retained
 session state promptly, including under concurrent deadline updates.
-The client code is retained as an upstream interoperability test helper; Xray
-does not register an AnyTLS outbound. No sing-box runtime is embedded.
+The client engine backs Xray's native AnyTLS outbound as well as interoperability
+tests. No sing-box runtime is embedded. Local hardening validates padding from
+both configurations and peers, and bounds control/data write cancellation.
