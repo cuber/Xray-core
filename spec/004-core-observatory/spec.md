@@ -5,7 +5,7 @@
 - Authorized: 2026-09-27，用户授权历史重建、隔离 worktree 补齐 V-010 至 V-014、窄修复及本目录文档同步；未授权部署。
 - Source: 历史基线为原 Core e7a21974，相对 b4f08981；见 [001 清单](../001-core-fork-contracts/inventory.md)。
 - Scope: 独立探测组、URL 重载、健康恢复、快照和调度停止；不吸收上游、不改原 core 或生产。
-- 原 001 FR-005 与 V-010 至 V-014 保持稳定。当前结果见 [执行证据](../001-core-fork-contracts/@@SPECMAP0@@)。
+- 原 001 FR-005 与 V-010 至 V-014 保持稳定。当前结果见 [执行证据](../001-core-fork-contracts/evidence-008-009.md)。
 
 ## US-001 — 分类维护与独立验证（P1）
 

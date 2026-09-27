@@ -2,7 +2,7 @@
 
 继承 001 的 V-005 至 V-009。受支持的补测已实现并通过，不再是待实现 harness。
 Core 路径相对 `/Volumes/Linux/opensource/cuber/xray-core-spec`。
-[原补测证据](../001-core-fork-contracts/@@SPECMAP0@@)记录完整跨 002/003
+[原补测证据](../001-core-fork-contracts/evidence-006-007.md)记录完整跨 002/003
 race 三轮命令（8 包、240 个通过事件、退出 0）和最终 TCP/UDP 计数补测
 （三轮、18 个通过事件、退出 0）。通过事件包含子测试和重复运行。
 

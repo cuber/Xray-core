@@ -10,4 +10,4 @@
 - [x] 证据、任务、复验命令、文件归属和剩余边界相互对应。
 - [x] 父进程完成审阅归并及统一隔离 clone 发布构建；未以包测试替代此项。
 
-[本轮证据](../../001-core-fork-contracts/@@SPECMAP0@@) · [测试矩阵](../tests.md)
+[本轮证据](../../001-core-fork-contracts/evidence-008-009.md) · [测试矩阵](../tests.md)

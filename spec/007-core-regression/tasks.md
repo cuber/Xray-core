@@ -16,6 +16,6 @@
 - [x] T014 [US-001] 最终 focused race 54 项通过、scoped vet/格式门禁通过，源码及测试冻结交父流程；后续仅更新文档。
 
 状态、文件归属、命令、原始 JSON 路径、退出码及残留见
-[本轮证据](../001-core-fork-contracts/@@SPECMAP0@@)。
+[本轮证据](../001-core-fork-contracts/evidence-011.md)。
 protobuf 真正重生成单独归 003/004/006，见
-[独立证据](../001-core-fork-contracts/@@SPECMAP1@@)。
+[独立证据](../001-core-fork-contracts/evidence-protobuf.md)。

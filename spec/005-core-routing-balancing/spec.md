@@ -6,7 +6,7 @@
   窄修复及本目录文档同步；未授权部署。
 - Source: 历史基线为原 Core e7a21974，相对 b4f08981；见 [001 清单](../001-core-fork-contracts/inventory.md)。
 - Scope: 健康池加权轮询、用户域匹配和路由控制面；不吸收上游、不改原 core 或生产。
-- 原 001 FR-006、FR-007 与 V-015 至 V-018 保持稳定；见 [本轮证据](../001-core-fork-contracts/@@SPECMAP0@@)。
+- 原 001 FR-006、FR-007 与 V-015 至 V-018 保持稳定；见 [本轮证据](../001-core-fork-contracts/evidence-008-009.md)。
 
 ## US-001 — 分类维护与独立验证（P1）
 

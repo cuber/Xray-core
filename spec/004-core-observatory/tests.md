@@ -3,7 +3,7 @@
 V-010 至 V-014 核心补测已实现并通过 race（2026-09-27），不再是 harness 设计稿。
 新增代码在 /Volumes/Linux/opensource/cuber/xray-core-spec；下列 core 路径相对该 worktree。
 原有 manager/ping/healthping/config 测试保留并随完整目标包运行。
-详细原始结果、失败复现、修复、日志哈希见 [执行证据](../001-core-fork-contracts/@@SPECMAP0@@)。
+详细原始结果、失败复现、修复、日志哈希见 [执行证据](../001-core-fork-contracts/evidence-008-009.md)。
 
 | ID / 原 FR | 已实现输入与断言 | 新测试入口 | 状态 |
 |---|---|---|---|

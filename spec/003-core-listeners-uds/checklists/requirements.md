@@ -4,7 +4,7 @@
 - [x] V-005 至 V-009 对应实际实现的正负向测试，不保留过时的待实现标记。
 - [x] 历史重建 tree 对比与后续测试增量分开。
 - [x] 定向三轮 race、精确计数和真实非 AnyTLS RPC 证据可追溯到
-  [报告](../../001-core-fork-contracts/@@SPECMAP0@@)。
+  [报告](../../001-core-fork-contracts/evidence-006-007.md)。
 - [x] 明确顶层 null 可兼容、[null] 拒绝，不混淆数组约束。
 - [x] 明确 UDS UDP ASSOCIATE、完整源元数据、全协议动态用户不在证据范围。
 - [x] 新增 UDS 路径长度不依赖 TMPDIR；Windows 局部 skip 不影响 TCP 对照。

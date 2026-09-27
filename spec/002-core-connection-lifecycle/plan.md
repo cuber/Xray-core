@@ -8,7 +8,7 @@
    app/proxyman/outbound/dispatch_contract_test.go、
    transport/internet/hysteria/lifecycle_contract_test.go，覆盖 V-001 至 V-004。
 4. 已执行定向 race 三轮；[tests.md](tests.md) 给出可复验命令，
-   [证据](../001-core-fork-contracts/@@SPECMAP0@@) 保存退出码和失败试跑。
+   [证据](../001-core-fork-contracts/evidence-006-007.md) 保存退出码和失败试跑。
    不把父任务的全量回归、其他平台 CI 或发布构建冒充本类别已执行。
 5. 契约明确 packet 仅响应方向、取消后显式 Close，以及重复 clean 与私有
    client.close 的区别。FD 枚举失败采用自有资源 join/关闭断言，不虚报数字。

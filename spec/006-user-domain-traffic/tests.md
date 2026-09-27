@@ -7,8 +7,8 @@
 
 本轮 Core 路径是 `../xray-core-spec`；Sidecar 默认 replace 仍指向原 `../xray-core`。
 联测使用临时 modfile，不修改 pin。完整实测、负向证据及限制见
-[Core evidence](../001-core-fork-contracts/@@SPECMAP0@@) 与
-[Sidecar evidence](../001-core-fork-contracts/@@SPECMAP1@@)。
+[Core evidence](../001-core-fork-contracts/evidence-010-core.md) 与
+[Sidecar evidence](../001-core-fork-contracts/evidence-010-sidecar.md)。
 历史重建结果仍见 [001 reconstruction](../001-core-fork-contracts/reconstruction.md)。
 
 ## 公共步骤

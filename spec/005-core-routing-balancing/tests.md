@@ -4,7 +4,7 @@ V-015 至 V-018 的核心 harness 已实现并通过 race（2026-09-27）。
 代码在 /Volumes/Linux/opensource/cuber/xray-core-spec，以下 core 路径相对此 worktree。
 原有 weighted/leastLoad/condition/command/conf 测试随完整目标包运行。
 实际 Sidecar/TUI 解码仍是跨组件剩余项，不能由 core wire 兼容替代。
-详见 [执行证据](../001-core-fork-contracts/@@SPECMAP0@@)。
+详见 [执行证据](../001-core-fork-contracts/evidence-008-009.md)。
 
 | ID / 原 FR | 已实现输入与断言 | 新测试入口 | 状态 |
 |---|---|---|---|

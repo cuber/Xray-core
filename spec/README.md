@@ -1,5 +1,16 @@
 # Core Specifications
 
+## Numbering
+
+This repository allocates its own IDs independently of other repositories.
+`spec/` and `draft/` are separate sequences: use the highest allocated ID in
+the same repository and directory plus one (001 when empty). Do not reuse retired
+IDs or consult another repository's counter. IDs stay stable after this migration.
+Cross-repository references include repository and directory, not a bare number.
+Promotion from draft assigns the next spec ID; deferral assigns the next draft
+ID. Record the source-to-destination mapping and reserved old ID in the index,
+update links, and move rather than duplicate the authoritative documents.
+
 This repository owns the contracts, implementation plans and verification
 evidence for its fork-specific features. They do not depend on the configuration
 repository to define Core behavior. Deployment records and consumer tests may
@@ -18,7 +29,10 @@ reference sibling repositories as integration evidence, not implementation input
 
 Each implementation commit owns its corresponding numbered spec; AnyTLS remains
 last. 001 is the cross-feature index, not a separate runtime feature.
-Identifiers are retained from the original inventory for traceability.
+On 2026-09-27 the user authorized repository-local renumbering: old global
+005/006/007/008/009/010/011/012 map to local 001/002/003/004/005/006/007/008.
+Historical hashes, requirement IDs, test names and evidence filenames remain
+provenance, not allocations in the new sequence. Next spec: 009; next draft: 001.
 
 Approved, Implementing, Implemented and Superseded specs live here. Undecided
 proposals belong in `draft/`, not in the implementation backlog. Move documents
@@ -52,7 +66,9 @@ were rerun against newly numbered commits. Shared 001 evidence is included with
 the final 008 commit; earlier commits intentionally contain forward references
 to that final series index and to later specs.
 
-The documentation-bearing series is `refactor/spec-owned-docs-20260927`.
+The current seven-commit series is on local `develop`; the numbering backup is
+`backup/develop-before-local-spec-ids-20260927` at `4a93cc18`.
+The earlier documentation-bearing series is `refactor/spec-owned-docs-20260927`.
 The untouched pre-migration series is preserved as
 `backup/spec-final-pre-docs-20260927` at `cea5d5a1`. See the
 [migration record](001-core-fork-contracts/document-migration.md) for invariants.

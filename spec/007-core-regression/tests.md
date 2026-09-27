@@ -1,7 +1,7 @@
 # 回归基础设施与通用修复验证矩阵
 
 继承 001 稳定 V 编号。2026-09-27 在 `../xray-core-spec` 共享隔离 worktree
-完成本轮补测；[执行证据](../001-core-fork-contracts/@@SPECMAP0@@) 为准确命令、
+完成本轮补测；[执行证据](../001-core-fork-contracts/evidence-011.md) 为准确命令、
 JSON 路径、文件归属和失败边界的权威记录。不是只存在文档或零测试命中。
 
 | ID / 原 FR | 本轮实现与独立断言 | 实际状态 |

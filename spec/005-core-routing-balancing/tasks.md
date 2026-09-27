@@ -19,5 +19,5 @@
   两边各十次 race 通过，TUI xrayapi 完整包 race 通过；无 fake ListRule、无 pin 修改。
 
 T005 是核心范围完成；T010 的真实消费者 RPC 缺口已闭环，非生产网络或 UI 渲染验收。
-[消费者命令与证据](../001-core-fork-contracts/@@SPECMAP0@@)
-[历史重建](../001-core-fork-contracts/reconstruction.md) · [本轮证据](../001-core-fork-contracts/@@SPECMAP1@@)
+[消费者命令与证据](../001-core-fork-contracts/evidence-009-consumers.md)
+[历史重建](../001-core-fork-contracts/reconstruction.md) · [本轮证据](../001-core-fork-contracts/evidence-008-009.md)

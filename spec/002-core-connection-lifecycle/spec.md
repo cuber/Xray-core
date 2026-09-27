@@ -40,7 +40,7 @@ app/proxyman/outbound/handler.go、transport/internet/hysteria/dialer.go。
 逐字节等于原始 HEAD。当前变更不包含运行时实现修改。
 [测试矩阵](tests.md) V-001 至 V-004 在上述边界内已实现并通过 Darwin race 验证。
 正负向命令、退出码、失败试跑见
-[证据报告](../001-core-fork-contracts/@@SPECMAP0@@)。
+[证据报告](../001-core-fork-contracts/evidence-006-007.md)。
 
 这不是任意协议、全部操作系统、生产 Hy2/NAT 或全局 FD 无泄漏认证。
 /dev/fd 枚举在本机不可用；使用自有任务 join、连接关闭断言证明受测资源退出。

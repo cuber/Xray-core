@@ -48,7 +48,7 @@ V-005 至 V-009 在上述范围内已实现并通过 Darwin race；新增监听/
 Linux network-none 容器 race 三轮通过。Windows 受影响测试包已交叉编译，
 未执行 Windows 测试程序。skip 不计为运行通过。
 [tests.md](tests.md)记录平台审查命令；
-[补测证据](../001-core-fork-contracts/@@SPECMAP0@@)保留此前的完整执行记录。
+[补测证据](../001-core-fork-contracts/evidence-006-007.md)保留此前的完整执行记录。
 本轮无生产实现变更、提交、全量或部署声明。
 
 Linux splice 的 downlink 统计在 TCPConn.ReadFrom 返回后提交；测试回显端点

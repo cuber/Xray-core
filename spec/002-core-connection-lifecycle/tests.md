@@ -4,7 +4,7 @@
 Core 路径相对隔离 worktree `/Volumes/Linux/opensource/cuber/xray-core-spec`。
 2026-09-27，Go 1.26.1 darwin/arm64；原始 checkout 未修改。
 
-[证据报告](../001-core-fork-contracts/@@SPECMAP0@@)记录完整跨 002/003
+[证据报告](../001-core-fork-contracts/evidence-006-007.md)记录完整跨 002/003
 命令、失败试跑与退出码：主选择 8 个包、race 三轮退出 0，240 个通过事件
 （含子测试与重复次数，非 240 个独立测试）。
 最终三入口补充命令三轮退出 0、48 个通过事件。无全量或 Windows/Linux 运行声明。

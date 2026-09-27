@@ -17,7 +17,7 @@
 
 ## 已执行与剩余
 
-实现及定向验证见 [@@SPECMAP0@@](../001-core-fork-contracts/@@SPECMAP1@@)。
+实现及定向验证见 [evidence-011](../001-core-fork-contracts/evidence-011.md)。
 六条 vet、V-028 至 V-032 定向验收、V-033 代理/格式负例已通过。
 历史禁网整库暴露的范围外监听计数与 AnyTLS fixture FD 失败已由所属流程修复；
 最后一次整合运行按要求停止，最终全库由父流程执行，不因定向成功宣布全绿。

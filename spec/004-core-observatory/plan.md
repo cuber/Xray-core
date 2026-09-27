@@ -11,7 +11,7 @@
 4. selector 边界（已完成）：使用缓冲结果通道取消等待；回调本身仍须并发安全、
    及时返回并释放资源。禁止宣称可以强制中止不可取消的任意函数。
 5. 验证（已完成）：四包完整 race、新增测试十次重复 race、gofmt 和 diff 检查；
-   准确命令、失败到修复证据、文件归属见 [执行证据](../001-core-fork-contracts/@@SPECMAP0@@)。
+   准确命令、失败到修复证据、文件归属见 [执行证据](../001-core-fork-contracts/evidence-008-009.md)。
 6. 父进程收敛（未完成）：审阅并按 spec 归并修改，统一隔离 clone wrapper 构建；
    当前 worker 不提交、不 checkout、不再尝试构建、不部署。
 

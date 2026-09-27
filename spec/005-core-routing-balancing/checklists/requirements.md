@@ -11,4 +11,4 @@
 - [x] 父进程完成审阅归并及统一隔离 clone 发布构建。
 - [x] 实际 Sidecar/TUI 客户端解码通过；见真实消费者 RPC 证据，core wire 测试不替代此项。
 
-[本轮证据](../../001-core-fork-contracts/@@SPECMAP0@@) · [测试矩阵](../tests.md)
+[本轮证据](../../001-core-fork-contracts/evidence-008-009.md) · [测试矩阵](../tests.md)

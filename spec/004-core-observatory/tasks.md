@@ -16,4 +16,4 @@
 
 本类别核心补测和修复已完成，尚未声明整个发布阶段完成。
 历史记录见 [reconstruction](../001-core-fork-contracts/reconstruction.md)；
-本轮证据见 [@@SPECMAP0@@](../001-core-fork-contracts/@@SPECMAP1@@)。
+本轮证据见 [evidence-008-009](../001-core-fork-contracts/evidence-008-009.md)。

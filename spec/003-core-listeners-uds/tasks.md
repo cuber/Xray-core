@@ -15,7 +15,7 @@
   CloseWrite/EOF 同步，不放宽 5/5；Darwin 十轮及 Linux network-none race 三轮通过。
 - [x] T010 [US-001] 定向验证后通知父流程 002/003 源码冻结，后续仅更新文档。
 
-[补测证据](../001-core-fork-contracts/@@SPECMAP0@@)及
+[补测证据](../001-core-fork-contracts/evidence-006-007.md)及
 [本次平台复验](tests.md#平台审查与实际执行)分别保留原执行和平台修正记录。
 补测完成不表示全平台 CI、提交或发布完成；Linux 定向测试已在容器执行，
 Windows 仅交叉编译。007/父流程在新快照接续全库复验，本轮无提交。

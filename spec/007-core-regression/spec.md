@@ -5,7 +5,7 @@
 - Authorized: 2026-09-27，用户授权在共享隔离 worktree 补齐 V-028 至 V-033、窄范围运行时修复及格式 baseline 修复；主流程统一提交，不部署。
 - Source: 原 Core e7a21974，相对 b4f08981；历史清单见 [001](../001-core-fork-contracts/inventory.md)。
 - Scope: DNS/XHTTP/VLESS、SS2022 资源、VMess vet、Router publication 取消所有权、缓存并发、TLS 证书热重载、离线 fixtures、代理与格式门禁。
-- 原 001 FR-010 至 FR-012 保留稳定追溯；实际差异、命令和退出码见 [本轮证据](../001-core-fork-contracts/@@SPECMAP0@@)。
+- 原 001 FR-010 至 FR-012 保留稳定追溯；实际差异、命令和退出码见 [本轮证据](../001-core-fork-contracts/evidence-011.md)。
 
 ## US-001 — 分类维护与独立验证（P1）
 
@@ -47,7 +47,7 @@ V-033 的代理、fresh-clone 格式负例与真实禁网实验已实现并执�
 
 历史无损重建与本轮用户授权新增修复是两个阶段；不再要求新增修复后的树等于旧 HEAD。
 新增文件由父流程归入 spec007 单笔提交；protobuf 修复另归 003/004/006，见
-[protobuf 证据](../001-core-fork-contracts/@@SPECMAP1@@)。不修改生产状态或远端。
+[protobuf 证据](../001-core-fork-contracts/evidence-protobuf.md)。不修改生产状态或远端。
 
 ## 导航
 

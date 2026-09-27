@@ -11,5 +11,5 @@
 - [x] T007 [US-001] 将 spec/plan/tasks/tests/checklist 同步到实际通过结果。
 - [x] T008 [US-001] 已通知父流程 002/003 源码冻结；后续仅改文档，提交由父流程处理。
 
-[补测证据](../001-core-fork-contracts/@@SPECMAP0@@)记录精确命令与退出码。
+[补测证据](../001-core-fork-contracts/evidence-006-007.md)记录精确命令与退出码。
 补测任务完成不表示提交、全平台 CI、全量回归或部署完成；本轮无提交。

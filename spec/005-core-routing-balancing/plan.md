@@ -11,7 +11,7 @@
 4. 控制面语义（已验证）：重复追加拒绝、整表替换、不存在删除幂等、空 tag 拒绝；
    真实 gRPC 和 direct service 嵌套响应修改均不污染内部状态。
 5. 验证（已完成）：四包完整 race、新增测试十次重复 race、gofmt/diff 检查。
-   [执行证据](../001-core-fork-contracts/@@SPECMAP0@@) 保存命令、结果和日志哈希。
+   [执行证据](../001-core-fork-contracts/evidence-008-009.md) 保存命令、结果和日志哈希。
 6. 父进程收敛（未完成）：审阅归并、统一隔离 clone wrapper 构建、实际 Sidecar/TUI
    解码验证。当前 worker 不提交、不 checkout、不再尝试构建、不部署。
 
