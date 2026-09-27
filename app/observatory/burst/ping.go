@@ -2,6 +2,7 @@ package burst
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -13,14 +14,16 @@ import (
 )
 
 type pingClient struct {
+	ctx         context.Context
 	destination string
 	httpClient  *http.Client
 }
 
-func newPingClient(ctx context.Context, dispatcher routing.Dispatcher, destination string, timeout time.Duration, handler string) *pingClient {
+func newPingClient(ctx context.Context, dispatcher routing.Dispatcher, destination string, timeout time.Duration, handler string, keepAlive bool) *pingClient {
 	return &pingClient{
+		ctx:         ctx,
 		destination: destination,
-		httpClient:  newHTTPClient(ctx, dispatcher, handler, timeout),
+		httpClient:  newHTTPClient(ctx, dispatcher, handler, timeout, keepAlive),
 	}
 }
 
@@ -31,9 +34,9 @@ func newDirectPingClient(destination string, timeout time.Duration) *pingClient 
 	}
 }
 
-func newHTTPClient(ctxv context.Context, dispatcher routing.Dispatcher, handler string, timeout time.Duration) *http.Client {
+func newHTTPClient(ctxv context.Context, dispatcher routing.Dispatcher, handler string, timeout time.Duration, keepAlive bool) *http.Client {
 	tr := &http.Transport{
-		DisableKeepAlives: true,
+		DisableKeepAlives: !keepAlive,
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			dest, err := net.ParseDestination(network + ":" + addr)
 			if err != nil {
@@ -52,13 +55,24 @@ func newHTTPClient(ctxv context.Context, dispatcher routing.Dispatcher, handler 
 	}
 }
 
+func (s *pingClient) CloseIdleConnections() {
+	if s == nil || s.httpClient == nil {
+		return
+	}
+	s.httpClient.CloseIdleConnections()
+}
+
 // MeasureDelay returns the delay time of the request to dest
 func (s *pingClient) MeasureDelay(httpMethod string) (time.Duration, error) {
 	if s.httpClient == nil {
 		panic("pingClient not initialized")
 	}
 
-	req, err := http.NewRequest(httpMethod, s.destination, nil)
+	ctx := s.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	req, err := http.NewRequestWithContext(ctx, httpMethod, s.destination, nil)
 	if err != nil {
 		return rttFailed, err
 	}
@@ -72,10 +86,14 @@ func (s *pingClient) MeasureDelay(httpMethod string) (time.Duration, error) {
 	if httpMethod == http.MethodGet {
 		_, err = io.Copy(io.Discard, resp.Body)
 		if err != nil {
+			resp.Body.Close()
 			return rttFailed, err
 		}
 	}
 	resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		return rttFailed, fmt.Errorf("unexpected health check HTTP status: %s", resp.Status)
+	}
 
 	return time.Since(start), nil
 }

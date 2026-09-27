@@ -20,6 +20,11 @@ type HealthPingSettings struct {
 	SamplingCount int           `json:"sampling"`
 	Timeout       time.Duration `json:"timeout"`
 	HttpMethod    string        `json:"httpMethod"`
+	KeepAlive     bool          `json:"keepAlive"`
+	// DestinationsByPrefix overrides the probe URL for outbound tags matching
+	// the given prefix. Longest matching prefix wins; empty map means all tags
+	// use Destination.
+	DestinationsByPrefix map[string]string `json:"destinationsByPrefix,omitempty"`
 }
 
 // HealthPing is the health checker for balancers
@@ -29,6 +34,15 @@ type HealthPing struct {
 	access      sync.Mutex
 	ticker      *time.Ticker
 	tickerClose chan struct{}
+	schedulerMu sync.Mutex
+	cancel      context.CancelFunc
+	workers     sync.WaitGroup
+
+	// Selector is the tag-prefix selector this HealthPing owns. Set by
+	// Manager when building multi-group observatories; unused by legacy
+	// single-group callers (who pass the selector via StartScheduler's
+	// closure instead).
+	Selector []string
 
 	Settings *HealthPingSettings
 	Results  map[string]*HealthPingRTTS
@@ -46,13 +60,22 @@ func NewHealthPing(ctx context.Context, dispatcher routing.Dispatcher, config *H
 			httpMethod = strings.TrimSpace(config.HttpMethod)
 		}
 
+		var destByPrefix map[string]string
+		if len(config.DestinationsByPrefix) > 0 {
+			destByPrefix = make(map[string]string, len(config.DestinationsByPrefix))
+			for k, v := range config.DestinationsByPrefix {
+				destByPrefix[k] = strings.TrimSpace(v)
+			}
+		}
 		settings = &HealthPingSettings{
-			Connectivity:  strings.TrimSpace(config.Connectivity),
-			Destination:   strings.TrimSpace(config.Destination),
-			Interval:      time.Duration(config.Interval),
-			SamplingCount: int(config.SamplingCount),
-			Timeout:       time.Duration(config.Timeout),
-			HttpMethod:    httpMethod,
+			Connectivity:         strings.TrimSpace(config.Connectivity),
+			Destination:          strings.TrimSpace(config.Destination),
+			Interval:             time.Duration(config.Interval),
+			SamplingCount:        int(config.SamplingCount),
+			Timeout:              time.Duration(config.Timeout),
+			HttpMethod:           httpMethod,
+			KeepAlive:            config.KeepAlive,
+			DestinationsByPrefix: destByPrefix,
 		}
 	}
 	if settings.Destination == "" {
@@ -83,8 +106,13 @@ func NewHealthPing(ctx context.Context, dispatcher routing.Dispatcher, config *H
 	}
 }
 
-// StartScheduler implements the HealthChecker
+// StartScheduler implements the HealthChecker. selector must be concurrency-safe,
+// return promptly, and release its own resources: its legacy signature cannot
+// accept cancellation.
+// Stop cancels waiting for a selector, but cannot terminate the callback itself.
 func (h *HealthPing) StartScheduler(selector func() ([]string, error)) {
+	h.schedulerMu.Lock()
+	defer h.schedulerMu.Unlock()
 	if h.ticker != nil {
 		return
 	}
@@ -93,25 +121,34 @@ func (h *HealthPing) StartScheduler(selector func() ([]string, error)) {
 	tickerClose := make(chan struct{})
 	h.ticker = ticker
 	h.tickerClose = tickerClose
+	ctx, cancel := context.WithCancel(h.ctx)
+	h.cancel = cancel
+	h.workers.Add(2)
 	go func() {
-		tags, err := selector()
+		defer h.workers.Done()
+		tags, err := resolvePingTags(ctx, selector)
 		if err != nil {
 			errors.LogWarning(h.ctx, "error select outbounds for initial health check: ", err)
 			return
 		}
-		h.Check(tags)
+		h.doCheckContext(ctx, tags, 0, 1)
 	}()
 
 	go func() {
+		defer h.workers.Done()
 		for {
+			h.workers.Add(1)
 			go func() {
-				tags, err := selector()
+				defer h.workers.Done()
+				tags, err := resolvePingTags(ctx, selector)
 				if err != nil {
 					errors.LogWarning(h.ctx, "error select outbounds for scheduled health check: ", err)
 					return
 				}
-				h.doCheck(tags, interval, h.Settings.SamplingCount)
-				h.Cleanup(tags)
+				h.doCheckContext(ctx, tags, interval, h.Settings.SamplingCount)
+				if ctx.Err() == nil {
+					h.Cleanup(tags)
+				}
 			}()
 			select {
 			case <-ticker.C:
@@ -125,13 +162,45 @@ func (h *HealthPing) StartScheduler(selector func() ([]string, error)) {
 
 // StopScheduler implements the HealthChecker
 func (h *HealthPing) StopScheduler() {
+	h.schedulerMu.Lock()
+	defer h.schedulerMu.Unlock()
 	if h.ticker == nil {
 		return
 	}
 	h.ticker.Stop()
+	// Serialize cancellation with publishing scheduled results.
+	h.access.Lock()
+	h.cancel()
+	h.access.Unlock()
 	h.ticker = nil
 	close(h.tickerClose)
+	h.workers.Wait()
 	h.tickerClose = nil
+	h.cancel = nil
+}
+
+func resolvePingTags(ctx context.Context, selector func() ([]string, error)) ([]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	type result struct {
+		tags []string
+		err  error
+	}
+	done := make(chan result, 1)
+	go func() {
+		if ctx.Err() != nil {
+			return
+		}
+		tags, err := selector()
+		done <- result{tags: tags, err: err}
+	}()
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case result := <-done:
+		return result.tags, result.err
+	}
 }
 
 // Check implements the HealthChecker
@@ -152,27 +221,44 @@ type rtt struct {
 // doCheck performs the 'rounds' amount checks in given 'duration'. You should make
 // sure all tags are valid for current balancer
 func (h *HealthPing) doCheck(tags []string, duration time.Duration, rounds int) {
+	h.doCheckContext(h.ctx, tags, duration, rounds)
+}
+
+func (h *HealthPing) doCheckContext(ctx context.Context, tags []string, duration time.Duration, rounds int) {
 	count := len(tags) * rounds
 	if count == 0 {
 		return
 	}
 	ch := make(chan *rtt, count)
+	var probes sync.WaitGroup
 
 	for _, tag := range tags {
 		handler := tag
+		destination := h.Settings.destinationFor(tag)
 		client := newPingClient(
-			h.ctx,
+			ctx,
 			h.dispatcher,
-			h.Settings.Destination,
+			destination,
 			h.Settings.Timeout,
 			handler,
+			h.Settings.KeepAlive,
 		)
+		defer client.CloseIdleConnections()
 		for i := 0; i < rounds; i++ {
 			delay := time.Duration(0)
 			if duration > 0 {
 				delay = time.Duration(dice.RollInt63n(int64(duration)))
 			}
-			time.AfterFunc(delay, func() {
+			probes.Add(1)
+			go func() {
+				defer probes.Done()
+				timer := time.NewTimer(delay)
+				defer timer.Stop()
+				select {
+				case <-ctx.Done():
+					return
+				case <-timer.C:
+				}
 				errors.LogDebug(h.ctx, "checking ", handler)
 				delay, err := client.MeasureDelay(h.Settings.HttpMethod)
 				if err == nil {
@@ -182,7 +268,10 @@ func (h *HealthPing) doCheck(tags []string, duration time.Duration, rounds int) 
 					}
 					return
 				}
-				if !h.checkConnectivity() {
+				if ctx.Err() != nil {
+					return
+				}
+				if !h.checkConnectivityContext(ctx) {
 					errors.LogWarning(h.ctx, "network is down")
 					ch <- &rtt{
 						handler: handler,
@@ -192,7 +281,7 @@ func (h *HealthPing) doCheck(tags []string, duration time.Duration, rounds int) 
 				}
 				errors.LogWarning(h.ctx, fmt.Sprintf(
 					"error ping %s with %s: %s",
-					h.Settings.Destination,
+					destination,
 					handler,
 					err,
 				))
@@ -200,14 +289,28 @@ func (h *HealthPing) doCheck(tags []string, duration time.Duration, rounds int) 
 					handler: handler,
 					value:   rttFailed,
 				}
-			})
+			}()
 		}
 	}
+	// Join canceled delayed samples and HTTP requests before closing their clients.
+	defer probes.Wait()
 	for i := 0; i < count; i++ {
-		rtt := <-ch
+		var rtt *rtt
+		select {
+		case <-ctx.Done():
+			return
+		case rtt = <-ch:
+		}
+		if ctx.Err() != nil {
+			return
+		}
 		if rtt.value > 0 {
 			// should not put results when network is down
-			h.PutResult(rtt.handler, rtt.value)
+			h.access.Lock()
+			if ctx.Err() == nil {
+				h.putResultLocked(rtt.handler, rtt.value)
+			}
+			h.access.Unlock()
 		}
 	}
 }
@@ -216,6 +319,10 @@ func (h *HealthPing) doCheck(tags []string, duration time.Duration, rounds int) 
 func (h *HealthPing) PutResult(tag string, rtt time.Duration) {
 	h.access.Lock()
 	defer h.access.Unlock()
+	h.putResultLocked(tag, rtt)
+}
+
+func (h *HealthPing) putResultLocked(tag string, rtt time.Duration) {
 	if h.Results == nil {
 		h.Results = make(map[string]*HealthPingRTTS)
 	}
@@ -251,9 +358,37 @@ func (h *HealthPing) Cleanup(tags []string) {
 	}
 }
 
+// destinationFor returns the probe URL for the given outbound tag. It picks
+// the longest DestinationsByPrefix entry whose key is a prefix of tag; if no
+// prefix matches it returns the global Destination.
+func (s *HealthPingSettings) destinationFor(tag string) string {
+	if len(s.DestinationsByPrefix) == 0 {
+		return s.Destination
+	}
+	bestKey := ""
+	bestVal := ""
+	for prefix, url := range s.DestinationsByPrefix {
+		if url == "" {
+			continue
+		}
+		if strings.HasPrefix(tag, prefix) && len(prefix) >= len(bestKey) {
+			bestKey = prefix
+			bestVal = url
+		}
+	}
+	if bestVal == "" {
+		return s.Destination
+	}
+	return bestVal
+}
+
 // checkConnectivity checks the network connectivity, it returns
 // true if network is good or "connectivity check url" not set
 func (h *HealthPing) checkConnectivity() bool {
+	return h.checkConnectivityContext(h.ctx)
+}
+
+func (h *HealthPing) checkConnectivityContext(ctx context.Context) bool {
 	if h.Settings.Connectivity == "" {
 		return true
 	}
@@ -261,6 +396,8 @@ func (h *HealthPing) checkConnectivity() bool {
 		h.Settings.Connectivity,
 		h.Settings.Timeout,
 	)
+	tester.ctx = ctx
+	defer tester.CloseIdleConnections()
 	if _, err := tester.MeasureDelay(h.Settings.HttpMethod); err != nil {
 		return false
 	}

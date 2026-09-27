@@ -21,18 +21,73 @@ func (o *ObservatoryConfig) Build() (proto.Message, error) {
 }
 
 type BurstObservatoryConfig struct {
-	SubjectSelector []string `json:"subjectSelector"`
-	// health check settings
-	HealthCheck *healthCheckSettings `json:"pingConfig,omitempty"`
+	// Legacy single-group. When `PingGroups` is non-empty, these are ignored.
+	SubjectSelector []string             `json:"subjectSelector"`
+	HealthCheck     *healthCheckSettings `json:"pingConfig,omitempty"`
+	// Multi-group: each entry has its own selector + full HealthPingConfig.
+	// Selectors across groups must NOT overlap (a tag must map to at most
+	// one group). Overlap is reported at config-load / `xray -test` time.
+	PingGroups []*pingGroupSettings `json:"pingGroups,omitempty"`
+}
+
+// pingGroupSettings mirrors burst.HealthPingGroup in JSON.
+type pingGroupSettings struct {
+	SubjectSelector []string             `json:"subjectSelector"`
+	HealthCheck     *healthCheckSettings `json:"pingConfig,omitempty"`
+}
+
+func (g *pingGroupSettings) Build(groupIdx int) (*burst.HealthPingGroup, error) {
+	if g == nil {
+		return nil, errors.New("burstObservatory.pingGroups[", groupIdx, "]: null entry (remove it, or provide a valid {subjectSelector, pingConfig} object)")
+	}
+	if len(g.SubjectSelector) == 0 {
+		return nil, errors.New("burstObservatory.pingGroups[", groupIdx, "].subjectSelector: each group must list at least one tag prefix")
+	}
+	if g.HealthCheck == nil {
+		return nil, errors.New("burstObservatory.pingGroups[", groupIdx, "].pingConfig: each group must have a pingConfig block")
+	}
+	m, err := g.HealthCheck.Build()
+	if err != nil {
+		return nil, errors.New("burstObservatory.pingGroups[", groupIdx, "].pingConfig: ").Base(err)
+	}
+	return &burst.HealthPingGroup{
+		SubjectSelector: g.SubjectSelector,
+		PingConfig:      m.(*burst.HealthPingConfig),
+	}, nil
 }
 
 func (b BurstObservatoryConfig) Build() (proto.Message, error) {
-	if b.HealthCheck == nil {
-		return nil, errors.New("BurstObservatory requires a valid pingConfig")
+	cfg := &burst.Config{}
+
+	if len(b.PingGroups) > 0 {
+		// New-style: pingGroups overrides legacy fields. Accept but warn if
+		// user also set legacy subjectSelector/pingConfig (would be silently
+		// dropped by the runtime).
+		if len(b.SubjectSelector) > 0 || b.HealthCheck != nil {
+			return nil, errors.New("burstObservatory: `pingGroups` is set, so the top-level `subjectSelector` / `pingConfig` would be ignored. Remove them to avoid surprises.")
+		}
+		for i, g := range b.PingGroups {
+			pb, err := g.Build(i)
+			if err != nil {
+				return nil, err
+			}
+			cfg.PingGroups = append(cfg.PingGroups, pb)
+		}
+		if err := burst.ValidatePingGroups(cfg.PingGroups); err != nil {
+			return nil, err
+		}
+		return cfg, nil
 	}
-	if result, err := b.HealthCheck.Build(); err == nil {
-		return &burst.Config{SubjectSelector: b.SubjectSelector, PingConfig: result.(*burst.HealthPingConfig)}, nil
-	} else {
+
+	// Legacy single-group path.
+	if b.HealthCheck == nil {
+		return nil, errors.New("burstObservatory: requires a valid `pingConfig` (or use `pingGroups` for per-prefix configuration)")
+	}
+	m, err := b.HealthCheck.Build()
+	if err != nil {
 		return nil, err
 	}
+	cfg.SubjectSelector = b.SubjectSelector
+	cfg.PingConfig = m.(*burst.HealthPingConfig)
+	return cfg, nil
 }
