@@ -12,13 +12,17 @@ import (
 	"github.com/xtls/xray-core/app/proxyman"
 	. "github.com/xtls/xray-core/app/proxyman/outbound"
 	"github.com/xtls/xray-core/app/stats"
+	"github.com/xtls/xray-core/common/buf"
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/serial"
 	"github.com/xtls/xray-core/common/session"
 	core "github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/features/outbound"
 	"github.com/xtls/xray-core/proxy/freedom"
+	"github.com/xtls/xray-core/transport"
+	"github.com/xtls/xray-core/transport/internet"
 	"github.com/xtls/xray-core/transport/internet/stat"
+	_ "github.com/xtls/xray-core/transport/internet/tcp"
 )
 
 func TestInterfaces(t *testing.T) {
@@ -173,4 +177,73 @@ func TestTagsCache(t *testing.T) {
 	wg_add_rm.Wait()
 	stop_get = true
 	wg_get.Wait()
+}
+
+type recordingHandler struct {
+	tag    string
+	result chan bool
+}
+
+func (h *recordingHandler) Tag() string { return h.tag }
+
+func (h *recordingHandler) Dispatch(ctx context.Context, link *transport.Link) {
+	_, ok := link.Reader.(buf.TimeoutReader)
+	h.result <- ok
+}
+
+func (h *recordingHandler) SenderSettings() *serial.TypedMessage { return nil }
+
+func (h *recordingHandler) ProxySettings() *serial.TypedMessage { return nil }
+
+func (h *recordingHandler) Start() error { return nil }
+
+func (h *recordingHandler) Close() error { return nil }
+
+func TestProxySettingsDialPreservesTimeoutReader(t *testing.T) {
+	ohm, err := New(context.Background(), &proxyman.OutboundConfig{})
+	if err != nil {
+		t.Fatalf("failed to create outbound handler manager: %v", err)
+	}
+
+	config := &core.Config{App: []*serial.TypedMessage{}}
+	v, _ := core.New(config)
+	v.AddFeature(ohm)
+
+	ctx := context.WithValue(context.Background(), xrayKey, v)
+	ctx = session.ContextWithOutbounds(ctx, []*session.Outbound{{}})
+
+	inner := &recordingHandler{
+		tag:    "inner",
+		result: make(chan bool, 1),
+	}
+	if err := ohm.AddHandler(ctx, inner); err != nil {
+		t.Fatalf("failed to add inner handler: %v", err)
+	}
+
+	h, err := NewHandler(ctx, &core.OutboundHandlerConfig{
+		Tag: "outer",
+		SenderSettings: serial.ToTypedMessage(&proxyman.SenderConfig{
+			StreamSettings: &internet.StreamConfig{ProtocolName: "tcp"},
+			ProxySettings:  &internet.ProxyConfig{Tag: inner.tag},
+		}),
+		ProxySettings: serial.ToTypedMessage(&freedom.Config{}),
+	})
+	if err != nil {
+		t.Fatalf("failed to create handler: %v", err)
+	}
+
+	conn, err := h.(*Handler).Dial(ctx, net.TCPDestination(net.DomainAddress("localhost"), 13146))
+	if err != nil {
+		t.Fatalf("dial failed: %v", err)
+	}
+	defer conn.Close()
+
+	select {
+	case ok := <-inner.result:
+		if !ok {
+			t.Fatal("expected proxySettings dispatch reader to implement buf.TimeoutReader")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for inner dispatch")
+	}
 }

@@ -37,6 +37,9 @@
 
 ## Documentation
 
+Local fork: [Core specifications](spec/README.md), feature contracts, implementation
+plans and historical verification evidence owned by this repository.
+
 [Project X Official Website](https://xtls.github.io)
 
 ## Telegram
