@@ -2,6 +2,9 @@ package router
 
 import (
 	"testing"
+	"time"
+
+	"github.com/xtls/xray-core/app/observatory"
 )
 
 /*
@@ -175,5 +178,70 @@ func TestSelectLeastLoadBaselinesNoQualified(t *testing.T) {
 	ns := strategy.selectLeastLoad(nodes)
 	if len(ns) != expected {
 		t.Errorf("expected: %v, actual: %v", expected, len(ns))
+	}
+}
+
+func TestLeastLoadToleranceFiltersFailureRate(t *testing.T) {
+	strategy := &LeastLoadStrategy{
+		settings: &StrategyLeastLoadConfig{
+			MaxRTT:    int64(500 * time.Millisecond),
+			Tolerance: 0.2,
+		},
+	}
+	candidates := []string{"healthy", "boundary", "failing"}
+
+	tests := []struct {
+		name   string
+		status *observatory.OutboundStatus
+		want   bool
+	}{
+		{
+			name: "healthy",
+			status: &observatory.OutboundStatus{
+				Alive:       true,
+				Delay:       100,
+				OutboundTag: "healthy",
+				HealthPing:  &observatory.HealthPingMeasurementResult{All: 20, Fail: 0},
+			},
+			want: true,
+		},
+		{
+			name: "failure rate at boundary",
+			status: &observatory.OutboundStatus{
+				Alive:       true,
+				Delay:       100,
+				OutboundTag: "boundary",
+				HealthPing:  &observatory.HealthPingMeasurementResult{All: 20, Fail: 4},
+			},
+			want: true,
+		},
+		{
+			name: "failure rate above tolerance",
+			status: &observatory.OutboundStatus{
+				Alive:       true,
+				Delay:       100,
+				OutboundTag: "failing",
+				HealthPing:  &observatory.HealthPingMeasurementResult{All: 20, Fail: 5},
+			},
+			want: false,
+		},
+		{
+			name: "average rtt at hard limit",
+			status: &observatory.OutboundStatus{
+				Alive:       true,
+				Delay:       500,
+				OutboundTag: "healthy",
+				HealthPing:  &observatory.HealthPingMeasurementResult{All: 20},
+			},
+			want: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := strategy.shouldSelectNode(test.status, candidates); got != test.want {
+				t.Fatalf("shouldSelectNode() = %v, want %v", got, test.want)
+			}
+		})
 	}
 }
