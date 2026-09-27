@@ -89,3 +89,17 @@ func TestQueryStats(t *testing.T) {
 		t.Error(r)
 	}
 }
+
+func TestGetDomainTrafficBucketsDisabledWithoutChangingStats(t *testing.T) {
+	m, err := stats.NewManager(context.Background(), &stats.Config{})
+	common.Must(err)
+	s := NewStatsServer(m)
+	resp, err := s.GetDomainTrafficBuckets(context.Background(), &GetDomainTrafficBucketsRequest{})
+	common.Must(err)
+	if resp.Enabled {
+		t.Fatal("disabled domain traffic returned enabled=true")
+	}
+	if _, err := m.RegisterCounter("still-available"); err != nil {
+		t.Fatalf("normal stats unavailable: %v", err)
+	}
+}

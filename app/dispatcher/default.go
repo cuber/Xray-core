@@ -34,9 +34,8 @@ type cachedReader struct {
 
 func (r *cachedReader) Cache(b *buf.Buffer, deadline time.Duration) error {
 	mb, err := r.reader.ReadMultiBufferTimeout(deadline)
-	if err != nil {
-		return err
-	}
+	// A read may return payload together with EOF or another error. Keep that
+	// payload for outbound replay even when sniffing itself cannot continue.
 	r.Lock()
 	if !mb.IsEmpty() {
 		r.cache, _ = buf.MergeMulti(r.cache, mb)
@@ -46,7 +45,7 @@ func (r *cachedReader) Cache(b *buf.Buffer, deadline time.Duration) error {
 	n := r.cache.Copy(rawBytes)
 	b.Resize(0, int32(n))
 	r.Unlock()
-	return nil
+	return err
 }
 
 func (r *cachedReader) readInternal() buf.MultiBuffer {
@@ -93,11 +92,12 @@ func (r *cachedReader) Interrupt() {
 
 // DefaultDispatcher is a default implementation of Dispatcher.
 type DefaultDispatcher struct {
-	ohm    outbound.Manager
-	router routing.Router
-	policy policy.Manager
-	stats  stats.Manager
-	fdns   dns.FakeDNSEngine
+	ohm           outbound.Manager
+	router        routing.Router
+	policy        policy.Manager
+	stats         stats.Manager
+	domainTraffic stats.DomainTrafficManager
+	fdns          dns.FakeDNSEngine
 }
 
 func init() {
@@ -121,6 +121,9 @@ func (d *DefaultDispatcher) Init(config *Config, om outbound.Manager, router rou
 	d.router = router
 	d.policy = pm
 	d.stats = sm
+	if domainTraffic, ok := sm.(stats.DomainTrafficManager); ok && domainTraffic.DomainTrafficEnabled() {
+		d.domainTraffic = domainTraffic
+	}
 	return nil
 }
 
@@ -183,6 +186,14 @@ func (d *DefaultDispatcher) getLink(ctx context.Context) (*transport.Link, *tran
 			trackOnlineIP(ctx, d.stats, user.Email, sessionInbound.Source.Address.String())
 		}
 	}
+	if d.domainTraffic != nil {
+		email := ""
+		if user != nil {
+			email = user.Email
+		}
+		inboundLink.Writer = &DomainTrafficWriter{User: email, Recorder: d.domainTraffic, Outbound: session.OutboundsFromContext(ctx), Uplink: true, Writer: inboundLink.Writer}
+		outboundLink.Writer = &DomainTrafficWriter{User: email, Recorder: d.domainTraffic, Outbound: session.OutboundsFromContext(ctx), Writer: outboundLink.Writer}
+	}
 
 	return inboundLink, outboundLink
 }
@@ -216,6 +227,15 @@ func WrapLink(ctx context.Context, policyManager policy.Manager, statsManager st
 		if p.Stats.UserOnline {
 			trackOnlineIP(ctx, statsManager, user.Email, sessionInbound.Source.Address.String())
 		}
+	}
+	if domainTraffic, ok := statsManager.(stats.DomainTrafficManager); ok && domainTraffic.DomainTrafficEnabled() {
+		email := ""
+		if user != nil {
+			email = user.Email
+		}
+		outbounds := session.OutboundsFromContext(ctx)
+		link.Reader = &DomainTrafficReader{User: email, Recorder: domainTraffic, Outbound: outbounds, Reader: link.Reader}
+		link.Writer = &DomainTrafficWriter{User: email, Recorder: domainTraffic, Outbound: outbounds, Writer: link.Writer}
 	}
 
 	return link
