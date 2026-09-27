@@ -155,12 +155,16 @@ func (v NetworkMatcher) Apply(ctx routing.Context) bool {
 }
 
 type UserMatcher struct {
-	user    []string
-	pattern []*regexp.Regexp
+	user        map[string]struct{}
+	emailDomain map[string]struct{}
+	pattern     []*regexp.Regexp
 }
 
+const userDomainPrefix = "domain:"
+
 func NewUserMatcher(users []string) *UserMatcher {
-	usersCopy := make([]string, 0, len(users))
+	usersCopy := make(map[string]struct{}, len(users))
+	emailDomainsCopy := make(map[string]struct{})
 	patternsCopy := make([]*regexp.Regexp, 0, len(users))
 	for _, user := range users {
 		if len(user) > 0 {
@@ -171,12 +175,20 @@ func NewUserMatcher(users []string) *UserMatcher {
 				// Items of users slice with an invalid regexp syntax are ignored.
 				continue
 			}
-			usersCopy = append(usersCopy, user)
+			if strings.HasPrefix(user, userDomainPrefix) {
+				emailDomain := strings.ToLower(user[len(userDomainPrefix):])
+				if emailDomain != "" {
+					emailDomainsCopy[emailDomain] = struct{}{}
+				}
+				continue
+			}
+			usersCopy[user] = struct{}{}
 		}
 	}
 	return &UserMatcher{
-		user:    usersCopy,
-		pattern: patternsCopy,
+		user:        usersCopy,
+		emailDomain: emailDomainsCopy,
+		pattern:     patternsCopy,
 	}
 }
 
@@ -186,9 +198,15 @@ func (v *UserMatcher) Apply(ctx routing.Context) bool {
 	if len(user) == 0 {
 		return false
 	}
-	for _, u := range v.user {
-		if u == user {
-			return true
+	if _, found := v.user[user]; found {
+		return true
+	}
+	if len(v.emailDomain) > 0 {
+		if at := strings.LastIndexByte(user, '@'); at >= 0 {
+			emailDomain := user[at+1:]
+			if _, found := v.emailDomain[strings.ToLower(emailDomain)]; found {
+				return true
+			}
 		}
 	}
 	for _, re := range v.pattern {

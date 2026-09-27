@@ -91,6 +91,20 @@ message StrategyLeastLoadConfig {
   float tolerance = 6;
 }
 
+message StrategyWeightedLeastPingConfig {
+  // Relative selection weights. Higher values receive more connections.
+  repeated StrategyWeight weights = 1;
+  // Hard upper bound for average RTT. Zero disables the bound.
+  int64 maxRTT = 2;
+  // Include nodes whose average RTT is within this distance of the best node.
+  // Zero disables the relative RTT window.
+  int64 rttTolerance = 3;
+  // Acceptable health-check failure rate. Zero disables failure-rate filtering.
+  float tolerance = 4;
+  // Minimum number of health-check samples required before a node is eligible.
+  int32 minSamples = 5;
+}
+
 message Config {
   enum DomainStrategy {
     // Use domain as is.
