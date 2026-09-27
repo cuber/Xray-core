@@ -4,6 +4,7 @@ import (
 	"context"
 	goerrors "errors"
 	"io"
+	stdnet "net"
 	"time"
 
 	"github.com/xtls/xray-core/common"
@@ -60,7 +61,7 @@ func (s *Server) policy() policy.Session {
 
 // Network implements proxy.Inbound.
 func (s *Server) Network() []net.Network {
-	list := []net.Network{net.Network_TCP}
+	list := []net.Network{net.Network_TCP, net.Network_UNIX}
 	if s.config.UdpEnabled {
 		list = append(list, net.Network_UDP)
 	}
@@ -80,7 +81,7 @@ func (s *Server) Process(ctx context.Context, network net.Network, conn stat.Con
 	}
 
 	switch network {
-	case net.Network_TCP:
+	case net.Network_TCP, net.Network_UNIX:
 		firstbyte := make([]byte, 1)
 		if n, err := conn.Read(firstbyte); n == 0 {
 			if goerrors.Is(err, io.EOF) {
@@ -116,7 +117,7 @@ func (s *Server) processTCP(ctx context.Context, conn stat.Connection, dispatche
 		config:       s.config,
 		address:      inbound.Gateway.Address,
 		port:         inbound.Gateway.Port,
-		localAddress: net.IPAddress(conn.LocalAddr().(*net.TCPAddr).IP),
+		localAddress: socksLocalAddress(conn.LocalAddr()),
 	}
 
 	// Firstbyte is for forwarded conn from SOCKS inbound
@@ -177,6 +178,13 @@ func (s *Server) processTCP(ctx context.Context, conn stat.Connection, dispatche
 	}
 
 	return nil
+}
+
+func socksLocalAddress(addr stdnet.Addr) net.Address {
+	if tcpAddr, ok := addr.(*stdnet.TCPAddr); ok && len(tcpAddr.IP) > 0 {
+		return net.IPAddress(tcpAddr.IP)
+	}
+	return net.LocalHostIP
 }
 
 func (*Server) handleUDP(c io.Reader) error {
