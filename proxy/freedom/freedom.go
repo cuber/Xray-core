@@ -122,7 +122,7 @@ func (h *Handler) getBlockedIPMatcher(ctx context.Context, inbound *session.Inbo
 		return nil
 	}
 	switch inbound.Name {
-	case "vmess", "trojan", "hysteria", "wireguard":
+	case "vmess", "trojan", "hysteria", "wireguard", "anytls":
 		errors.LogInfo(ctx, "applying default private IP blocking policy for inbound ", inbound.Name)
 		return defaultPrivateBlockIPMatcher
 	}

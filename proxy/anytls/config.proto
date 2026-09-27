@@ -1,0 +1,15 @@
+syntax = "proto3";
+package xray.proxy.anytls;
+option go_package = "github.com/xtls/xray-core/proxy/anytls";
+import "common/protocol/user.proto";
+
+message Account {
+  string password = 1;
+}
+message ServerConfig {
+  repeated xray.common.protocol.User users = 1;
+  repeated string padding_scheme = 2;
+  uint32 max_sessions = 3;
+  uint32 max_sessions_per_user = 4;
+  uint32 max_streams_per_session = 5;
+}

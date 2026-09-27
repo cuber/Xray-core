@@ -12,6 +12,7 @@ import (
 	"github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/infra/conf"
 	"github.com/xtls/xray-core/infra/conf/serial"
+	"github.com/xtls/xray-core/proxy/anytls"
 	"github.com/xtls/xray-core/proxy/shadowsocks"
 	"github.com/xtls/xray-core/proxy/shadowsocks_2022"
 	"github.com/xtls/xray-core/proxy/trojan"
@@ -77,6 +78,8 @@ func extractInboundUsers(inb *core.InboundHandlerConfig) []*protocol.User {
 		return nil
 	}
 	switch ty := inst.(type) {
+	case *anytls.ServerConfig:
+		return ty.Users
 	case *vmessin.Config:
 		return ty.User
 	case *vlessin.Config:
