@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	stdnet "net"
 	"strings"
 	"testing"
 	"time"
@@ -80,6 +81,20 @@ func TestCommanderListenConfigurationItem(t *testing.T) {
 	common.Must(err)
 	defer CloseAllServers(servers)
 
+	// The first freshly linked executable can start slowly on macOS. Wait for
+	// this listener rather than treating a fixed startup sleep as readiness.
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		conn, err := stdnet.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", clientPort), 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("Xray listener did not become ready: %v", err)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 	if err := testTCPConn(clientPort, 1024, time.Second*5)(); err != nil {
 		t.Fatal(err)
 	}
@@ -428,7 +443,7 @@ func TestCommanderAddRemoveUser(t *testing.T) {
 					Receiver: &protocol.ServerEndpoint{
 						Address: net.NewIPOrDomain(net.LocalHostIP),
 						Port:    uint32(serverPort),
-						User:    &protocol.User{
+						User: &protocol.User{
 							Account: serial.ToTypedMessage(&vmess.Account{
 								Id: u2.String(),
 								SecuritySettings: &protocol.SecurityConfig{
@@ -603,7 +618,7 @@ func TestCommanderStats(t *testing.T) {
 					Receiver: &protocol.ServerEndpoint{
 						Address: net.NewIPOrDomain(net.LocalHostIP),
 						Port:    uint32(serverPort),
-						User:    &protocol.User{
+						User: &protocol.User{
 							Account: serial.ToTypedMessage(&vmess.Account{
 								Id: userID.String(),
 								SecuritySettings: &protocol.SecurityConfig{

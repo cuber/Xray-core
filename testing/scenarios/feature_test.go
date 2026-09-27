@@ -2,8 +2,12 @@ package scenarios
 
 import (
 	"context"
+	"crypto/tls"
+	"github.com/xtls/xray-core/common/geodata"
+	"github.com/xtls/xray-core/testing/servers/dnsfixture"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
@@ -537,6 +541,12 @@ func TestUDPConnection(t *testing.T) {
 }
 
 func TestDomainSniffing(t *testing.T) {
+	cert, roots := dnsfixture.Certificate(t, "sniff.test")
+	target := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = io.WriteString(w, "sniffed") }))
+	target.TLS = &tls.Config{Certificates: []tls.Certificate{cert}}
+	target.StartTLS()
+	defer target.Close()
+	targetPort := target.Listener.Addr().(*net.TCPAddr).Port
 	sniffingPort := tcp.PickPort()
 	httpPort := tcp.PickPort()
 	serverConfig := &core.Config{
@@ -580,7 +590,7 @@ func TestDomainSniffing(t *testing.T) {
 			},
 			{
 				Tag:           "direct",
-				ProxySettings: serial.ToTypedMessage(&freedom.Config{}),
+				ProxySettings: serial.ToTypedMessage(&freedom.Config{DestinationOverride: &freedom.DestinationOverride{Server: &protocol.ServerEndpoint{Address: net.NewIPOrDomain(net.LocalHostIP), Port: uint32(targetPort)}}}),
 			},
 		},
 		App: []*serial.TypedMessage{
@@ -591,6 +601,7 @@ func TestDomainSniffing(t *testing.T) {
 							Tag: "direct",
 						},
 						InboundTag: []string{"snif"},
+						Domain:     []*geodata.DomainRule{{Value: &geodata.DomainRule_Custom{Custom: &geodata.Domain{Type: geodata.Domain_Full, Value: "sniff.test"}}}},
 					}, {
 						TargetTag: &router.RoutingRule_Tag{
 							Tag: "redir",
@@ -612,17 +623,23 @@ func TestDomainSniffing(t *testing.T) {
 
 	{
 		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{RootCAs: roots},
 			Proxy: func(req *http.Request) (*url.URL, error) {
 				return url.Parse("http://127.0.0.1:" + httpPort.String())
 			},
 		}
 
+		defer transport.CloseIdleConnections()
 		client := &http.Client{
+			Timeout:   10 * time.Second,
 			Transport: transport,
 		}
 
-		resp, err := client.Get("https://www.github.com/")
-		common.Must(err)
+		resp, err := client.Get("https://sniff.test/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
 		if resp.StatusCode != 200 {
 			t.Error("unexpected status code: ", resp.StatusCode)
 		}

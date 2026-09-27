@@ -38,6 +38,11 @@ type DoHNameServer struct {
 
 // NewDoHNameServer creates DOH/DOHL client object for remote/local resolving.
 func NewDoHNameServer(url *url.URL, dispatcher routing.Dispatcher, h2c bool, disableCache bool, serveStale bool, serveExpiredTTL uint32, clientIP net.IP) *DoHNameServer {
+	return newDoHNameServer(url, dispatcher, h2c, disableCache, serveStale, serveExpiredTTL, clientIP, nil)
+}
+
+// The private constructor permits isolated TLS trust without changing global roots.
+func newDoHNameServer(url *url.URL, dispatcher routing.Dispatcher, h2c bool, disableCache bool, serveStale bool, serveExpiredTTL uint32, clientIP net.IP, trust *utls.Config) *DoHNameServer {
 	url.Scheme = "https"
 	mode := "DOH"
 	if dispatcher == nil {
@@ -99,8 +104,14 @@ func NewDoHNameServer(url *url.URL, dispatcher routing.Dispatcher, h2c bool, dis
 					}
 				}
 				if !h2c {
-					conn = utls.UClient(conn, &utls.Config{ServerName: url.Hostname()}, utls.HelloChrome_Auto)
+					config := &utls.Config{ServerName: url.Hostname()}
+					if trust != nil {
+						config = trust.Clone()
+						config.ServerName = url.Hostname()
+					}
+					conn = utls.UClient(conn, config, utls.HelloChrome_Auto)
 					if err := conn.(*utls.UConn).HandshakeContext(ctx); err != nil {
+						conn.Close()
 						return nil, err
 					}
 				}
