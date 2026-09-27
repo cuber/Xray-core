@@ -38,5 +38,27 @@ func TestFreedomConfig(t *testing.T) {
 				UserLevel: 1,
 			},
 		},
+		{
+			Input: `{
+				"domainStrategy": "AsIs",
+				"redirect": "unix:/run/xray-sidecar/probe.sock",
+				"userLevel": 1
+			}`,
+			Parser: loadJSON(creator),
+			Output: &freedom.Config{
+				DomainStrategy: internet.DomainStrategy_AS_IS,
+				DestinationOverride: &freedom.DestinationOverride{
+					Network: net.Network_UNIX,
+					Server: &protocol.ServerEndpoint{
+						Address: &net.IPOrDomain{
+							Address: &net.IPOrDomain_Domain{
+								Domain: "/run/xray-sidecar/probe.sock",
+							},
+						},
+					},
+				},
+				UserLevel: 1,
+			},
+		},
 	})
 }

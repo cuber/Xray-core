@@ -137,6 +137,10 @@ func isBlockedAddress(matcher geodata.IPMatcher, addr net.Address) bool {
 	return matcher != nil && addr != nil && addr.Family().IsIP() && matcher.Match(addr.IP())
 }
 
+func isStreamNetwork(network net.Network) bool {
+	return network == net.Network_TCP || network == net.Network_UNIX
+}
+
 // Process implements proxy.Outbound.
 func (h *Handler) Process(ctx context.Context, link *transport.Link, dialer internet.Dialer) error {
 	outbounds := session.OutboundsFromContext(ctx)
@@ -158,6 +162,9 @@ func (h *Handler) Process(ctx context.Context, link *transport.Link, dialer inte
 	outGateway := ob.Gateway
 	UDPOverride := net.UDPDestination(nil, 0)
 	if h.config.DestinationOverride != nil {
+		if h.config.DestinationOverride.Network != net.Network_Unknown {
+			destination.Network = h.config.DestinationOverride.Network
+		}
 		server := h.config.DestinationOverride.Server
 		if isValidAddress(server.Address) {
 			destination.Address = server.Address.AsAddress()
@@ -175,7 +182,7 @@ func (h *Handler) Process(ctx context.Context, link *transport.Link, dialer inte
 	var conn stat.Connection
 	err := retry.ExponentialBackoff(5, 100).On(func() error {
 		dialDest := destination
-		if h.config.DomainStrategy.HasStrategy() && dialDest.Address.Family().IsDomain() {
+		if dialDest.Network != net.Network_UNIX && h.config.DomainStrategy.HasStrategy() && dialDest.Address.Family().IsDomain() {
 			strategy := h.config.DomainStrategy
 			if destination.Network == net.Network_UDP && origTargetAddr != nil && outGateway == nil {
 				strategy = strategy.GetDynamicStrategy(origTargetAddr.Family())
@@ -243,7 +250,7 @@ func (h *Handler) Process(ctx context.Context, link *transport.Link, dialer inte
 		defer timer.SetTimeout(plcy.Timeouts.DownlinkOnly)
 
 		var writer buf.Writer
-		if destination.Network == net.Network_TCP {
+		if isStreamNetwork(destination.Network) {
 			if h.config.Fragment != nil {
 				errors.LogDebug(ctx, "FRAGMENT", h.config.Fragment.PacketsFrom, h.config.Fragment.PacketsTo, h.config.Fragment.LengthMin, h.config.Fragment.LengthMax,
 					h.config.Fragment.IntervalMin, h.config.Fragment.IntervalMax, h.config.Fragment.MaxSplitMin, h.config.Fragment.MaxSplitMax)
@@ -287,7 +294,7 @@ func (h *Handler) Process(ctx context.Context, link *transport.Link, dialer inte
 			return proxy.CopyRawConnIfExist(ctx, conn, writeConn, link.Writer, timer, inTimer)
 		}
 		var reader buf.Reader
-		if destination.Network == net.Network_TCP {
+		if isStreamNetwork(destination.Network) {
 			reader = buf.NewReader(conn)
 		} else {
 			reader = NewPacketReader(conn, UDPOverride, destination, blockedIPMatcher)

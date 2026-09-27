@@ -1,6 +1,9 @@
 package scenarios
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -21,6 +24,60 @@ import (
 	xproxy "golang.org/x/net/proxy"
 	socks4 "h12.io/socks"
 )
+
+func TestSocksUnixSocket(t *testing.T) {
+	tcpServer := tcp.Server{
+		MsgProcessor: xor,
+	}
+	dest, err := tcpServer.Start()
+	common.Must(err)
+	defer tcpServer.Close()
+
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("xray-socks-%d-%d.sock", os.Getpid(), time.Now().UnixNano()))
+	defer os.Remove(socketPath)
+
+	serverConfig := &core.Config{
+		Inbound: []*core.InboundHandlerConfig{
+			{
+				ReceiverSettings: serial.ToTypedMessage(&proxyman.ReceiverConfig{
+					Listen: net.NewIPOrDomain(net.DomainAddress(socketPath)),
+				}),
+				ProxySettings: serial.ToTypedMessage(&socks.ServerConfig{
+					AuthType: socks.AuthType_PASSWORD,
+					Accounts: map[string]string{
+						"Test Account": "Test Password",
+					},
+					Address:    net.NewIPOrDomain(net.LocalHostIP),
+					UdpEnabled: false,
+				}),
+			},
+		},
+		Outbound: []*core.OutboundHandlerConfig{
+			{
+				ProxySettings: serial.ToTypedMessage(&freedom.Config{
+					IpsBlocked: &freedom.IPRules{},
+				}),
+			},
+		},
+	}
+
+	servers, err := InitializeServerConfigs(serverConfig)
+	common.Must(err)
+	defer CloseAllServers(servers)
+
+	dialer, err := xproxy.SOCKS5("unix", socketPath, &xproxy.Auth{
+		User:     "Test Account",
+		Password: "Test Password",
+	}, xproxy.Direct)
+	common.Must(err)
+	conn, err := dialer.Dial("tcp", dest.NetAddr())
+	common.Must(err)
+	defer conn.Close()
+
+	if err := testTCPConn2(conn, 1024, time.Second*5)(); err != nil {
+		t.Error(err)
+	}
+}
 
 func TestSocksBridgeTCP(t *testing.T) {
 	tcpServer := tcp.Server{
