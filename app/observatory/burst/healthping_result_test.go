@@ -17,6 +17,7 @@ func TestHealthPingResults(t *testing.T) {
 	}
 	rttFailed := time.Duration(math.MaxInt64)
 	expected := &burst.HealthPingStats{
+		Alive:     true,
 		All:       4,
 		Fail:      0,
 		Deviation: 40,
@@ -30,6 +31,7 @@ func TestHealthPingResults(t *testing.T) {
 	}
 	hr.Put(rttFailed)
 	hr.Put(rttFailed)
+	expected.Alive = false
 	expected.Fail = 2
 	actual = hr.Get()
 	if !reflect.DeepEqual(expected, actual) {
@@ -101,6 +103,22 @@ func TestHealthPingResultsIgnoreOutdated(t *testing.T) {
 	}
 	actual = hr.Get()
 	if !reflect.DeepEqual(expected, actual) {
-		t.Errorf("expected: %v, actual: %v", expected, actual)
+		t.Errorf("expected first recovery sample to remain dead: %v, actual: %v", expected, actual)
+	}
+
+	hr.Put(time.Duration(60))
+	hr.Put(time.Duration(60))
+	expected = &burst.HealthPingStats{
+		Alive:     true,
+		All:       3,
+		Fail:      0,
+		Deviation: 0,
+		Average:   60,
+		Max:       60,
+		Min:       60,
+	}
+	actual = hr.Get()
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("expected third recovery sample to restore alive: %v, actual: %v", expected, actual)
 	}
 }
