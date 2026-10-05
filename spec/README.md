@@ -32,7 +32,9 @@ last. 001 is the cross-feature index, not a separate runtime feature.
 On 2026-09-27 the user authorized repository-local renumbering: old global
 005/006/007/008/009/010/011/012 map to local 001/002/003/004/005/006/007/008.
 Historical hashes, requirement IDs, test names and evidence filenames remain
-provenance, not allocations in the new sequence. Next spec: 009; next draft: 001.
+provenance, not allocations in the new sequence. Next spec: 009; next draft: 003.
+The upstream synchronization proposal is [draft002](../draft/002-upstream-sync/spec.md),
+explicitly numbered by the user on 2026-10-05. It is not implementation scope.
 
 Approved, Implementing, Implemented and Superseded specs live here. Undecided
 proposals belong in `draft/`, not in the implementation backlog. Move documents

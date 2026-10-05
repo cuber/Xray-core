@@ -23,7 +23,6 @@ import (
 	"github.com/xtls/xray-core/common/protocol"
 	"github.com/xtls/xray-core/common/session"
 	"github.com/xtls/xray-core/common/signal"
-	"github.com/xtls/xray-core/common/singbridge"
 	"github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/features/policy"
 	"github.com/xtls/xray-core/features/routing"
@@ -420,7 +419,7 @@ func (s *Server) NewConnectionEx(ctx context.Context, conn net.Conn, source, des
 	if dest.Fqdn == uot.LegacyMagicAddress || dest.Fqdn == "v1.mux.cool" || !dest.IsValid() || dest.Port == 0 {
 		return
 	}
-	target := singbridge.ToDestination(dest, net.Network_TCP)
+	target := toDestination(dest, net.Network_TCP)
 	ctx = log.ContextWithAccessMessage(ctx, &log.AccessMessage{From: source, To: target, Status: log.AccessAccepted, Email: u.Email})
 	s.copyTCP(ctx, conn, target)
 }

@@ -16,7 +16,6 @@ import (
 	"github.com/xtls/xray-core/common/protocol"
 	"github.com/xtls/xray-core/common/session"
 	"github.com/xtls/xray-core/common/signal"
-	"github.com/xtls/xray-core/common/singbridge"
 	"github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/features/policy"
 	engine "github.com/xtls/xray-core/proxy/anytls/internal/engine"
@@ -204,7 +203,7 @@ func (c *Client) Process(parent context.Context, link *transport.Link, dialer in
 	p := c.policy.ForLevel(c.server.User.Level)
 	dialCtx, dialCancel := context.WithTimeout(ctx, p.Timeouts.Handshake)
 	dialCtx = context.WithValue(dialCtx, clientDialKey{}, clientDial{dialer: dialer, tags: tags})
-	target := singbridge.ToSocksaddr(destination)
+	target := toSocksaddr(destination)
 	if destination.Network == net.Network_UDP {
 		target = M.Socksaddr{Fqdn: uot.MagicAddress, Port: 443}
 	}
@@ -245,7 +244,7 @@ func (c *Client) Process(parent context.Context, link *transport.Link, dialer in
 	var reader buf.Reader = buf.NewReader(conn)
 	var writer buf.Writer = buf.NewWriter(conn)
 	if destination.Network == net.Network_UDP {
-		request := uot.Request{Destination: singbridge.ToSocksaddr(destination)}
+		request := uot.Request{Destination: toSocksaddr(destination)}
 		conn.SetWriteDeadline(time.Now().Add(p.Timeouts.Handshake))
 		err = uot.WriteRequest(conn, request)
 		conn.SetWriteDeadline(time.Time{})

@@ -40,6 +40,9 @@
 Local fork: [Core specifications](spec/README.md), feature contracts, implementation
 plans and historical verification evidence owned by this repository.
 
+Local fork: [draft designs](draft/README.md), including the WIP upstream-sync
+review; drafts do not authorize implementation or deployment.
+
 Local fork: [AnyTLS inbound](proxy/anytls/README.md) configuration, control plane,
 statistics, resource limits and interoperability tests.
 

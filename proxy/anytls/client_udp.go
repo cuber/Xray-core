@@ -7,7 +7,6 @@ import (
 	"github.com/sagernet/sing/common/uot"
 	"github.com/xtls/xray-core/common/buf"
 	"github.com/xtls/xray-core/common/net"
-	"github.com/xtls/xray-core/common/singbridge"
 )
 
 type clientPackets struct {
@@ -25,7 +24,7 @@ func (p *clientPackets) WriteMultiBuffer(mb buf.MultiBuffer) error {
 		if b.IsEmpty() || b.Len() > buf.Size || !dest.IsValid() || dest.Port == 0 {
 			return fmt.Errorf("anytls: invalid UDP target or unsupported payload size")
 		}
-		if err := p.conn.WritePacket(B.As(b.Bytes()), singbridge.ToSocksaddr(dest)); err != nil {
+		if err := p.conn.WritePacket(B.As(b.Bytes()), toSocksaddr(dest)); err != nil {
 			return err
 		}
 	}
@@ -46,7 +45,7 @@ func (p *clientPackets) ReadMultiBuffer() (buf.MultiBuffer, error) {
 	}
 	b := buf.New()
 	b.Write(packet.Bytes())
-	target := singbridge.ToDestination(dest, net.Network_UDP)
+	target := toDestination(dest, net.Network_UDP)
 	b.UDP = &target
 	return buf.MultiBuffer{b}, nil
 }

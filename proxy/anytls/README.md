@@ -4,6 +4,11 @@ Local fork implementation with inbound and native outbound adapters. No AnyTLS
 subscription renderer is added here. Production rollout is tracked separately in
 [`spec/008-anytls/`](../../spec/008-anytls/spec.md) in this repository.
 
+Sing/Core destination conversion lives in protocol-local `address.go`. AnyTLS
+does not import the legacy `common/singbridge` adapters; its engine and UoT still
+use the pinned `sing` dependency. This does not change pool, routing, policy or
+statistics ownership. See [address adapter isolation](../../spec/008-anytls/address-adapter.md).
+
 Use standard Xray inbound fields and `streamSettings.network: "raw"`,
 `security: "tls"`, and normal `tlsSettings.certificates`. Plaintext, REALITY and
 non-TCP transports are rejected, including control-plane creation.
