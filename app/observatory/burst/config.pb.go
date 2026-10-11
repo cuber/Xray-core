@@ -167,7 +167,9 @@ type HealthPingConfig struct {
 	// legacy burst observatory behavior unchanged.
 	KeepAlive bool `protobuf:"varint,8,opt,name=keep_alive,json=keepAlive,proto3" json:"keep_alive,omitempty"`
 	// Attempt HTTP/2 over TLS, falling back to HTTP/1.1. Disabled by default.
-	Http2         bool `protobuf:"varint,9,opt,name=http2,proto3" json:"http2,omitempty"`
+	Http2 bool `protobuf:"varint,9,opt,name=http2,proto3" json:"http2,omitempty"`
+	// Optional bounded probe retries. All attempts share the ping timeout.
+	Retry         *ProbeRetryConfig `protobuf:"bytes,10,opt,name=retry,proto3" json:"retry,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -265,6 +267,73 @@ func (x *HealthPingConfig) GetHttp2() bool {
 	return false
 }
 
+func (x *HealthPingConfig) GetRetry() *ProbeRetryConfig {
+	if x != nil {
+		return x.Retry
+	}
+	return nil
+}
+
+type ProbeRetryConfig struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	MaxRetries     int32                  `protobuf:"varint,1,opt,name=max_retries,json=maxRetries,proto3" json:"max_retries,omitempty"`
+	InitialBackoff int64                  `protobuf:"varint,2,opt,name=initial_backoff,json=initialBackoff,proto3" json:"initial_backoff,omitempty"`
+	MaxBackoff     int64                  `protobuf:"varint,3,opt,name=max_backoff,json=maxBackoff,proto3" json:"max_backoff,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ProbeRetryConfig) Reset() {
+	*x = ProbeRetryConfig{}
+	mi := &file_app_observatory_burst_config_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProbeRetryConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProbeRetryConfig) ProtoMessage() {}
+
+func (x *ProbeRetryConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_app_observatory_burst_config_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProbeRetryConfig.ProtoReflect.Descriptor instead.
+func (*ProbeRetryConfig) Descriptor() ([]byte, []int) {
+	return file_app_observatory_burst_config_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ProbeRetryConfig) GetMaxRetries() int32 {
+	if x != nil {
+		return x.MaxRetries
+	}
+	return 0
+}
+
+func (x *ProbeRetryConfig) GetInitialBackoff() int64 {
+	if x != nil {
+		return x.InitialBackoff
+	}
+	return 0
+}
+
+func (x *ProbeRetryConfig) GetMaxBackoff() int64 {
+	if x != nil {
+		return x.MaxBackoff
+	}
+	return 0
+}
+
 var File_app_observatory_burst_config_proto protoreflect.FileDescriptor
 
 const file_app_observatory_burst_config_proto_rawDesc = "" +
@@ -279,7 +348,7 @@ const file_app_observatory_burst_config_proto_rawDesc = "" +
 	"\x0fHealthPingGroup\x12)\n" +
 	"\x10subject_selector\x18\x01 \x03(\tR\x0fsubjectSelector\x12R\n" +
 	"\vping_config\x18\x02 \x01(\v21.xray.core.app.observatory.burst.HealthPingConfigR\n" +
-	"pingConfig\"\xd6\x03\n" +
+	"pingConfig\"\x9f\x04\n" +
 	"\x10HealthPingConfig\x12 \n" +
 	"\vdestination\x18\x01 \x01(\tR\vdestination\x12\"\n" +
 	"\fconnectivity\x18\x02 \x01(\tR\fconnectivity\x12\x1a\n" +
@@ -292,10 +361,18 @@ const file_app_observatory_burst_config_proto_rawDesc = "" +
 	"\x16destinations_by_prefix\x18\a \x03(\v2K.xray.core.app.observatory.burst.HealthPingConfig.DestinationsByPrefixEntryR\x14destinationsByPrefix\x12\x1d\n" +
 	"\n" +
 	"keep_alive\x18\b \x01(\bR\tkeepAlive\x12\x14\n" +
-	"\x05http2\x18\t \x01(\bR\x05http2\x1aG\n" +
+	"\x05http2\x18\t \x01(\bR\x05http2\x12G\n" +
+	"\x05retry\x18\n" +
+	" \x01(\v21.xray.core.app.observatory.burst.ProbeRetryConfigR\x05retry\x1aG\n" +
 	"\x19DestinationsByPrefixEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01Bp\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"}\n" +
+	"\x10ProbeRetryConfig\x12\x1f\n" +
+	"\vmax_retries\x18\x01 \x01(\x05R\n" +
+	"maxRetries\x12'\n" +
+	"\x0finitial_backoff\x18\x02 \x01(\x03R\x0einitialBackoff\x12\x1f\n" +
+	"\vmax_backoff\x18\x03 \x01(\x03R\n" +
+	"maxBackoffBp\n" +
 	"\x1ecom.xray.app.observatory.burstP\x01Z/github.com/xtls/xray-core/app/observatory/burst\xaa\x02\x1aXray.App.Observatory.Burstb\x06proto3"
 
 var (
@@ -310,23 +387,25 @@ func file_app_observatory_burst_config_proto_rawDescGZIP() []byte {
 	return file_app_observatory_burst_config_proto_rawDescData
 }
 
-var file_app_observatory_burst_config_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_app_observatory_burst_config_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_app_observatory_burst_config_proto_goTypes = []any{
 	(*Config)(nil),           // 0: xray.core.app.observatory.burst.Config
 	(*HealthPingGroup)(nil),  // 1: xray.core.app.observatory.burst.HealthPingGroup
 	(*HealthPingConfig)(nil), // 2: xray.core.app.observatory.burst.HealthPingConfig
-	nil,                      // 3: xray.core.app.observatory.burst.HealthPingConfig.DestinationsByPrefixEntry
+	(*ProbeRetryConfig)(nil), // 3: xray.core.app.observatory.burst.ProbeRetryConfig
+	nil,                      // 4: xray.core.app.observatory.burst.HealthPingConfig.DestinationsByPrefixEntry
 }
 var file_app_observatory_burst_config_proto_depIdxs = []int32{
 	2, // 0: xray.core.app.observatory.burst.Config.ping_config:type_name -> xray.core.app.observatory.burst.HealthPingConfig
 	1, // 1: xray.core.app.observatory.burst.Config.ping_groups:type_name -> xray.core.app.observatory.burst.HealthPingGroup
 	2, // 2: xray.core.app.observatory.burst.HealthPingGroup.ping_config:type_name -> xray.core.app.observatory.burst.HealthPingConfig
-	3, // 3: xray.core.app.observatory.burst.HealthPingConfig.destinations_by_prefix:type_name -> xray.core.app.observatory.burst.HealthPingConfig.DestinationsByPrefixEntry
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	4, // 3: xray.core.app.observatory.burst.HealthPingConfig.destinations_by_prefix:type_name -> xray.core.app.observatory.burst.HealthPingConfig.DestinationsByPrefixEntry
+	3, // 4: xray.core.app.observatory.burst.HealthPingConfig.retry:type_name -> xray.core.app.observatory.burst.ProbeRetryConfig
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_app_observatory_burst_config_proto_init() }
@@ -340,7 +419,7 @@ func file_app_observatory_burst_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_app_observatory_burst_config_proto_rawDesc), len(file_app_observatory_burst_config_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

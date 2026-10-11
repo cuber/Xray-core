@@ -53,4 +53,12 @@ message HealthPingConfig {
   bool keep_alive = 8;
   // Attempt HTTP/2 over TLS, falling back to HTTP/1.1. Disabled by default.
   bool http2 = 9;
+  // Optional bounded probe retries. All attempts share the ping timeout.
+  ProbeRetryConfig retry = 10;
+}
+
+message ProbeRetryConfig {
+  int32 max_retries = 1;
+  int64 initial_backoff = 2;
+  int64 max_backoff = 3;
 }

@@ -26,3 +26,17 @@
 - [x] T013 本地提交、Darwin/Linux 正式构建及新/旧配置校验，保持生产不变。
 
 HTTP/2 增量验证记录见 [验收证据](http2-acceptance.md)，明确全库的 opt-in 跳过项。
+
+## Probe Retry Increment
+
+- [x] T014 [FR-003] Implement the shared bounded/context-aware helper, typed
+  errors and exponential capped jitter; unit tests and arithmetic boundaries.
+- [x] T015 [FR-003] Add JSON/proto/runtime policy and idempotent-method gates;
+  round-trip, default, invalid and group-isolation tests.
+- [x] T016 [FR-003] One-deadline main probes, total RTT and one final sample;
+  failure/recovery, H1/H2 pool isolation, timeout and scheduler-stop tests.
+- [x] T017 [FR-003] Full regression, repeated race, vet and documented evidence;
+  record the initial UDP scenario timeout and five successful isolated reruns.
+- [x] T018 [FR-003] Local commit, approved dual-platform build and Darwin config
+  validation. Later authorized Shlii-only enablement belongs in xray-config;
+  this does not enable retries by default or authorize fleet deployment.

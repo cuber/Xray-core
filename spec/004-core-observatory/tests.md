@@ -1,5 +1,10 @@
 # Observatory 验证矩阵
 
+2026-10-12 optional retry increment: V-016 is covered by
+[retry-acceptance.md](retry-acceptance.md), including helper/config validation,
+actual H1/H2 reuse, concurrent pool isolation, one final health sample,
+unchanged recovery, total deadline and stopping during backoff.
+
 V-010 至 V-014 核心补测已实现并通过 race（2026-09-27），不再是 harness 设计稿。
 新增代码在 /Volumes/Linux/opensource/cuber/xray-core-spec；下列 core 路径相对该 worktree。
 原有 manager/ping/healthping/config 测试保留并随完整目标包运行。
