@@ -17,3 +17,12 @@
 本类别核心补测和修复已完成，尚未声明整个发布阶段完成。
 历史记录见 [reconstruction](../001-core-fork-contracts/reconstruction.md)；
 本轮证据见 [evidence-008-009](../001-core-fork-contracts/evidence-008-009.md)。
+
+## HTTP/2 增量任务（2026-10-11）
+
+- [x] T010 将布尔 http2 从 JSON/proto 传至主 OB transport，默认 H1，TLS ALPN 回退。
+- [x] T011 补受控协商、连接复用/关闭、失败、取消、h2c 排除和配置往返测试。
+- [x] T012 重复 race、相关回归、全库测试、vet、格式门禁通过并记录结果。
+- [x] T013 本地提交、Darwin/Linux 正式构建及新/旧配置校验，保持生产不变。
+
+HTTP/2 增量验证记录见 [验收证据](http2-acceptance.md)，明确全库的 opt-in 跳过项。

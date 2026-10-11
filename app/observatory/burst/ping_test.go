@@ -29,7 +29,7 @@ func TestNewHTTPClientKeepAlive(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			client := newHTTPClient(context.Background(), nil, "test-handler", time.Second, tc.keepAlive)
+			client := newHTTPClient(context.Background(), nil, "test-handler", time.Second, tc.keepAlive, false)
 			transport, ok := client.Transport.(*http.Transport)
 			if !ok {
 				t.Fatalf("transport type = %T, want *http.Transport", client.Transport)

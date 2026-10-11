@@ -15,7 +15,7 @@ Then 分别记录历史一致性、当前实际运行时变化和验证边界，
 ## FR-001 — 当前实现契约
 
 - pingGroups 独立配置 selector、destination、interval、timeout、sampling、
-  httpMethod、keepAlive；旧 subjectSelector/pingConfig 保持可用。
+  httpMethod、keepAlive、http2；旧 subjectSelector/pingConfig 保持可用。
 - 跨组相同或前缀覆盖 selector 拒绝，同组完全重复拒绝；同组嵌套允许。
   旧空 selector 是 no-op，不解析标签、不启动探测。
 - destinationsByPrefix 使用最长前缀，未命中回默认 URL；query 原样保留。
@@ -53,3 +53,33 @@ V-010 至 V-014 的核心 harness 已实现并在四包完整 race 及新增测�
 ## 导航
 
 [技术计划](plan.md) · [任务](tasks.md) · [检查清单](checklists/requirements.md)
+
+## FR-002 — 可选 HTTP/2（2026-10-11）
+
+用户授权增加 `pingConfig.http2`，只扩展 Core 主 OB 请求的协议协商，
+不改变已部署配置或 Sidecar 的 egress HTTP 客户端。
+
+- `http2` 为布尔值，缺省/false 保持 HTTP/1.1。旧单组和 `pingGroups` 均支持，
+  protobuf 追加字段 9，保留原字段编号；每组独立传递到运行时。
+- true 使用 Go 标准 `http.Transport.ForceAttemptHTTP2`，通过 TLS ALPN 尝试
+  HTTP/2；服务端只支持 HTTP/1.1 时正常回退。`http://` 不启用 h2c。
+- `http2` 不隐式打开 `keepAlive`，也不修改 method、URL/query、超时、selector、
+  204 成功判定或健康恢复策略。`keepAlive=true` 才允许跨请求保留连接；
+  同一 tag/轮次共享 transport，轮末释放空闲连接，不保证跨轮复用。
+- 保留真实出站 tagged dialer、请求/连接取消所有权和 TLS 证书验证，
+  不新增协议专用拨号器，不采用 `InsecureSkipVerify` 绕过测试。
+- 本地验证必须观察服务端 `Request.ProtoMajor`、连接数与 query，不以
+  `ForceAttemptHTTP2` 字段为 true 代替实际协商验证。详见 tests.md 的 V-015。
+
+配置示例（HTTP/2 与连接复用均为显式启用）：
+
+```json
+"pingConfig": {
+  "destination": "https://cp.cloudflare.com/generate_204",
+  "interval": "30s",
+  "timeout": "5s",
+  "sampling": 25,
+  "keepAlive": true,
+  "http2": true
+}
+```

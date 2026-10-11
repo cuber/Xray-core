@@ -29,11 +29,11 @@ func (c *pingConnection) Close() error {
 	return c.Conn.Close()
 }
 
-func newPingClient(ctx context.Context, dispatcher routing.Dispatcher, destination string, timeout time.Duration, handler string, keepAlive bool) *pingClient {
+func newPingClient(ctx context.Context, dispatcher routing.Dispatcher, destination string, timeout time.Duration, handler string, keepAlive, http2 bool) *pingClient {
 	return &pingClient{
 		ctx:         ctx,
 		destination: destination,
-		httpClient:  newHTTPClient(ctx, dispatcher, handler, timeout, keepAlive),
+		httpClient:  newHTTPClient(ctx, dispatcher, handler, timeout, keepAlive, http2),
 	}
 }
 
@@ -44,9 +44,10 @@ func newDirectPingClient(destination string, timeout time.Duration) *pingClient 
 	}
 }
 
-func newHTTPClient(ctxv context.Context, dispatcher routing.Dispatcher, handler string, timeout time.Duration, keepAlive bool) *http.Client {
+func newHTTPClient(ctxv context.Context, dispatcher routing.Dispatcher, handler string, timeout time.Duration, keepAlive, http2 bool) *http.Client {
 	tr := &http.Transport{
 		DisableKeepAlives: !keepAlive,
+		ForceAttemptHTTP2: http2,
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			dest, err := net.ParseDestination(network + ":" + addr)
 			if err != nil {
