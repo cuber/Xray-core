@@ -51,4 +51,6 @@ message HealthPingConfig {
   // Enable HTTP keep-alive for this ping group. Disabled by default to keep
   // legacy burst observatory behavior unchanged.
   bool keep_alive = 8;
+  // Attempt HTTP/2 over TLS, falling back to HTTP/1.1. Disabled by default.
+  bool http2 = 9;
 }

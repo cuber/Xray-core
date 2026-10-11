@@ -47,7 +47,7 @@ func TestContractProbeConnectionOwnsDispatchContext(t *testing.T) {
 	}
 	parent, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	client := newHTTPClient(parent, nil, "probe", time.Second, true)
+	client := newHTTPClient(parent, nil, "probe", time.Second, true, false)
 	transport := client.Transport.(*http.Transport)
 	// net/http can detach a dial from request cancellation to permit reuse.
 	// The observer parent must still cancel its owned dispatch on shutdown.
@@ -124,7 +124,7 @@ func TestContractHTTPStatusesAndConnections(t *testing.T) {
 	defer server.Close()
 	for _, path := range []string{"204", "200", "302", "503", "timeout"} {
 		t.Run(path, func(t *testing.T) {
-			c := newPingClient(context.Background(), nil, server.URL+"/"+path, 100*time.Millisecond, "probe", false)
+			c := newPingClient(context.Background(), nil, server.URL+"/"+path, 100*time.Millisecond, "probe", false, false)
 			defer c.CloseIdleConnections()
 			delay, err := c.MeasureDelay(http.MethodGet)
 			if (err == nil) != (path == "204") {
@@ -156,7 +156,7 @@ func TestContractHTTPStatusesAndConnections(t *testing.T) {
 			}
 			s.Start()
 			defer s.Close()
-			c := newPingClient(context.Background(), nil, s.URL, time.Second, "probe", keep)
+			c := newPingClient(context.Background(), nil, s.URL, time.Second, "probe", keep, false)
 			defer c.CloseIdleConnections()
 			for range 10 {
 				if _, err := c.MeasureDelay(http.MethodGet); err != nil {

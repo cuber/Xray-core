@@ -102,3 +102,42 @@ Stop 只取消等待，违规回调仍可存活；不宣称所有任意外部 go
 3s 只验证配置不变，不保证精确周期。全仓测试和 Darwin/Linux 发布构建未标 PASS。
 父进程负责统一隔离 clone wrapper 构建，本 worker 不再尝试。
 历史 tree 一致性仅属于重建阶段，本轮取消修复和新测试有意增加差异。
+
+## V-015：HTTP/2 协商、复用与兼容（2026-10-11）
+
+新增 `app/observatory/burst/http2_test.go` 和
+`infra/conf/contracts_observatory_test.go` 中的 HTTP/2 契约测试。
+TLS fixture 使用专用受信任根，不关闭证书验证；tagged dialer 只改为串行
+loopback 测试钩子，结束恢复原实现，不声称已验证远端 SOCKS 或生产链路。
+
+```sh
+go test -race ./app/observatory/burst ./infra/conf \
+  -run 'Test(HTTP2|ContractBurstHTTP2Config|ContractBurstJSONIndependentSettings|NewHTTPClientKeepAlive)' \
+  -count=10 -timeout=5m
+go test -race ./app/observatory/... ./app/router/... ./infra/conf -count=1 -timeout=5m
+go test ./... -count=1 -timeout=15m
+go vet ./app/observatory/... ./app/router/... ./infra/conf
+bash .github/check-gofmt.sh
+```
+
+- `TestHTTP2ProbeNegotiationAndReuse`: HEAD/GET 均覆盖默认 H1、显式 H2、
+  H1-only TLS 服务端回退。每个组合连续十次请求，服务端观察协议、原始 query
+  和 RemoteAddr；keepAlive=false 新建十个连接，true 复用一个；清理后全部关闭。
+- `TestHTTP2ProbeStatusAndTLSValidation`: 真实 H2 下只有 204 成功，200/302/503
+  失败；重定向目标零命中。不受信任证书失败，HTTP/2 不绕过 TLS 验证。
+- `TestHTTP2ConcurrentProbeStreamsReuseConnection`: 建立连接后并发八个请求，
+  在释放响应前八个 handler 都进入；协议均为 H2、RemoteAddr 相同、连接数为一。
+  这验证多流并发，不承诺冷启动时 Go transport 的投机拨号只创建一个连接。
+- `TestHTTP2ProbeTimeoutAndCancellation`: H2 handler 阻塞，客户端超时和 observer
+  parent 取消分别结束请求，服务端流 context 被取消，客户端清理空闲连接。
+- `TestHTTP2OptionDoesNotEnableH2C`: 开启选项后明文 HTTP 仍为 HTTP/1.1。
+- `TestContractBurstHTTP2Config`: 单组/多组、true/false、protobuf 编解码及
+  运行时配置保持一致；字符串 `"true"` 拒绝；不连带启用 keepAlive。
+- 原独立组测试覆盖 A 显式开启 H2，B 缺省关闭；原 HTTP/1 状态、连接、
+  健康恢复、调度取消和 router 测试必须一起通过。
+
+正式构建从 xray-config 执行 `./scripts/xrayctl.py build core`，源代码须先本地
+提交。检查 Darwin/Linux 产物的格式和 VCS 版本，再用 Darwin `run -test`
+验证新增选项与现有节点配置。不因本地验证自动启用生产配置或部署。
+
+实际执行结果与跳过边界见 [HTTP/2 验收证据](http2-acceptance.md)。

@@ -11,3 +11,12 @@
 - [x] 父进程完成审阅归并及统一隔离 clone 发布构建；未以包测试替代此项。
 
 [本轮证据](../../001-core-fork-contracts/evidence-008-009.md) · [测试矩阵](../tests.md)
+
+## HTTP/2 Increment
+
+- [x] FR-002 / V-015 define default behavior, independent Keep-Alive and TLS fallback.
+- [x] Real protocol/connection/status/TLS/cancellation and configuration tests pass.
+- [x] Repeat race, relevant regressions, full-suite skips, vet and format are recorded.
+- [x] Clean-source Darwin/Linux wrapper build and new/legacy config checks complete.
+
+[HTTP/2 evidence](../http2-acceptance.md)

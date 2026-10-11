@@ -29,3 +29,13 @@ Start/Stop 锁阻止 WaitGroup 跨 run 复用；新增任务来自已经计数�
 阻塞 selector 由测试主动释放。测试不声称真实远端路由或精确三秒发包。
 历史备份分支/tag 仍是重建回滚参考；新增修复由父进程审阅后单独可追溯归并。
 不修改远端、Sidecar pin 或部署记录；遵守 constitution 的隔离与事实约束。
+
+## HTTP/2 增量计划（2026-10-11）
+
+1. 追加 protobuf 字段 9，将 `pingConfig.http2` 经 JSON、proto、运行时设置
+   传到现有 HTTP transport；缺省关闭，不修改拨号器或共享连接生命周期。
+2. 受控 TLS H1/H2 服务端验证协议协商、回退、HEAD/GET、连接数和清理，
+   并覆盖证书失败、非 204、超时/取消、组隔离和 proto 编解码。
+3. 重复 race、相关完整回归、全库测试、vet 和格式门禁；保留实际结果与跳过。
+4. 代码/spec 本地提交后执行批准的双平台构建和 Darwin 配置校验。
+   不 push、不部署；Sidecar egress 客户端和 Shlii 线上故障独立调查。
