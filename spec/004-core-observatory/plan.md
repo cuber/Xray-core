@@ -39,3 +39,19 @@ Start/Stop 锁阻止 WaitGroup 跨 run 复用；新增任务来自已经计数�
 3. 重复 race、相关完整回归、全库测试、vet 和格式门禁；保留实际结果与跳过。
 4. 代码/spec 本地提交后执行批准的双平台构建和 Darwin 配置校验。
    不 push、不部署；Sidecar egress 客户端和 Shlii 线上故障独立调查。
+
+## Probe Retry Increment (2026-10-12)
+
+1. Add a probe-only context-aware policy to `common/retry`, leaving existing
+   protocol retryers unchanged; typed transient/permanent classification,
+   bounded exponential jitter, attempts and first-error diagnostics.
+2. Append proto field 10 and JSON policy; validate limits and HEAD/GET, carry
+   per-group settings to existing ping clients. Use one timeout context per
+   logical request, preserving the shared transport and one final sample.
+3. Reuse the helper in Sidecar's own spec003, pinning the approved clean Core
+   commit only after Core tests/commit. Sidecar does not read Core OB config.
+4. Deterministic callback tests cover arithmetic/attempts/classification;
+   loopback H1/H2 tests cover RTT, pool/concurrency, final health, cancellation
+   and stop. Repeat race, run relevant/full regressions and vet.
+5. Commit locally before approved Darwin/Linux builds and config tests.
+   No production retry config, binary installation, push, or deployment.

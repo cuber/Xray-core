@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/xtls/xray-core/common/retry"
 	"github.com/xtls/xray-core/features/routing"
 )
 
@@ -135,6 +137,16 @@ func ValidatePingGroups(groups []*HealthPingGroup) error {
 	}
 	var all []sel
 	for i, g := range groups {
+		if cfg := g.GetPingConfig().GetRetry(); cfg != nil {
+			_, err := (retry.ProbePolicy{MaxRetries: int(cfg.MaxRetries), InitialBackoff: time.Duration(cfg.InitialBackoff), MaxBackoff: time.Duration(cfg.MaxBackoff)}).Normalize()
+			if err != nil {
+				return fmt.Errorf("burstObservatory.pingGroups[%d].pingConfig.retry: %w", i, err)
+			}
+			method := strings.TrimSpace(g.PingConfig.HttpMethod)
+			if cfg.MaxRetries > 0 && method != "" && method != "HEAD" && method != "GET" {
+				return fmt.Errorf("burstObservatory.pingGroups[%d].pingConfig.retry requires HEAD or GET httpMethod", i)
+			}
+		}
 		sels := g.GetSubjectSelector()
 		if len(sels) == 0 {
 			return fmt.Errorf("burstObservatory.pingGroups[%d].subjectSelector: empty selector list; each group must select at least one tag prefix", i)

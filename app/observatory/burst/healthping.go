@@ -9,19 +9,21 @@ import (
 
 	"github.com/xtls/xray-core/common/dice"
 	"github.com/xtls/xray-core/common/errors"
+	"github.com/xtls/xray-core/common/retry"
 	"github.com/xtls/xray-core/features/routing"
 )
 
 // HealthPingSettings holds settings for health Checker
 type HealthPingSettings struct {
-	Destination   string        `json:"destination"`
-	Connectivity  string        `json:"connectivity"`
-	Interval      time.Duration `json:"interval"`
-	SamplingCount int           `json:"sampling"`
-	Timeout       time.Duration `json:"timeout"`
-	HttpMethod    string        `json:"httpMethod"`
-	KeepAlive     bool          `json:"keepAlive"`
-	HTTP2         bool          `json:"http2"`
+	Destination   string            `json:"destination"`
+	Connectivity  string            `json:"connectivity"`
+	Interval      time.Duration     `json:"interval"`
+	SamplingCount int               `json:"sampling"`
+	Timeout       time.Duration     `json:"timeout"`
+	HttpMethod    string            `json:"httpMethod"`
+	KeepAlive     bool              `json:"keepAlive"`
+	HTTP2         bool              `json:"http2"`
+	Retry         retry.ProbePolicy `json:"retry"`
 	// DestinationsByPrefix overrides the probe URL for outbound tags matching
 	// the given prefix. Longest matching prefix wins; empty map means all tags
 	// use Destination.
@@ -53,6 +55,10 @@ type HealthPing struct {
 func NewHealthPing(ctx context.Context, dispatcher routing.Dispatcher, config *HealthPingConfig) *HealthPing {
 	settings := &HealthPingSettings{}
 	if config != nil {
+		var retryPolicy retry.ProbePolicy
+		if config.Retry != nil {
+			retryPolicy = retry.ProbePolicy{MaxRetries: int(config.Retry.MaxRetries), InitialBackoff: time.Duration(config.Retry.InitialBackoff), MaxBackoff: time.Duration(config.Retry.MaxBackoff)}
+		}
 
 		var httpMethod string
 		if config.HttpMethod == "" {
@@ -77,6 +83,7 @@ func NewHealthPing(ctx context.Context, dispatcher routing.Dispatcher, config *H
 			HttpMethod:           httpMethod,
 			KeepAlive:            config.KeepAlive,
 			HTTP2:                config.Http2,
+			Retry:                retryPolicy,
 			DestinationsByPrefix: destByPrefix,
 		}
 	}
@@ -246,6 +253,7 @@ func (h *HealthPing) doCheckContext(ctx context.Context, tags []string, duration
 			h.Settings.KeepAlive,
 			h.Settings.HTTP2,
 		)
+		client.retryPolicy = h.Settings.Retry
 		defer client.CloseIdleConnections()
 		for i := 0; i < rounds; i++ {
 			delay := time.Duration(0)

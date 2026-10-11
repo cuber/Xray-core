@@ -2,10 +2,12 @@ package conf
 
 import (
 	"strings"
+	"time"
 
 	"github.com/xtls/xray-core/app/observatory/burst"
 	"github.com/xtls/xray-core/app/router"
 	"github.com/xtls/xray-core/common/errors"
+	"github.com/xtls/xray-core/common/retry"
 	"github.com/xtls/xray-core/infra/conf/cfgcommon/duration"
 	"google.golang.org/protobuf/proto"
 )
@@ -58,23 +60,45 @@ type strategyWeightedLeastPingConfig struct {
 
 // healthCheckSettings holds settings for health Checker
 type healthCheckSettings struct {
-	Destination          string            `json:"destination"`
-	Connectivity         string            `json:"connectivity"`
-	Interval             duration.Duration `json:"interval"`
-	SamplingCount        int               `json:"sampling"`
-	Timeout              duration.Duration `json:"timeout"`
-	HttpMethod           string            `json:"httpMethod"`
-	KeepAlive            bool              `json:"keepAlive"`
-	HTTP2                bool              `json:"http2"`
-	DestinationsByPrefix map[string]string `json:"destinationsByPrefix,omitempty"`
+	Destination          string              `json:"destination"`
+	Connectivity         string              `json:"connectivity"`
+	Interval             duration.Duration   `json:"interval"`
+	SamplingCount        int                 `json:"sampling"`
+	Timeout              duration.Duration   `json:"timeout"`
+	HttpMethod           string              `json:"httpMethod"`
+	KeepAlive            bool                `json:"keepAlive"`
+	HTTP2                bool                `json:"http2"`
+	Retry                *probeRetrySettings `json:"retry,omitempty"`
+	DestinationsByPrefix map[string]string   `json:"destinationsByPrefix,omitempty"`
+}
+
+type probeRetrySettings struct {
+	MaxRetries     int               `json:"maxRetries"`
+	InitialBackoff duration.Duration `json:"initialBackoff"`
+	MaxBackoff     duration.Duration `json:"maxBackoff"`
 }
 
 func (h healthCheckSettings) Build() (proto.Message, error) {
+	var retryConfig *burst.ProbeRetryConfig
+	if h.Retry != nil {
+		policy, err := (retry.ProbePolicy{
+			MaxRetries:     h.Retry.MaxRetries,
+			InitialBackoff: time.Duration(h.Retry.InitialBackoff),
+			MaxBackoff:     time.Duration(h.Retry.MaxBackoff),
+		}).Normalize()
+		if err != nil {
+			return nil, errors.New("pingConfig.retry: ").Base(err)
+		}
+		retryConfig = &burst.ProbeRetryConfig{MaxRetries: int32(policy.MaxRetries), InitialBackoff: int64(policy.InitialBackoff), MaxBackoff: int64(policy.MaxBackoff)}
+	}
 	var httpMethod string
 	if h.HttpMethod == "" {
 		httpMethod = "HEAD"
 	} else {
 		httpMethod = strings.TrimSpace(h.HttpMethod)
+	}
+	if retryConfig.GetMaxRetries() > 0 && httpMethod != "HEAD" && httpMethod != "GET" {
+		return nil, errors.New("pingConfig.retry requires HEAD or GET httpMethod")
 	}
 	return &burst.HealthPingConfig{
 		Destination:          h.Destination,
@@ -85,6 +109,7 @@ func (h healthCheckSettings) Build() (proto.Message, error) {
 		HttpMethod:           httpMethod,
 		KeepAlive:            h.KeepAlive,
 		Http2:                h.HTTP2,
+		Retry:                retryConfig,
 		DestinationsByPrefix: h.DestinationsByPrefix,
 	}, nil
 }

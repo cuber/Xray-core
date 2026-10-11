@@ -99,3 +99,48 @@ it does not replace the protocol-independent contract test.
   "http2": true
 }
 ```
+
+## FR-003 - Bounded Probe Retry (2026-10-12)
+
+Authorized by the user after the HTTP/2 commit. The initial implementation scope
+was local testing/build only. Subsequent authorization on 2026-10-12 permits
+Core/Sidecar rollout and HKT retry enablement only on `hk.shlii.tr`, after tests;
+node configuration/rollout evidence stays in xray-config. No fleet rollout or push.
+
+- `pingConfig.retry` is optional in both legacy and grouped configurations.
+  `maxRetries` defaults to zero, accepts 0..3, and counts additional application
+  attempts (not TCP dials or Go transport's own stale-connection retries).
+- `initialBackoff` defaults to `100ms`, `maxBackoff` to `400ms`; configured delays
+  must be nonnegative, with zero using defaults, and max >= initial. Exponential
+  waits have +/-20% jitter and an absolute cap, with overflow-safe arithmetic.
+- Enabled retry is restricted to HEAD/GET. Refused/reset/broken connections,
+  EOF and temporary DNS/transport timeouts are eligible; recognizable auth,
+  TLS certificate, NXDOMAIN, HTTP status, parse/config, cancellation and ASN
+  failures are not. An opaque bridge EOF cannot identify its underlying cause.
+- A logical main probe has one timeout context spanning attempts, response
+  reads and waits. No attempt resets the deadline. Insufficient budget for the
+  next backoff ends the probe without waiting; cancellation interrupts waits.
+- Publish exactly one final RTT/sample. RTT includes failed attempts and waits.
+  Exhaustion publishes one dead sample; recovery still needs separate scheduled
+  successes. Startup, stale-window, selector and balancer rules are unchanged.
+- Keep the same tagged outbound, destination/query, method and transport across
+  attempts. Do not close a shared pool on one retry or cancel other streams.
+  Existing direct `connectivity` diagnostics remain a separate one-shot stage
+  with their existing timeout; they are not part of the main retry budget.
+- `common/retry.ProbePolicy` is shared with Sidecar. It creates no goroutines,
+  requires context-aware operations, exposes attempts/first error and supports
+  explicit permanent parser errors. Do not alter existing `ExponentialBackoff`
+  or protocol dialer retry behavior as part of this feature.
+- Proto appends `HealthPingConfig.retry = 10` with a separate policy message.
+  JSON and proto configuration validation enforce bounded settings.
+
+```json
+"retry": {
+  "maxRetries": 2,
+  "initialBackoff": "100ms",
+  "maxBackoff": "400ms"
+}
+```
+
+Consumer contract: [Sidecar spec003](../../../xray-sidecar/spec/003-egress-probe-retry/spec.md).
+Validation and limitations: [retry acceptance](retry-acceptance.md).
