@@ -3,6 +3,9 @@ package commander
 import (
 	"context"
 	"net"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/xtls/xray-core/common"
@@ -10,6 +13,7 @@ import (
 	"github.com/xtls/xray-core/common/signal/done"
 	core "github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/features/outbound"
+	"github.com/xtls/xray-core/transport/internet"
 	"google.golang.org/grpc"
 )
 
@@ -74,7 +78,7 @@ func (c *Commander) Start() error {
 	}
 
 	if len(c.listen) > 0 {
-		if l, err := net.Listen("tcp", c.listen); err != nil {
+		if l, err := listenAPI(c.listen); err != nil {
 			errors.LogErrorInner(context.Background(), err, "API server failed to listen on ", c.listen)
 			return err
 		} else {
@@ -99,6 +103,22 @@ func (c *Commander) Start() error {
 		tag:      c.tag,
 		listener: listener,
 	})
+}
+
+func listenAPI(address string) (net.Listener, error) {
+	if strings.HasPrefix(address, "/") {
+		path, mode, explicitMode := strings.Cut(address, ",")
+		if !filepath.IsAbs(path) || strings.Contains(mode, ",") {
+			return nil, errors.New("invalid API Unix listener")
+		}
+		if !explicitMode {
+			address += ",0600"
+		} else if _, err := strconv.ParseUint(mode, 8, 9); err != nil {
+			return nil, errors.New("invalid API Unix permission").Base(err)
+		}
+		return internet.ListenExclusiveUnix(context.Background(), address)
+	}
+	return net.Listen("tcp", address)
 }
 
 // Close implements common.Closable.

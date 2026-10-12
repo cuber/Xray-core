@@ -13,11 +13,20 @@ import (
 
 // Acquire lock
 func (fl *FileLocker) Acquire() error {
+	return fl.acquire(unix.LOCK_EX)
+}
+
+// TryAcquire refuses an occupied lock instead of waiting for its owner.
+func (fl *FileLocker) TryAcquire() error {
+	return fl.acquire(unix.LOCK_EX | unix.LOCK_NB)
+}
+
+func (fl *FileLocker) acquire(operation int) error {
 	f, err := os.Create(fl.path)
 	if err != nil {
 		return err
 	}
-	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil {
+	if err := unix.Flock(int(f.Fd()), operation); err != nil {
 		f.Close()
 		return errors.New("failed to lock file: ", fl.path).Base(err)
 	}
