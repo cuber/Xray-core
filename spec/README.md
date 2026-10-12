@@ -26,13 +26,15 @@ reference sibling repositories as integration evidence, not implementation input
 | [006](006-user-domain-traffic/spec.md) | Bounded user/domain traffic and consumer contract |
 | [007](007-core-regression/spec.md) | Regression infrastructure and shared fixes |
 | [008](008-anytls/spec.md) | AnyTLS inbound/outbound, routing, statistics and control API |
+| [009](009-direct-control-listener/spec.md) | Direct control-plane UDS listener without traffic inbounds/routes |
 
 Each implementation commit owns its corresponding numbered spec; AnyTLS remains
-last. 001 is the cross-feature index, not a separate runtime feature.
+last in the original 001-008 reconstruction. Later features allocate new IDs.
+001 is the cross-feature index, not a separate runtime feature.
 On 2026-09-27 the user authorized repository-local renumbering: old global
 005/006/007/008/009/010/011/012 map to local 001/002/003/004/005/006/007/008.
 Historical hashes, requirement IDs, test names and evidence filenames remain
-provenance, not allocations in the new sequence. Next spec: 009; next draft: 003.
+provenance, not allocations in the new sequence. Next spec: 010; next draft: 003.
 The upstream synchronization proposal is [draft002](../draft/002-upstream-sync/spec.md),
 explicitly numbered by the user on 2026-10-05. It is not implementation scope.
 

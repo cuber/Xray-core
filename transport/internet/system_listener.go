@@ -2,6 +2,8 @@ package internet
 
 import (
 	"context"
+	stderrors "errors"
+	stdnet "net"
 	"os"
 	"runtime"
 	"strconv"
@@ -75,6 +77,16 @@ func (conn *UnixConnWrapper) RemoteAddr() net.Addr {
 }
 
 func (dl *DefaultListener) Listen(ctx context.Context, addr net.Addr, sockopt *SocketConfig) (l net.Listener, err error) {
+	return dl.listen(ctx, addr, sockopt, false)
+}
+
+// ListenExclusiveUnix shares the Core UDS permission/locking lifecycle, but fails
+// fast on another owner and reclaims only a refused, stale filesystem socket.
+func ListenExclusiveUnix(ctx context.Context, address string) (net.Listener, error) {
+	return effectiveListener.listen(ctx, &net.UnixAddr{Name: address, Net: "unix"}, nil, true)
+}
+
+func (dl *DefaultListener) listen(ctx context.Context, addr net.Addr, sockopt *SocketConfig, exclusiveUnix bool) (l net.Listener, err error) {
 	var lc net.ListenConfig
 	var network, address string
 	// callback is called after the Listen function returns
@@ -141,8 +153,18 @@ func (dl *DefaultListener) Listen(ctx context.Context, addr net.Addr, sockopt *S
 			locker := &FileLocker{
 				path: address + ".lock",
 			}
-			if err := locker.Acquire(); err != nil {
+			acquire := locker.Acquire
+			if exclusiveUnix {
+				acquire = locker.TryAcquire
+			}
+			if err := acquire(); err != nil {
 				return nil, err
+			}
+			if exclusiveUnix {
+				if err := reclaimStaleUnixSocket(address); err != nil {
+					locker.Release()
+					return nil, err
+				}
 			}
 
 			// set callback to combine listener and set permission
@@ -171,6 +193,28 @@ func (dl *DefaultListener) Listen(ctx context.Context, addr net.Addr, sockopt *S
 		l = &proxyproto.Listener{Listener: l, Policy: policyFunc}
 	}
 	return l, err
+}
+
+func reclaimStaleUnixSocket(address string) error {
+	info, err := os.Lstat(address)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if info.Mode()&os.ModeSocket == 0 {
+		return errors.New("refusing non-socket Unix path: ", address)
+	}
+	conn, err := stdnet.DialTimeout("unix", address, 200*time.Millisecond)
+	if err == nil {
+		conn.Close()
+		return errors.New("Unix socket already listening: ", address)
+	}
+	if !stderrors.Is(err, syscall.ECONNREFUSED) {
+		return err
+	}
+	return os.Remove(address)
 }
 
 func (dl *DefaultListener) ListenPacket(ctx context.Context, addr net.Addr, sockopt *SocketConfig) (net.PacketConn, error) {
