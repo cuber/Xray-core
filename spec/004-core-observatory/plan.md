@@ -55,3 +55,15 @@ Start/Stop 锁阻止 WaitGroup 跨 run 复用；新增任务来自已经计数�
    and stop. Repeat race, run relevant/full regressions and vet.
 5. Commit locally before approved Darwin/Linux builds and config tests.
    No production retry config, binary installation, push, or deployment.
+
+## Independent Probe Transport Increment (2026-10-14)
+
+1. Append field 11 and optional JSON/runtime transport tag, preserving all
+   existing subject/default semantics; do not modify dispatcher or SOCKS dialing.
+2. Use that tag only for the request channel and keep every result under the
+   observed subject. Cover defaults, group isolation, failure/recovery and cancel.
+3. Run targeted/repeated race, affected regressions, vet, format and full tests;
+   commit locally before approved Darwin/Linux build.
+4. xray-config owns Shlii's real Core/Sidecar fixture, config-only behavior and
+   rollout: unchanged egress through Core, local Sidecar UDS OB, independent
+   budgets, no extra backend credentials and no other node deployment.

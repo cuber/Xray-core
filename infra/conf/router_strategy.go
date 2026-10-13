@@ -69,6 +69,7 @@ type healthCheckSettings struct {
 	KeepAlive            bool                `json:"keepAlive"`
 	HTTP2                bool                `json:"http2"`
 	Retry                *probeRetrySettings `json:"retry,omitempty"`
+	ProbeOutboundTag     string              `json:"probeOutboundTag,omitempty"`
 	DestinationsByPrefix map[string]string   `json:"destinationsByPrefix,omitempty"`
 }
 
@@ -110,6 +111,7 @@ func (h healthCheckSettings) Build() (proto.Message, error) {
 		KeepAlive:            h.KeepAlive,
 		Http2:                h.HTTP2,
 		Retry:                retryConfig,
+		ProbeOutboundTag:     strings.TrimSpace(h.ProbeOutboundTag),
 		DestinationsByPrefix: h.DestinationsByPrefix,
 	}, nil
 }

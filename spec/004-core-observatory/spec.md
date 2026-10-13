@@ -128,3 +128,29 @@ node configuration/rollout evidence stays in xray-config. No fleet rollout or pu
 
 Consumer contract: [Sidecar spec003](../../../xray-sidecar/spec/003-egress-probe-retry/spec.md).
 Validation and limitations: [retry acceptance](retry-acceptance.md).
+
+## FR-004 - Independent Probe Transport (2026-10-14)
+
+Authorized for Shlii's local HKT guard consumption, not a fleet rollout.
+`pingConfig.probeOutboundTag` is an optional transport outbound, appended as
+protobuf field 11. Empty/absent preserves probing through each observed subject.
+Legacy and grouped JSON trim surrounding whitespace and preserve it through
+protobuf and runtime settings. Normal URL/query, HEAD/GET, status, timeout,
+retry, cancellation, sampling and recovery rules remain unchanged.
+
+The selected subject remains the result key for success, failure and connectivity
+diagnostics; the transport tag never replaces it or enters balancer candidates.
+The existing tagged dispatcher still owns dialing, so an unknown transport fails
+closed rather than using the default outbound. This is explicit trust in another
+outbound's health response, not independent proof that the subject carried traffic.
+
+Shlii reads `http://127.0.0.1:8080/generate_204?ob=hkt` through `sidecar-uds`,
+which redirects to the local Sidecar HTTP UDS. Sidecar independently checks QoS
+through Core's authenticated `egress-in` and the fixed HKT SOCKS outbound. It
+does not read backend passwords or use the business balancer. Local OB reads
+cached health, does not trigger a new egress round, and records local response
+time, not upstream RTT. Keep OB and egress budgets/retries independent; native
+recovery gates remain separate and can add recovery delay. Existing randomized
+batch scheduling is unchanged; interval is not a strict maximum reaction time.
+
+Verification: [V-017](tests.md#v-017-independent-probe-transport).

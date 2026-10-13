@@ -146,3 +146,43 @@ bash .github/check-gofmt.sh
 验证新增选项与现有节点配置。不因本地验证自动启用生产配置或部署。
 
 实际执行结果与跳过边界见 [HTTP/2 验收证据](http2-acceptance.md)。
+
+## V-017: Independent Probe Transport
+
+```sh
+go test -race ./app/observatory/burst ./infra/conf \
+  -run 'Test(ProbeOutbound|ContractBurstProbeOutboundConfig)' -count=3 -timeout=3m
+go test -race ./app/observatory/... ./app/router/... ./app/proxyman/outbound ./infra/conf -count=1 -timeout=5m
+go vet ./app/observatory/... ./app/router/... ./app/proxyman/outbound ./infra/conf
+go test ./... -count=1 -timeout=15m
+bash .github/check-gofmt.sh
+```
+
+`TestProbeOutboundKeepsSubjectHealthAndGroupIsolation` captures actual HEAD/query
+and transport tag, checks unchanged defaults in another group, immediate failure
+and three-success recovery, and missing-transport failure without another dial.
+Only the selected subject has results. `TestProbeOutboundTimeoutAndStop` checks
+timeout and scheduler cancellation, no canceled result, and resource cleanup.
+JSON tests cover legacy/groups, empty/trimmed tags, string validation and proto
+round-trip. These Go HTTP harnesses replace the tagged dialer; they do not prove
+real routing or Unix redirect.
+
+After local commit and the approved Darwin/Linux build, xray-config adds a real
+Core/Sidecar test, using a private Core API/egress/Sidecar UDS and authenticated
+SOCKS fixture. Run `python3 test/run.py nodes/hk.shlii.tr` there. A wrong ASN must
+make OB dead despite a reachable SOCKS backend; expected ASN restores health.
+Backend refusal makes OB dead and business uses direct, while egress never uses
+that fallback. Recovery returns business to SOCKS. Assert the backend never sees
+`/generate_204`, direct never sees `/client-ip`, no result uses `sidecar-uds`, and
+Sidecar config contains no backend password. Keep existing native VLESS/Mux tests.
+Every process, HTTP/SOCKS fixture and private temporary directory must be closed.
+
+Node config/rollout evidence belongs in xray-config, not a duplicated Core spec.
+
+Executed 2026-10-14: targeted race passed at count=3 and count=10, full affected
+package race and vet passed, and `go test ./... -count=1 -timeout=15m` exited 0
+(AnyTLS 524.424s, protocol scenarios 276.366s). Default opt-in external/soak
+tests remain opt-in; this is not a new public-network or soak acceptance claim.
+Format/whitespace gates and approved Darwin/Linux wrapper build passed.
+The real Core/Sidecar fixture passed, then xray-config's full suite passed
+437 tests with one existing skip. No Sidecar runtime source change was needed.
