@@ -112,3 +112,42 @@ func TestContractBurstHTTP2Config(t *testing.T) {
 		t.Fatal("http2 must be a boolean")
 	}
 }
+
+func TestContractBurstProbeOutboundConfig(t *testing.T) {
+	for _, grouped := range []bool{false, true} {
+		for _, tag := range []string{"", "sidecar-uds", " sidecar-uds "} {
+			input := `{"subjectSelector":["hkt-socks"],"pingConfig":{"probeOutboundTag":"` + tag + `"}}`
+			if grouped {
+				input = `{"pingGroups":[` + input + `]}`
+			}
+			var config BurstObservatoryConfig
+			if err := json.Unmarshal([]byte(input), &config); err != nil {
+				t.Fatal(err)
+			}
+			built, err := config.Build()
+			if err != nil {
+				t.Fatal(err)
+			}
+			wire, err := proto.Marshal(built)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var decoded burst.Config
+			if err := proto.Unmarshal(wire, &decoded); err != nil {
+				t.Fatal(err)
+			}
+			ping := decoded.PingConfig
+			if grouped {
+				ping = decoded.PingGroups[0].PingConfig
+			}
+			settings := burst.NewHealthPing(context.Background(), nil, ping).Settings
+			if ping.ProbeOutboundTag != strings.TrimSpace(tag) || settings.ProbeOutboundTag != strings.TrimSpace(tag) {
+				t.Fatalf("grouped=%v tag=%q settings=%+v", grouped, tag, settings)
+			}
+		}
+	}
+	var config BurstObservatoryConfig
+	if err := json.Unmarshal([]byte(`{"pingConfig":{"probeOutboundTag":true}}`), &config); err == nil {
+		t.Fatal("probeOutboundTag must be a string")
+	}
+}

@@ -15,15 +15,16 @@ import (
 
 // HealthPingSettings holds settings for health Checker
 type HealthPingSettings struct {
-	Destination   string            `json:"destination"`
-	Connectivity  string            `json:"connectivity"`
-	Interval      time.Duration     `json:"interval"`
-	SamplingCount int               `json:"sampling"`
-	Timeout       time.Duration     `json:"timeout"`
-	HttpMethod    string            `json:"httpMethod"`
-	KeepAlive     bool              `json:"keepAlive"`
-	HTTP2         bool              `json:"http2"`
-	Retry         retry.ProbePolicy `json:"retry"`
+	Destination      string            `json:"destination"`
+	Connectivity     string            `json:"connectivity"`
+	Interval         time.Duration     `json:"interval"`
+	SamplingCount    int               `json:"sampling"`
+	Timeout          time.Duration     `json:"timeout"`
+	HttpMethod       string            `json:"httpMethod"`
+	KeepAlive        bool              `json:"keepAlive"`
+	HTTP2            bool              `json:"http2"`
+	Retry            retry.ProbePolicy `json:"retry"`
+	ProbeOutboundTag string            `json:"probeOutboundTag,omitempty"`
 	// DestinationsByPrefix overrides the probe URL for outbound tags matching
 	// the given prefix. Longest matching prefix wins; empty map means all tags
 	// use Destination.
@@ -84,6 +85,7 @@ func NewHealthPing(ctx context.Context, dispatcher routing.Dispatcher, config *H
 			KeepAlive:            config.KeepAlive,
 			HTTP2:                config.Http2,
 			Retry:                retryPolicy,
+			ProbeOutboundTag:     strings.TrimSpace(config.ProbeOutboundTag),
 			DestinationsByPrefix: destByPrefix,
 		}
 	}
@@ -243,6 +245,9 @@ func (h *HealthPing) doCheckContext(ctx context.Context, tags []string, duration
 
 	for _, tag := range tags {
 		handler := tag
+		if h.Settings.ProbeOutboundTag != "" {
+			handler = h.Settings.ProbeOutboundTag
+		}
 		destination := h.Settings.destinationFor(tag)
 		client := newPingClient(
 			ctx,
@@ -274,7 +279,7 @@ func (h *HealthPing) doCheckContext(ctx context.Context, tags []string, duration
 				delay, err := client.MeasureDelay(h.Settings.HttpMethod)
 				if err == nil {
 					ch <- &rtt{
-						handler: handler,
+						handler: tag,
 						value:   delay,
 					}
 					return
@@ -285,7 +290,7 @@ func (h *HealthPing) doCheckContext(ctx context.Context, tags []string, duration
 				if !h.checkConnectivityContext(ctx) {
 					errors.LogWarning(h.ctx, "network is down")
 					ch <- &rtt{
-						handler: handler,
+						handler: tag,
 						value:   0,
 					}
 					return
@@ -297,7 +302,7 @@ func (h *HealthPing) doCheckContext(ctx context.Context, tags []string, duration
 					err,
 				))
 				ch <- &rtt{
-					handler: handler,
+					handler: tag,
 					value:   rttFailed,
 				}
 			}()

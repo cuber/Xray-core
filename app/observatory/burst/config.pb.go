@@ -169,9 +169,12 @@ type HealthPingConfig struct {
 	// Attempt HTTP/2 over TLS, falling back to HTTP/1.1. Disabled by default.
 	Http2 bool `protobuf:"varint,9,opt,name=http2,proto3" json:"http2,omitempty"`
 	// Optional bounded probe retries. All attempts share the ping timeout.
-	Retry         *ProbeRetryConfig `protobuf:"bytes,10,opt,name=retry,proto3" json:"retry,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Retry *ProbeRetryConfig `protobuf:"bytes,10,opt,name=retry,proto3" json:"retry,omitempty"`
+	// Optional probe transport outbound; results still belong to the selected
+	// subject tags. Empty uses each subject itself, preserving normal probes.
+	ProbeOutboundTag string `protobuf:"bytes,11,opt,name=probe_outbound_tag,json=probeOutboundTag,proto3" json:"probe_outbound_tag,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *HealthPingConfig) Reset() {
@@ -274,6 +277,13 @@ func (x *HealthPingConfig) GetRetry() *ProbeRetryConfig {
 	return nil
 }
 
+func (x *HealthPingConfig) GetProbeOutboundTag() string {
+	if x != nil {
+		return x.ProbeOutboundTag
+	}
+	return ""
+}
+
 type ProbeRetryConfig struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	MaxRetries     int32                  `protobuf:"varint,1,opt,name=max_retries,json=maxRetries,proto3" json:"max_retries,omitempty"`
@@ -348,7 +358,7 @@ const file_app_observatory_burst_config_proto_rawDesc = "" +
 	"\x0fHealthPingGroup\x12)\n" +
 	"\x10subject_selector\x18\x01 \x03(\tR\x0fsubjectSelector\x12R\n" +
 	"\vping_config\x18\x02 \x01(\v21.xray.core.app.observatory.burst.HealthPingConfigR\n" +
-	"pingConfig\"\x9f\x04\n" +
+	"pingConfig\"\xcd\x04\n" +
 	"\x10HealthPingConfig\x12 \n" +
 	"\vdestination\x18\x01 \x01(\tR\vdestination\x12\"\n" +
 	"\fconnectivity\x18\x02 \x01(\tR\fconnectivity\x12\x1a\n" +
@@ -363,7 +373,8 @@ const file_app_observatory_burst_config_proto_rawDesc = "" +
 	"keep_alive\x18\b \x01(\bR\tkeepAlive\x12\x14\n" +
 	"\x05http2\x18\t \x01(\bR\x05http2\x12G\n" +
 	"\x05retry\x18\n" +
-	" \x01(\v21.xray.core.app.observatory.burst.ProbeRetryConfigR\x05retry\x1aG\n" +
+	" \x01(\v21.xray.core.app.observatory.burst.ProbeRetryConfigR\x05retry\x12,\n" +
+	"\x12probe_outbound_tag\x18\v \x01(\tR\x10probeOutboundTag\x1aG\n" +
 	"\x19DestinationsByPrefixEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"}\n" +

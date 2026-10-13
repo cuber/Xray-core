@@ -55,6 +55,9 @@ message HealthPingConfig {
   bool http2 = 9;
   // Optional bounded probe retries. All attempts share the ping timeout.
   ProbeRetryConfig retry = 10;
+  // Optional probe transport outbound; results still belong to the selected
+  // subject tags. Empty uses each subject itself, preserving normal probes.
+  string probe_outbound_tag = 11;
 }
 
 message ProbeRetryConfig {

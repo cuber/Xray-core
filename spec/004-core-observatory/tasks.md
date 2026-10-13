@@ -40,3 +40,11 @@ HTTP/2 增量验证记录见 [验收证据](http2-acceptance.md)，明确全库�
 - [x] T018 [FR-003] Local commit, approved dual-platform build and Darwin config
   validation. Later authorized Shlii-only enablement belongs in xray-config;
   this does not enable retries by default or authorize fleet deployment.
+
+## Independent Probe Transport Increment
+
+- [x] T019 [FR-004] Append JSON/proto/runtime transport tag; preserve subject keys.
+- [x] T020 [FR-004] Add configuration, HTTP isolation, failure/recovery and cancel tests.
+- [x] T021 [FR-004] Complete full tests/format, local commit and dual-platform build.
+- [x] T022 [FR-004] Verify real Core/Sidecar UDS fixture through xray-config;
+  production rollout and node-specific evidence remain owned there.
