@@ -12,10 +12,8 @@ import (
 	stdnet "net"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 
@@ -37,6 +35,7 @@ import (
 	vin "github.com/xtls/xray-core/proxy/vless/inbound"
 	vout "github.com/xtls/xray-core/proxy/vless/outbound"
 	testingtcp "github.com/xtls/xray-core/testing/servers/tcp"
+	testingudp "github.com/xtls/xray-core/testing/servers/udp"
 	"github.com/xtls/xray-core/transport/internet"
 	hytransport "github.com/xtls/xray-core/transport/internet/hysteria"
 	"github.com/xtls/xray-core/transport/internet/reality"
@@ -341,7 +340,7 @@ func runVLESSRealityCase(t *testing.T, bin string, mode trafficMode, payloadSize
 	serverCmd, clientCmd := runXrayPair(t, bin, serverConfig, clientConfig)
 	defer stopCmd(clientCmd)
 	defer stopCmd(serverCmd)
-	exerciseTCPClient(t, int(clientPort), payloadSize)
+	exerciseTCPClient(t, clientCmd, int(clientPort), payloadSize)
 
 	return analyzeTCPRelay(t, "vless-reality", mode, relay.Snapshots())
 }
@@ -350,12 +349,12 @@ func runHysteria2Case(t *testing.T, bin string, mode trafficMode, payloadSize in
 	backend := startXOREchoServer(t)
 	defer backend.Close()
 
-	serverPort := testingtcp.PickPort()
-	relayPort := testingtcp.PickPort()
+	serverPort := testingudp.PickPort()
 	clientPort := testingtcp.PickPort()
 
-	relay := startUDPRelay(t, int(relayPort), int(serverPort))
+	relay := startUDPRelay(t, 0, int(serverPort))
 	defer relay.Close()
+	relayPort := relay.conn.LocalAddr().(*stdnet.UDPAddr).Port
 
 	ct, ctHash := cert.MustGenerate(nil, cert.CommonName("localhost"), cert.DNSNames("localhost"))
 	auth := "hy2-auth-secret"
@@ -458,7 +457,7 @@ func runHysteria2Case(t *testing.T, bin string, mode trafficMode, payloadSize in
 	serverCmd, clientCmd := runXrayPair(t, bin, serverConfig, clientConfig)
 	defer stopCmd(clientCmd)
 	defer stopCmd(serverCmd)
-	if err := exerciseTCPClientErr(t, int(clientPort), payloadSize); err != nil {
+	if err := exerciseTCPClientErr(t, clientCmd, int(clientPort), payloadSize); err != nil {
 		c2s, s2c := relay.Snapshots()
 		t.Fatalf("hy2 traffic failed: %v (udp packets c2s=%d s2c=%d first_c2s=%d first_s2c=%d)", err, len(c2s), len(s2c), firstChunkLen(c2s), firstChunkLen(s2c))
 	}
@@ -564,7 +563,7 @@ func runVLesseEncCase(t *testing.T, bin string, mode trafficMode, payloadSize in
 	serverCmd, clientCmd := runXrayPair(t, bin, serverConfig, clientConfig)
 	defer stopCmd(clientCmd)
 	defer stopCmd(serverCmd)
-	exerciseTCPClient(t, int(clientPort), payloadSize)
+	exerciseTCPClient(t, clientCmd, int(clientPort), payloadSize)
 
 	return analyzeTCPRelay(t, "vless-enc", mode, relay.Snapshots())
 }
@@ -662,7 +661,7 @@ func runVLESSXHTTPCase(t *testing.T, bin string, mode trafficMode, payloadSize i
 	serverCmd, clientCmd := runXrayPair(t, bin, serverConfig, clientConfig)
 	defer stopCmd(clientCmd)
 	defer stopCmd(serverCmd)
-	exerciseTCPClient(t, int(clientPort), payloadSize)
+	exerciseTCPClient(t, clientCmd, int(clientPort), payloadSize)
 
 	return analyzeTCPRelay(t, "vless-xhttp", mode, relay.Snapshots())
 }
@@ -953,7 +952,11 @@ func buildE2EBinary(t *testing.T) string {
 			return
 		}
 		e2eBinaryPath = filepath.Join(tempDir, "xray.test")
-		cmd := exec.Command("go", "build", "-o", e2eBinaryPath, "./main")
+		args := []string{"build", "-o", e2eBinaryPath}
+		if sudokuRaceEnabled {
+			args = append(args, "-race")
+		}
+		cmd := exec.Command("go", append(args, "./main")...)
 		cmd.Dir = repoRoot(t)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -962,6 +965,7 @@ func buildE2EBinary(t *testing.T) string {
 	if e2eBinaryErr != nil {
 		t.Fatal(e2eBinaryErr)
 	}
+	verifySudokuBinary(t, e2eBinaryPath)
 	return e2eBinaryPath
 }
 
@@ -983,19 +987,17 @@ func repoRoot(t *testing.T) string {
 	}
 }
 
-func runXrayPair(t *testing.T, bin string, serverCfg, clientCfg *core.Config) (*exec.Cmd, *exec.Cmd) {
+func runXrayPair(t *testing.T, bin string, serverCfg, clientCfg *core.Config) (*sudokuChild, *sudokuChild) {
 	t.Helper()
-	serverCmd := runXray(t, bin, serverCfg)
-
-	time.Sleep(500 * time.Millisecond)
-
-	clientCmd := runXray(t, bin, clientCfg)
-
-	time.Sleep(1500 * time.Millisecond)
+	deadline := time.Now().Add(10 * time.Second)
+	serverCmd := runXray(t, bin, serverCfg, "server")
+	clientCmd := runXray(t, bin, clientCfg, "client")
+	clientCmd.peer = serverCmd
+	clientCmd.readyDeadline = deadline
 	return serverCmd, clientCmd
 }
 
-func runXray(t *testing.T, bin string, cfg *core.Config) *exec.Cmd {
+func runXray(t *testing.T, bin string, cfg *core.Config, label string) *sudokuChild {
 	t.Helper()
 	cfgBytes, err := proto.Marshal(cfg)
 	if err != nil {
@@ -1003,30 +1005,22 @@ func runXray(t *testing.T, bin string, cfg *core.Config) *exec.Cmd {
 	}
 	cmd := exec.Command(bin, "-config=stdin:", "-format=pb")
 	cmd.Stdin = bytes.NewReader(cfgBytes)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
+	child, err := startSudokuChild(cmd, label)
+	if err != nil {
 		t.Fatal(err)
 	}
-	return cmd
+	child.report = func(err error) { t.Helper(); t.Error(err) }
+	t.Logf("started %s pid=%d binary=%s race=%v", label, cmd.Process.Pid, bin, sudokuRaceEnabled)
+	t.Cleanup(func() { stopCmd(child) })
+	return child
 }
 
-func stopCmd(cmd *exec.Cmd) {
-	if cmd == nil || cmd.Process == nil {
-		return
-	}
-	_ = cmd.Process.Signal(syscall.SIGTERM)
-	done := make(chan struct{})
-	go func() {
-		_, _ = cmd.Process.Wait()
-		close(done)
-	}()
-	select {
-	case <-done:
-	case <-time.After(3 * time.Second):
-		_ = cmd.Process.Kill()
-		<-done
-	}
+func stopCmd(child *sudokuChild) {
+	child.stopOnce.Do(func() {
+		if err := child.stop(); err != nil {
+			child.report(err)
+		}
+	})
 }
 
 func startTCPRelay(t *testing.T, listenPort int, target string) *tcpRelay {
@@ -1308,15 +1302,19 @@ func (d *tlsDecoy) Close() {
 	d.wg.Wait()
 }
 
-func exerciseTCPClient(t *testing.T, port int, payloadSize int) {
+func exerciseTCPClient(t *testing.T, child *sudokuChild, port int, payloadSize int) {
 	t.Helper()
-	if err := exerciseTCPClientErr(t, port, payloadSize); err != nil {
+	if err := exerciseTCPClientErr(t, child, port, payloadSize); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func exerciseTCPClientErr(t *testing.T, port int, payloadSize int) error {
-	conn := waitTCPConn(t, port, 10*time.Second)
+func exerciseTCPClientErr(t *testing.T, child *sudokuChild, port int, payloadSize int) error {
+	conn, err := waitSudokuReady(child.readyDeadline, port, child.peer, child)
+	if err != nil {
+		return err
+	}
+	t.Logf("both child cores ready; client port=%d remaining=%s", port, time.Until(child.readyDeadline))
 	defer conn.Close()
 	payload := make([]byte, payloadSize)
 	if _, err := rand.Read(payload); err != nil {
@@ -1353,21 +1351,6 @@ func firstChunkLen(chunks [][]byte) int {
 	return len(chunks[0])
 }
 
-func waitTCPConn(t *testing.T, port int, timeout time.Duration) stdnet.Conn {
-	t.Helper()
-	deadline := time.Now().Add(timeout)
-	for {
-		conn, err := stdnet.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), 500*time.Millisecond)
-		if err == nil {
-			return conn
-		}
-		if time.Now().After(deadline) {
-			t.Fatal(err)
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-}
-
 func mustX25519Keypair(t *testing.T) ([]byte, []byte) {
 	t.Helper()
 	priv, err := ecdh.X25519().GenerateKey(rand.Reader)
@@ -1384,13 +1367,4 @@ func mustDecodeHex(t *testing.T, s string) []byte {
 		t.Fatal(err)
 	}
 	return out
-}
-
-func init() {
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-ch
-		os.Exit(130)
-	}()
 }
