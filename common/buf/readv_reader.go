@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"syscall"
 
+	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/platform"
 	"github.com/xtls/xray-core/features/stats"
 )
@@ -57,6 +58,11 @@ type ReadVReader struct {
 	mr      multiReader
 	alloc   allocStrategy
 	counter stats.Counter
+}
+
+// Interrupt preserves cancellation through the reader wrapper.
+func (r *ReadVReader) Interrupt() {
+	common.Interrupt(r.Reader)
 }
 
 // NewReadVReader creates a new ReadVReader.

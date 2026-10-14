@@ -100,6 +100,13 @@ func NewHandler(ctx context.Context, config *core.OutboundHandlerConfig) (outbou
 		return nil, err
 	}
 	h.proxyConfig = proxyConfig
+	if validator, ok := proxyConfig.(interface {
+		ValidateSender(*proxyman.SenderConfig) error
+	}); ok {
+		if err := validator.ValidateSender(h.senderSettings); err != nil {
+			return nil, err
+		}
+	}
 
 	ctx = session.ContextWithFullHandler(ctx, h)
 
@@ -331,6 +338,14 @@ func (h *Handler) Start() error {
 func (h *Handler) Close() error {
 	common.Close(h.mux)
 	common.Close(h.proxy)
+	return nil
+}
+
+// A nil retirement capability retains the protocol's historical removal behavior.
+func (h *Handler) Retirement() outbound.Retirement {
+	if retiring, ok := h.proxy.(outbound.Retirement); ok {
+		return retiring
+	}
 	return nil
 }
 

@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/xtls/xray-core/common"
+	"github.com/xtls/xray-core/common/buf"
 	"github.com/xtls/xray-core/common/dice"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/net"
-	"github.com/xtls/xray-core/common/net/cnc"
 	"github.com/xtls/xray-core/common/session"
 	"github.com/xtls/xray-core/features/dns"
 	"github.com/xtls/xray-core/features/outbound"
@@ -108,6 +107,18 @@ func LookupForIP(domain string, strategy DomainStrategy, localAddr net.Address) 
 	return ips, err
 }
 
+type redirectConnection struct {
+	net.Conn
+	buf.Reader
+	buf.Writer
+	cancel context.CancelFunc
+}
+
+func (c *redirectConnection) Close() error {
+	c.cancel()
+	return c.Conn.Close()
+}
+
 func redirect(ctx context.Context, dst net.Destination, obt string, h outbound.Handler) net.Conn {
 	errors.LogInfo(ctx, "redirecting request "+dst.String()+" to "+obt)
 	outbounds := session.OutboundsFromContext(ctx)
@@ -117,22 +128,20 @@ func redirect(ctx context.Context, dst net.Destination, obt string, h outbound.H
 		Tag:     obt,
 	})) // add another outbound in session ctx
 
-	ur, uw := pipe.New(pipe.OptionsFromContext(ctx)...)
-	dr, dw := pipe.New(pipe.OptionsFromContext(ctx)...)
-
-	go h.Dispatch(context.WithoutCancel(ctx), &transport.Link{Reader: ur, Writer: dw})
-	var readerOpt cnc.ConnectionOption
-	if dst.Network == net.Network_TCP {
-		readerOpt = cnc.ConnectionOutputMulti(dr)
-	} else {
-		readerOpt = cnc.ConnectionOutputMultiUDP(dr)
+	output := transport.DispatchConnOutputStream
+	if dst.Network != net.Network_TCP {
+		output = transport.DispatchConnOutputPacket
 	}
-	nc := cnc.NewConnection(
-		cnc.ConnectionInputMulti(uw),
-		readerOpt,
-		cnc.ConnectionOnClose(common.ChainedClosable{uw, dw}),
+	// A pooled connection outlives its dialing request; closing its owner must
+	// still cancel relay admission before the handler starts reading the pipes.
+	ctx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	conn := transport.NewDispatchConn(
+		ctx,
+		pipe.OptionsFromContext(ctx),
+		output,
+		h.Dispatch,
 	)
-	return nc
+	return &redirectConnection{Conn: conn, Reader: conn.(buf.Reader), Writer: conn.(buf.Writer), cancel: cancel}
 }
 
 func checkAddressPortStrategy(ctx context.Context, dest net.Destination, sockopt *SocketConfig) (*net.Destination, error) {

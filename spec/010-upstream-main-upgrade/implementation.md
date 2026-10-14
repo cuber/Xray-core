@@ -50,3 +50,32 @@ Go source changes require the official dual-platform build workflow before
 release; this branch is an incomplete integration candidate, not a release.
 No candidate artifact may overwrite xray-config/build approved release artifacts
 or restart the local Xray service during integration.
+
+### 2026-10-14: initial lifecycle checkpoint
+
+Ported from develop `1fd51943`: dispatch pipe ownership, reader interrupt
+forwarding, redirect owner cancellation, sender validation and optional outbound
+retirement. Preserved upstream core status locking and FinalRules test fixtures;
+did not restore singbridge or removed proxySettings behavior. Hy2 lifecycle
+adaptation remains open, so P02/P03 are not marked complete.
+
+Pristine upstream race baseline failed in outbound TestTagsCache: the cache
+pointer was read outside the registry lock; its test also raced on stop flags.
+The restored fork manager reads the cache under RLock and test flags are atomic.
+Broader candidate tests exposed the existing UDP fixture accepting-flag race;
+ported the spec007 close-driven fixture rather than suppressing the race.
+
+Passed with Go 1.27.0 on Darwin/arm64:
+
+```sh
+go test -race -count=1 -timeout=5m ./common/buf ./core ./app/proxyman/outbound ./transport ./transport/internet ./transport/internet/hysteria
+go vet ./common/buf ./core ./app/proxyman/outbound ./transport ./transport/internet ./transport/internet/hysteria
+bash .github/check-gofmt.sh
+git diff --check
+```
+
+Core tests took 48.546s, outbound 11.225s; other packages completed in under 3s.
+These are package regressions, not the full acceptance or interop matrix.
+Config wrapper now accepts a Git worktree root without weakening its dirty-tree
+or develop tracking guards; four build wrapper tests pass. Candidate build
+output is isolated in `xray-config/build/rebase-20261014`.
