@@ -1,4 +1,26 @@
-# Tasks: AnyTLS inbound
+# Tasks: AnyTLS
+
+## Outbound extension (2026-09-27)
+
+The following new work is not covered by the checked historical inbound tasks.
+See [outbound contract and acceptance](outbound.md).
+
+- [x] O-T01 ClientConfig, JSON/protobuf validation and registration (OT-01); tables and real gRPC rejection pass, see outbound-implementation.md.
+- [x] O-T02 Native TCP pool, dialing, cancellation and graceful retirement (OT-02..05, OT-07, OT-12); lifecycle, resource and chained-admission closures in outbound-current-audit.md.
+- [x] O-T03 UoT v2 packet adapter (OT-06); adapter/native boundary and interoperability evidence reconciled in outbound-current-audit.md.
+- [x] O-T04 Real control-plane and statistics integration (OT-08..11); native gRPC/wire counters and candidate Sidecar live consumer tests mapped in outbound-final-acceptance.md.
+- [x] O-T05 External-server interoperability, regression and builds (OT-02, OT-13..14); final local acceptance and artifact evidence in outbound-final-acceptance.md.
+- [x] O-T06 Complete requirement-to-evidence review; outbound-final-acceptance.md maps OT/B/C rows and preserves revision/platform boundaries.
+- [x] O-T07 Execute real OB and egress matrix B-01..B-08 in outbound-tests.md; composition and cancellation closures recorded in the audit.
+- [x] O-T08 Execute chain matrix C-01..C-07 in outbound-tests.md; exact counts, pending-hop cancellation repair, external chains and separate-process verification passed.
+- [x] O-T09 Review every shared-code diff using outbound-impact.md; per-file/hunk reconciliation and independent shared-module regressions recorded at fca957f5. This review does not close the remaining protocol-local lifecycle or release gates.
+
+Local outbound implementation and acceptance are complete. Final OT/B/C mapping
+and execution boundaries are in [outbound-final-acceptance.md](outbound-final-acceptance.md).
+Historical failures and their resolutions remain in the chronological evidence;
+production pin updates, push and deployment are not part of this local acceptance.
+
+Current bounded gap review: [outbound-current-audit.md](outbound-current-audit.md).
 
 实现及 SHI 单节点试点已完成，仅内部试点；公开分发与推广仍不在范围。
 完成时补实际提交和验证证据，不因授权就勾选测试任务。

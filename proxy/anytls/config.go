@@ -4,10 +4,10 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/xtls/xray-core/common/protocol"
+	engine "github.com/xtls/xray-core/proxy/anytls/internal/engine"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -54,46 +54,5 @@ func (c *ServerConfig) Validate() error {
 	if len(c.PaddingScheme) == 0 {
 		return nil
 	}
-	if len(strings.Join(c.PaddingScheme, "\n")) > 8192 {
-		return fmt.Errorf("anytls: padding scheme too large")
-	}
-	seen, stop := map[string]bool{}, false
-	for _, line := range c.PaddingScheme {
-		key, value, ok := strings.Cut(line, "=")
-		if !ok || seen[key] {
-			return fmt.Errorf("anytls: invalid padding scheme")
-		}
-		seen[key] = true
-		if key == "stop" {
-			n, e := strconv.Atoi(value)
-			if e != nil || n < 1 || n > 256 {
-				return fmt.Errorf("anytls: invalid padding stop")
-			}
-			stop = true
-			continue
-		}
-		n, e := strconv.Atoi(key)
-		if e != nil || n < 0 || n > 255 || strconv.Itoa(n) != key {
-			return fmt.Errorf("anytls: invalid padding index")
-		}
-		fields := strings.Split(value, ",")
-		if len(fields) > 16 {
-			return fmt.Errorf("anytls: too many padding ranges")
-		}
-		for _, field := range fields {
-			if field == "c" {
-				continue
-			}
-			lo, hi, ok := strings.Cut(field, "-")
-			l, le := strconv.Atoi(lo)
-			h, he := strconv.Atoi(hi)
-			if !ok || le != nil || he != nil || l < 1 || h < l || h > 65535 {
-				return fmt.Errorf("anytls: invalid padding range")
-			}
-		}
-	}
-	if !stop {
-		return fmt.Errorf("anytls: padding stop is required")
-	}
-	return nil
+	return engine.ValidatePaddingScheme([]byte(strings.Join(c.PaddingScheme, "\n")))
 }

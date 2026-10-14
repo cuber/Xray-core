@@ -45,6 +45,34 @@ func TestAnyTLSJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := outbound.Build(); err == nil {
-		t.Fatal("AnyTLS outbound must remain unsupported")
+		t.Fatal("empty AnyTLS outbound settings must be rejected")
+	}
+}
+
+func TestAnyTLSOutboundPoolLimitsJSON(t *testing.T) {
+	var config conf.AnyTLSClientConfig
+	if err := json.Unmarshal([]byte(`{"address":"anytls.test","port":443,"password":"secret","maxSessions":32,"maxIdleSessions":8,"maxConcurrentDials":4}`), &config); err != nil {
+		t.Fatal(err)
+	}
+	built, err := config.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := built.(*anytls.ClientConfig)
+	if c.MaxSessions != 32 || c.MaxIdleSessions != 8 || c.MaxConcurrentDials != 4 {
+		t.Fatal("pool limits not preserved")
+	}
+	for _, raw := range []string{
+		`{"address":"anytls.test","port":443,"password":"secret","maxSessions":-1}`,
+		`{"address":"anytls.test","port":443,"password":"secret","maxSessions":4097}`,
+		`{"address":"anytls.test","port":443,"password":"secret","maxSessions":2,"maxConcurrentDials":3}`,
+		`{"address":"anytls.test","port":443,"password":"secret","maxIdleSessions":1,"minIdleSession":2}`,
+	} {
+		var bad conf.AnyTLSClientConfig
+		if err := json.Unmarshal([]byte(raw), &bad); err == nil {
+			if _, err := bad.Build(); err == nil {
+				t.Fatal("invalid pool limits accepted", raw)
+			}
+		}
 	}
 }

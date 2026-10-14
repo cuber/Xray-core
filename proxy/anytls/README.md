@@ -1,8 +1,8 @@
-# AnyTLS Inbound
+# AnyTLS
 
-Local fork implementation. Inbound only; no AnyTLS outbound or subscription
-renderer is registered. Production rollout is tracked separately in
-[`spec/008-anytls-inbound/`](../../spec/008-anytls-inbound/spec.md) in this repository.
+Local fork implementation with inbound and native outbound adapters. No AnyTLS
+subscription renderer is added here. Production rollout is tracked separately in
+[`spec/008-anytls/`](../../spec/008-anytls/spec.md) in this repository.
 
 Use standard Xray inbound fields and `streamSettings.network: "raw"`,
 `security: "tls"`, and normal `tlsSettings.certificates`. Plaintext, REALITY and
@@ -70,6 +70,44 @@ link, with at most 64 active targets per association and policy-driven idle
 reclamation. Payloads of 1..8192 bytes are supported; zero and larger datagrams
 are rejected rather than silently truncated by the existing UDP stack.
 
+## Outbound
+
+Use `protocol: "anytls"` with one `settings.address`, `port`, and opaque
+`password`. Optional `email` and `level` are local metadata/policy, not a wire
+username. `streamSettings` must select RAW/TCP and TLS; outer `mux.enabled`,
+Reality, plaintext and request-dependent `sendThrough` are rejected. TLS CA/SNI
+and socket options use normal Xray fields. See the complete
+[configuration and lifecycle contract](../../spec/008-anytls/outbound.md).
+
+The handler owns the native pool and dials through Core's supplied dialer,
+including `proxySettings` and `sockopt.dialerProxy`. Sequential completed streams
+reuse idle sessions; concurrent streams do not imply one physical socket.
+`idleSessionCheckInterval` and `idleSessionTimeout` default to 30 seconds
+(values 0..5 select that default). `minIdleSession` retains existing idle sessions
+without pre-dialing. UDP uses UoT v2 with the same 1..8192-byte payload limit.
+
+Pool admission is bounded: `maxSessions` defaults to 256; `maxIdleSessions` and
+`maxConcurrentDials` default to min(64, maxSessions). Zero selects these defaults,
+not unlimited capacity. Bounds must not exceed 4096 or the total session cap;
+`minIdleSession` cannot exceed the idle cap. Excess admission fails immediately
+without a waiting queue or automatic replay. Failed/closed dials release capacity.
+
+Padding from local configuration and remote control frames is validated before
+publication and allocation. Invalid remote updates retain the previous scheme.
+Server and client control writes have owned cancellation timers, not shared
+transport deadlines. See [security hardening](../../spec/008-anytls/security-hardening.md)
+for exact bounds, compatibility changes and regression tests.
+
+HandlerService removal stops admission and drains established streams; instance
+shutdown immediately closes active and retired pools. Authentication and SYN
+writes complete before admission. Cancellation interrupts blocked physical writes,
+including dispatch-backed connections with no-op write deadlines. A partial record
+retires its physical connection and is never replayed. This does not change the
+wire protocol or promise TCP half-close or TLS 0-RTT.
+
+Outbound counters remain Core's wire counters; inbound user/domain counters remain
+logical payload counters. No duplicate protocol-specific accounting is introduced.
+
 ## Tests
 
 ```sh
@@ -82,6 +120,13 @@ Set `ANYTLS_SINGBOX` and `ANYTLS_MIHOMO` to independent client binaries to enabl
 client, against distinct users of one Core. The same fixture verifies Hy2 UDP
 and AnyTLS TCP on the same numeric port. Test listeners bind only to loopback;
 temporary client files use mode 0600 and are removed on exit.
+
+`TestAnyTLSExternalServers` reverses interoperability: Core connects to independent
+sing-box and Mihomo servers with CA verification, exact TCP payloads and UDP
+packet/source checks. `ANYTLS_STRICT=1` makes missing external-server binaries an
+error. Local pool/lifecycle, real HandlerService/stats, OB-to-UDS and eleven direct/
+chained TCP/UoT paths have dedicated tests. Current evidence and remaining release
+gates are tracked in [outbound-implementation.md](../../spec/008-anytls/outbound-implementation.md).
 
 `TestAnyTLSUoTResourceRounds` exercises 128 real UDP targets across two users,
 overflow rejection, revocation and full credit recovery over warmed rounds with

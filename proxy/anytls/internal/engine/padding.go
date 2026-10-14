@@ -14,6 +14,15 @@ import (
 
 const paddingCheckMark = -1
 
+const (
+	maxPaddingSchemeBytes  = 8192
+	maxPaddingRecords      = 256
+	maxPaddingRanges       = 16
+	maxPaddingSize         = 65535
+	maxPaddingPacketBytes  = 128 * 1024
+	maxPaddingSchemeBudget = 1024 * 1024
+)
+
 var DefaultPaddingScheme = []byte(`stop=8
 0=30-30
 1=100-400
@@ -37,29 +46,42 @@ type paddingFactory struct {
 }
 
 func newPaddingFactory(rawScheme []byte) (*paddingFactory, error) {
-	scheme := parseSettings(rawScheme)
-	if len(scheme) == 0 {
+	if len(rawScheme) == 0 || len(rawScheme) > maxPaddingSchemeBytes {
 		return nil, ErrPaddingScheme
 	}
-	// sing-anytls 0.0.11 padding.NewPaddingFactory converts stop with an unchecked
-	// uint32 cast, so a negative stop means "never stop padding" on the wire.
-	stop, err := strconv.Atoi(scheme["stop"])
-	if err != nil {
-		return nil, E.Extend(ErrPaddingScheme, "parse stop: ", err)
+	scheme := make(settings)
+	for line := range strings.SplitSeq(string(rawScheme), "\n") {
+		key, value, found := strings.Cut(line, "=")
+		if _, duplicate := scheme[key]; !found || duplicate {
+			return nil, ErrPaddingScheme
+		}
+		scheme[key] = value
+	}
+	stop, err := strconv.ParseUint(scheme["stop"], 10, 32)
+	if err != nil || stop < 1 || stop > maxPaddingRecords {
+		return nil, ErrPaddingScheme
 	}
 	sum := md5.Sum(rawScheme)
 	factory := &paddingFactory{
-		rawScheme: rawScheme,
+		rawScheme: append([]byte(nil), rawScheme...),
 		md5Sum:    hex.EncodeToString(sum[:]),
 		stop:      uint32(stop),
 		records:   make(map[uint32][]paddingRange),
 	}
+	var totalBudget int
 	for key, value := range scheme {
-		packet, parseErr := strconv.ParseUint(key, 10, 32)
-		if parseErr != nil || strconv.FormatUint(packet, 10) != key {
+		if key == "stop" {
 			continue
 		}
+		packet, parseErr := strconv.ParseUint(key, 10, 32)
+		if parseErr != nil || packet >= maxPaddingRecords || strconv.FormatUint(packet, 10) != key {
+			return nil, ErrPaddingScheme
+		}
+		if strings.Count(value, ",") >= maxPaddingRanges {
+			return nil, ErrPaddingScheme
+		}
 		var ranges []paddingRange
+		var packetBudget int
 		for item := range strings.SplitSeq(value, ",") {
 			if item == "c" {
 				ranges = append(ranges, paddingRange{minSize: paddingCheckMark})
@@ -67,21 +89,23 @@ func newPaddingFactory(rawScheme []byte) (*paddingFactory, error) {
 			}
 			minText, maxText, found := strings.Cut(item, "-")
 			if !found {
-				continue
+				return nil, ErrPaddingScheme
 			}
 			minSize, minErr := strconv.Atoi(minText)
 			if minErr != nil {
-				continue
+				return nil, ErrPaddingScheme
 			}
 			maxSize, maxErr := strconv.Atoi(maxText)
 			if maxErr != nil {
-				continue
+				return nil, ErrPaddingScheme
 			}
-			if minSize > maxSize {
-				minSize, maxSize = maxSize, minSize
+			if minSize <= 0 || maxSize < minSize || maxSize > maxPaddingSize {
+				return nil, ErrPaddingScheme
 			}
-			if minSize <= 0 || maxSize <= 0 {
-				continue
+			packetBudget += maxSize
+			totalBudget += maxSize
+			if packetBudget > maxPaddingPacketBytes || totalBudget > maxPaddingSchemeBudget {
+				return nil, ErrPaddingScheme
 			}
 			ranges = append(ranges, paddingRange{minSize: minSize, maxSize: maxSize})
 		}
@@ -90,6 +114,21 @@ func newPaddingFactory(rawScheme []byte) (*paddingFactory, error) {
 		}
 	}
 	return factory, nil
+}
+
+// ValidatePaddingScheme is shared by configuration and remote control frames.
+func ValidatePaddingScheme(raw []byte) error {
+	_, err := newPaddingFactory(raw)
+	return err
+}
+
+func paddingRecordSize(size int) (int, error) {
+	// Check before arithmetic, even when called with a corrupted internal factory.
+	if size < 1 || size > maxPaddingSize {
+		return 0, E.New("anytls: padding size out of bounds")
+	}
+	wasteCount := 1 + (size-1)/maxFrameSize
+	return size + wasteCount*frameOverhead, nil
 }
 
 func (f *paddingFactory) GenerateRecordPayloadSizes(packet uint32) []int {

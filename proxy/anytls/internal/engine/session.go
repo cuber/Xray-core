@@ -58,6 +58,10 @@ type session struct {
 
 	idleSince time.Time
 	element   *list.Element[*session]
+	// Protected by client.access: an idle session taken but not yet opened must
+	// not be re-published by a previous stream's delayed write completion.
+	reserved bool
+	controls int
 }
 
 func newClientSession(client *Client, conn net.Conn) *session {
@@ -164,6 +168,10 @@ func (s *session) openStream(destination M.Socksaddr) (*stream, error) {
 }
 
 func (s *session) finishStream(streamID uint32, notify bool) error {
+	if s.client != nil && s.client.cancelableWrites {
+		s.client.beginControl(s)
+		defer s.client.endControl(s)
+	}
 	s.streamAccess.Lock()
 	delete(s.streams, streamID)
 	s.streamAccess.Unlock()
@@ -477,6 +485,42 @@ func (s *session) lockWrite() error {
 
 func (s *session) unlockWrite() {
 	<-s.writeAccess
+	if s.client != nil && s.client.cancelableWrites && !s.hasStreams() {
+		s.client.releaseSession(s)
+	}
+}
+
+// Join the watcher before releasing the write lock: a late cancellation must
+// not close a session that has already been returned to the idle pool.
+func (s *session) watchWrite(target *stream, limit *pipe.Deadline) func() {
+	if s.client != nil && !s.client.cancelableWrites {
+		return func() {}
+	}
+	finished, joined := make(chan struct{}), make(chan struct{})
+	var resolved atomic.Bool
+	go func() {
+		defer close(joined)
+		select {
+		case <-finished:
+			return
+		case <-target.done:
+		case <-limit.Wait():
+		}
+		// Completion and cancellation need one winner: select alone may choose
+		// cancellation after the writer has already published completion.
+		if !resolved.CompareAndSwap(false, true) {
+			return
+		}
+		// A partially written record cannot be reused. Close marks the session
+		// unavailable before interrupting transport I/O; it does not take the
+		// write lock, and the writer still owns its frame cleanup.
+		s.Close()
+	}()
+	return func() {
+		resolved.CompareAndSwap(false, true)
+		close(finished)
+		<-joined
+	}
 }
 
 func (s *session) write(target *stream, buffer *buf.Buffer, limit *pipe.Deadline) error {
@@ -485,11 +529,13 @@ func (s *session) write(target *stream, buffer *buf.Buffer, limit *pipe.Deadline
 		buffer.Release()
 		return err
 	}
+	stop := s.watchWrite(target, limit)
 	err = s.writeLocked(buffer)
-	s.unlockWrite()
+	stop()
 	if err != nil {
 		s.Close()
 	}
+	s.unlockWrite()
 	return err
 }
 
@@ -503,6 +549,7 @@ func (s *session) writeRequest(target *stream, request *buf.Buffer, limit *pipe.
 		return err
 	}
 	s.armOpenTimeout(target.id)
+	stop := s.watchWrite(target, limit)
 	if s.pending != nil {
 		err = s.writeLocked(request)
 	} else {
@@ -512,10 +559,11 @@ func (s *session) writeRequest(target *stream, request *buf.Buffer, limit *pipe.
 		}
 		request.Release()
 	}
-	s.unlockWrite()
+	stop()
 	if err != nil {
 		s.Close()
 	}
+	s.unlockWrite()
 	return err
 }
 
@@ -543,23 +591,37 @@ func (s *session) writeFrame(command byte, streamID uint32, data []byte) error {
 	if len(data) > maxFrameSize {
 		return E.New("anytls: control frame too large: ", len(data))
 	}
+	if s.client != nil && s.client.cancelableWrites {
+		s.client.beginControl(s)
+		defer s.client.endControl(s)
+	}
 	frame := buf.NewSize(frameOverhead + len(data))
 	putFrameHeader(frame.Extend(frameOverhead), command, streamID, len(data))
 	common.Must1(frame.Write(data))
-	s.conn.SetWriteDeadline(time.Now().Add(controlFrameWriteTimeout))
+	// Own the timeout across lock acquisition and I/O. A shared transport
+	// deadline can be overwritten by another queued control writer.
+	joined := make(chan struct{})
+	timer := time.AfterFunc(controlFrameWriteTimeout, func() {
+		defer close(joined)
+		s.Close()
+	})
+	stop := func() {
+		if !timer.Stop() {
+			<-joined
+		}
+	}
 	err := s.lockWrite()
 	if err != nil {
+		stop()
 		frame.Release()
 		return err
 	}
 	err = s.writeLocked(frame)
-	if err == nil {
-		s.conn.SetWriteDeadline(time.Time{})
-	}
-	s.unlockWrite()
+	stop()
 	if err != nil {
 		s.Close()
 	}
+	s.unlockWrite()
 	return err
 }
 
@@ -594,7 +656,21 @@ func (s *session) writePacketLocked(data []byte) error {
 		s.sendPadding = false
 		return common.Error(s.conn.Write(data))
 	}
-	for _, size := range factory.GenerateRecordPayloadSizes(s.packetCount) {
+	sizes := factory.GenerateRecordPayloadSizes(s.packetCount)
+	budget := 0
+	for _, size := range sizes {
+		if size == paddingCheckMark {
+			continue
+		}
+		if _, err := paddingRecordSize(size); err != nil {
+			return err
+		}
+		if size > maxPaddingPacketBytes-budget {
+			return ErrPaddingScheme
+		}
+		budget += size
+	}
+	for _, size := range sizes {
 		if size == paddingCheckMark {
 			if len(data) == 0 {
 				return nil
@@ -609,8 +685,11 @@ func (s *session) writePacketLocked(data []byte) error {
 			data = data[size:]
 			continue
 		}
-		wasteCount := (size + maxFrameSize - 1) / maxFrameSize
-		record := buf.NewSize(size + wasteCount*frameOverhead)
+		capacity, err := paddingRecordSize(size)
+		if err != nil {
+			return err
+		}
+		record := buf.NewSize(capacity)
 		if len(data) > 0 {
 			common.Must1(record.Write(data))
 			data = nil
@@ -628,7 +707,7 @@ func (s *session) writePacketLocked(data []byte) error {
 				remaining -= wasteLen
 			}
 		}
-		_, err := s.conn.Write(record.Bytes())
+		_, err = s.conn.Write(record.Bytes())
 		record.Release()
 		if err != nil {
 			return err
