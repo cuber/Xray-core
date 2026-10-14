@@ -1,0 +1,442 @@
+{
+  "scope": "current local worktree, including local generated config; NOT deployed-state proof",
+  "files": 42,
+  "protocol_objects": {
+    "inbounds:anytls": 5,
+    "inbounds:dokodemo-door": 45,
+    "inbounds:hysteria": 41,
+    "inbounds:shadowsocks": 87,
+    "inbounds:socks": 4,
+    "inbounds:vless": 12,
+    "outbounds:anytls": 6,
+    "outbounds:blackhole": 32,
+    "outbounds:freedom": 55,
+    "outbounds:hysteria": 359,
+    "outbounds:loopback": 42,
+    "outbounds:shadowsocks": 10,
+    "outbounds:socks": 6,
+    "outbounds:vless": 56
+  },
+  "field_counts": {
+    "interface": 7,
+    "ipsBlocked": 44,
+    "sendThrough": 1
+  },
+  "field_nodes": {
+    "interface": [
+      "isz5",
+      "la.lazy.switch",
+      "la.lisa"
+    ],
+    "ipsBlocked": [
+      "6hk",
+      "asz.lite",
+      "hk.akile.lite",
+      "hk.dmit.t1.tiny",
+      "hk.lisa",
+      "hk.pccw.hkt",
+      "hk.rfc.co.mini",
+      "hk.rfc.co.vgd",
+      "hk.rfc.t1.ctc",
+      "hk.rfc.t1.jinx",
+      "isz5",
+      "la.aaitr.att",
+      "la.akile.lite",
+      "la.cgt.135",
+      "la.dmit.an4.pro.tiny",
+      "la.dmit.an5.pro.tiny",
+      "la.dmit.eb.tiny",
+      "la.dmit.t1.tiny",
+      "la.lazy.switch",
+      "la.lisa",
+      "la.rfc.t1",
+      "la.usvps24.att.1st",
+      "la.usvps24.att.2nd",
+      "pgz.luck",
+      "pgz.nano",
+      "pgz.spec",
+      "phk.nano",
+      "psh.luck",
+      "psh.spec",
+      "sg.lisa",
+      "sg.zuma.sgsh1",
+      "tgz.lite",
+      "tk.akile.hyper",
+      "tk.dmit.t1.tiny",
+      "tk.lazy.softbank",
+      "tk.rfc.co.micro.shi",
+      "tk.rfc.co.micro.zds",
+      "tk.rfc.t1",
+      "vgz.ecs"
+    ],
+    "sendThrough": [
+      "isz5"
+    ]
+  },
+  "objects": [
+    {
+      "node": "6hk",
+      "path": "$config.outbounds[12].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "asz.lite",
+      "path": "$config.outbounds[12].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "asz.lite",
+      "path": "$config.outbounds[13].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "asz.lite",
+      "path": "$config.outbounds[14].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "asz.lite",
+      "path": "$config.outbounds[15].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "asz.lite",
+      "path": "$config.outbounds[16].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "asz.lite",
+      "path": "$config.outbounds[17].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "hk.akile.lite",
+      "path": "$config.outbounds[8].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "hk.dmit.t1.tiny",
+      "path": "$config.outbounds[6].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "hk.lisa",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "hk.pccw.hkt",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "hk.rfc.co.mini",
+      "path": "$config.outbounds[7].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "hk.rfc.co.vgd",
+      "path": "$config.outbounds[7].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "hk.rfc.t1.ctc",
+      "path": "$config.outbounds[6].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "hk.rfc.t1.jinx",
+      "path": "$config.outbounds[6].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "isz5",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "isz5",
+      "path": "$config.outbounds[1].sendThrough",
+      "field": "sendThrough",
+      "type": "str",
+      "items": null
+    },
+    {
+      "node": "isz5",
+      "path": "$config.outbounds[1].streamSettings.sockopt.interface",
+      "field": "interface",
+      "type": "str",
+      "items": null
+    },
+    {
+      "node": "la.aaitr.att",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "la.akile.lite",
+      "path": "$config.outbounds[7].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "la.cgt.135",
+      "path": "$config.outbounds[5].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "la.dmit.an4.pro.tiny",
+      "path": "$config.outbounds[7].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "la.dmit.an5.pro.tiny",
+      "path": "$config.outbounds[7].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "la.dmit.eb.tiny",
+      "path": "$config.outbounds[7].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "la.dmit.t1.tiny",
+      "path": "$config.outbounds[7].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "la.lazy.switch",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "la.lazy.switch",
+      "path": "$config.outbounds[4].streamSettings.sockopt.interface",
+      "field": "interface",
+      "type": "str",
+      "items": null
+    },
+    {
+      "node": "la.lazy.switch",
+      "path": "$config.outbounds[5].streamSettings.sockopt.interface",
+      "field": "interface",
+      "type": "str",
+      "items": null
+    },
+    {
+      "node": "la.lazy.switch",
+      "path": "$config.outbounds[6].streamSettings.sockopt.interface",
+      "field": "interface",
+      "type": "str",
+      "items": null
+    },
+    {
+      "node": "la.lisa",
+      "path": "$config.outbounds[7].streamSettings.sockopt.interface",
+      "field": "interface",
+      "type": "str",
+      "items": null
+    },
+    {
+      "node": "la.lisa",
+      "path": "$config.outbounds[8].streamSettings.sockopt.interface",
+      "field": "interface",
+      "type": "str",
+      "items": null
+    },
+    {
+      "node": "la.lisa",
+      "path": "$config.outbounds[9].streamSettings.sockopt.interface",
+      "field": "interface",
+      "type": "str",
+      "items": null
+    },
+    {
+      "node": "la.lisa",
+      "path": "$config.outbounds[10].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "la.rfc.t1",
+      "path": "$config.outbounds[2].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "la.usvps24.att.1st",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "la.usvps24.att.2nd",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "pgz.luck",
+      "path": "$config.outbounds[12].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "pgz.nano",
+      "path": "$config.outbounds[12].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "pgz.spec",
+      "path": "$config.outbounds[12].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "phk.nano",
+      "path": "$config.outbounds[13].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "psh.luck",
+      "path": "$config.outbounds[12].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "psh.spec",
+      "path": "$config.outbounds[12].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "sg.lisa",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "sg.zuma.sgsh1",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "tgz.lite",
+      "path": "$config.outbounds[5].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "tk.akile.hyper",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "tk.dmit.t1.tiny",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "tk.lazy.softbank",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "tk.rfc.co.micro.shi",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "tk.rfc.co.micro.zds",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "tk.rfc.t1",
+      "path": "$config.outbounds[0].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    },
+    {
+      "node": "vgz.ecs",
+      "path": "$config.outbounds[5].settings.ipsBlocked",
+      "field": "ipsBlocked",
+      "type": "list",
+      "items": 0
+    }
+  ]
+}
