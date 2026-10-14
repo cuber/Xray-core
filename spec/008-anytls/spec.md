@@ -42,6 +42,10 @@ its cross-module descriptions do not override the owning specs above.
 2026-09-30 安全审计修复与新回归契约见
 [security-hardening.md](security-hardening.md)，包括 padding、入站写超时和出站池上限。
 
+The 2026-10-04 address-adapter isolation is part of this spec, not an upstream
+merge: [scope, invariants and verification](address-adapter.md). AnyTLS must not
+import `common/singbridge`; pinned `sing` engine/UoT dependencies remain.
+
 ### 出站扩展
 
 出站新增契约、实施步骤和验收矩阵见 [outbound.md](outbound.md)。该扩展属于

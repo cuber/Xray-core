@@ -13,7 +13,6 @@ import (
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/session"
 	"github.com/xtls/xray-core/common/signal"
-	"github.com/xtls/xray-core/common/singbridge"
 	"github.com/xtls/xray-core/transport"
 )
 
@@ -85,7 +84,7 @@ func (s *Server) serveUDP(parent context.Context, conn net.Conn) error {
 				delete(targets, address)
 			}
 		}
-		target := singbridge.ToDestination(dest, net.Network_UDP)
+		target := toDestination(dest, net.Network_UDP)
 		t := targets[target]
 		if t == nil {
 			if len(targets) >= 64 {
@@ -132,7 +131,7 @@ func (s *Server) serveUDP(parent context.Context, conn net.Conn) error {
 							from = *b.UDP
 						}
 						payload := B.As(b.Bytes())
-						writeErr := packets.WritePacket(payload, singbridge.ToSocksaddr(from))
+						writeErr := packets.WritePacket(payload, toSocksaddr(from))
 						// WritePacket's vectorised path owns its buffers; As wraps Xray-owned data.
 						if writeErr != nil {
 							buf.ReleaseMulti(mb)

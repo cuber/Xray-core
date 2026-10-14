@@ -22,7 +22,6 @@ import (
 	xnet "github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/serial"
 	"github.com/xtls/xray-core/common/session"
-	"github.com/xtls/xray-core/common/singbridge"
 	"github.com/xtls/xray-core/features/outbound"
 	"github.com/xtls/xray-core/features/routing"
 	"github.com/xtls/xray-core/proxy/anytls"
@@ -110,7 +109,11 @@ func TestAnyTLSOutboundUDPResponseBoundaries(t *testing.T) {
 					feedback := &udpBoundaryErrors{}
 					requestCtx = session.TrackedConnectionError(requestCtx, feedback)
 					requestCtx = session.SetForcedOutboundTagToContext(requestCtx, observed.Tag())
-					dest := singbridge.ToDestination(M.ParseSocksaddr(address), xnet.Network_UDP)
+					dest, err := xnet.ParseDestination("udp:" + address)
+					if err != nil {
+						stop()
+						t.Fatal(err)
+					}
 					link, err := dispatcher.Dispatch(requestCtx, dest)
 					if err != nil {
 						stop()

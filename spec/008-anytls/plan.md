@@ -14,6 +14,14 @@ Current local implementation and results: [outbound-implementation.md](outbound-
 
 ## 技术范围与文件归属
 
+### 2026-10-04 Address Adapter Isolation
+
+Move only the two destination conversions into `proxy/anytls/address.go` and
+remove bridge imports from production and test code. Existing SS-2022 keeps its
+bridge; do not modify shared transport, dispatch, pool ownership or dependencies.
+Preserve conversion semantics and add address and import-boundary regressions.
+Acceptance and execution evidence are tracked in [address-adapter.md](address-adapter.md).
+
 ### 2026-09-26 会话回收修正
 
 - AnyTLS 独立接入 `common/mux` 的双观测算法，不耦合其帧/Session 类型。

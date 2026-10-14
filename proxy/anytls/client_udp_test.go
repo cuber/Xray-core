@@ -11,7 +11,6 @@ import (
 	"github.com/sagernet/sing/common/uot"
 	"github.com/xtls/xray-core/common/buf"
 	xnet "github.com/xtls/xray-core/common/net"
-	"github.com/xtls/xray-core/common/singbridge"
 )
 
 func TestClientUDPPacketBoundaries(t *testing.T) {
@@ -21,7 +20,7 @@ func TestClientUDPPacketBoundaries(t *testing.T) {
 			a.SetDeadline(time.Now().Add(time.Second))
 			b.SetDeadline(time.Now().Add(time.Second))
 			dest := M.ParseSocksaddr(address)
-			packets := &clientPackets{conn: uot.NewConn(a, uot.Request{}), target: singbridge.ToDestination(dest, xnet.Network_UDP)}
+			packets := &clientPackets{conn: uot.NewConn(a, uot.Request{}), target: toDestination(dest, xnet.Network_UDP)}
 			peer := uot.NewConn(b, uot.Request{})
 			payload := bytes.Repeat([]byte{42}, size)
 			buffer := buf.NewWithSize(int32(size + 1))
