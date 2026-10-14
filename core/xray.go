@@ -133,6 +133,7 @@ func AddOutboundHandler(server *Instance, config *OutboundHandlerConfig) error {
 		return errors.New("not an OutboundHandler")
 	}
 	if err := outboundManager.AddHandler(server.ctx, handler); err != nil {
+		common.Close(handler)
 		return err
 	}
 	return nil

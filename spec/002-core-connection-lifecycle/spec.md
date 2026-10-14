@@ -47,4 +47,35 @@ app/proxyman/outbound/handler.go、transport/internet/hysteria/dialer.go。
 
 ## 导航
 
+## FR-002 - Shared outbound ownership increment
+
+Extracted from `2074c223` on 2026-10-14 without behavior changes. These are
+protocol-independent capabilities consumed by AnyTLS spec008, not an AnyTLS
+implementation dependency in the manager or buffer packages.
+
+- `ValidateSender` is an optional configuration capability checked before proxy
+  construction. Protocol implementations own validation; legacy configs without
+  it preserve their behavior. JSON builder integration remains with spec008.
+- Optional `outbound.Retirement` stops new admission while draining established
+  work. Removal unpublishes the tag and retains ownership until drain finishes;
+  full shutdown closes both live and draining handlers outside the registry lock.
+  Legacy handlers without retirement keep the historical removal behavior.
+- A failed Start never publishes the handler/default. A closed manager refuses
+  additions/restart. `core.AddOutboundHandler` closes newly constructed rejected
+  objects without closing the existing object under a duplicate tag.
+- Redirect retains `WithoutCancel` request independence, but returns a connection
+  whose Close cancels its own dispatch context. Preserve multi-buffer Reader and
+  Writer interfaces; runner return and original request cancellation are not Close.
+- SingleReader, PacketReader, ReadVReader and TimeoutWrapperReader forward
+  Interrupt to the underlying resource. They add no new ordinary Close ownership
+  and do not use cancellation to mutate buffers/counters. Terminal readv syscall
+  handling belongs to spec007, not this contract.
+
+Validation: `go test -race -count=1 -timeout=5m ./common/buf ./core
+./app/proxyman/outbound ./transport/internet ./transport` (one shell command).
+Independent fixtures: `retirement_test.go`, `outbound_cleanup_test.go`,
+`redirect_lifecycle_test.go` and the reader/timeout/readv interruption tests.
+AnyTLS's admission/retirement/chain matrix remains a consumer test in spec008.
+Final execution evidence is recorded in spec001's history-split report.
+
 [技术计划](plan.md) · [任务](tasks.md) · [检查清单](checklists/requirements.md)

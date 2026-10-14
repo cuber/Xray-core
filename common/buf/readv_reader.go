@@ -7,6 +7,7 @@ import (
 	"io"
 	"syscall"
 
+	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/platform"
 	"github.com/xtls/xray-core/features/stats"
 )
@@ -56,6 +57,11 @@ type ReadVReader struct {
 	mr      multiReader
 	alloc   allocStrategy
 	counter stats.Counter
+}
+
+// Interrupt implements common.Interruptible.
+func (r *ReadVReader) Interrupt() {
+	common.Interrupt(r.Reader)
 }
 
 // NewReadVReader creates a new ReadVReader.

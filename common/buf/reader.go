@@ -153,6 +153,11 @@ type SingleReader struct {
 	io.Reader
 }
 
+// Interrupt implements common.Interruptible.
+func (r *SingleReader) Interrupt() {
+	common.Interrupt(r.Reader)
+}
+
 // ReadMultiBuffer implements Reader.
 func (r *SingleReader) ReadMultiBuffer() (MultiBuffer, error) {
 	b, err := ReadBuffer(r.Reader)
@@ -162,6 +167,11 @@ func (r *SingleReader) ReadMultiBuffer() (MultiBuffer, error) {
 // PacketReader is a Reader that read one Buffer every time.
 type PacketReader struct {
 	io.Reader
+}
+
+// Interrupt implements common.Interruptible.
+func (r *PacketReader) Interrupt() {
+	common.Interrupt(r.Reader)
 }
 
 // ReadMultiBuffer implements Reader.
