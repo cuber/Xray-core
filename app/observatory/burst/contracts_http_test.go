@@ -35,6 +35,41 @@ func contractWait(t *testing.T, ch <-chan struct{}, what string) {
 	}
 }
 
+func TestContractProbeConnectionOwnsDispatchContext(t *testing.T) {
+	old := tagged.Dialer
+	t.Cleanup(func() { tagged.Dialer = old })
+	var contexts []context.Context
+	tagged.Dialer = func(ctx context.Context, _ routing.Dispatcher, _ xnet.Destination, _ string) (xnet.Conn, error) {
+		contexts = append(contexts, ctx)
+		client, peer := net.Pipe()
+		t.Cleanup(func() { client.Close(); peer.Close() })
+		return client, nil
+	}
+	parent, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	client := newHTTPClient(parent, nil, "probe", time.Second, true)
+	transport := client.Transport.(*http.Transport)
+	// net/http can detach a dial from request cancellation to permit reuse.
+	// The observer parent must still cancel its owned dispatch on shutdown.
+	first, err := transport.DialContext(context.WithoutCancel(parent), "tcp", "example.test:80")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer first.Close()
+	second, err := transport.DialContext(context.WithoutCancel(parent), "tcp", "example.test:80")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer second.Close()
+	first.Close()
+	contractWait(t, contexts[0].Done(), "closing probe connection cancels dispatch")
+	if contexts[1].Err() != nil || parent.Err() != nil {
+		t.Fatal("connection close canceled another connection or the observer")
+	}
+	cancel()
+	contractWait(t, contexts[1].Done(), "observer cancellation reaches detached dispatch")
+}
+
 func TestContractProbeQueryCapture(t *testing.T) {
 	contractLoopbackDialer(t)
 	requests := make(chan string, 3)

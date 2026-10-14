@@ -52,4 +52,20 @@ V-010 至 V-014 的核心 harness 已实现并在四包完整 race 及新增测�
 
 ## 导航
 
+## Probe connection ownership (extracted from 2074c223)
+
+This protocol-neutral increment belongs to spec004, not the AnyTLS adapter.
+Dispatch may return a pipe before protocol admission/handshake finishes. Each
+HTTP transport connection therefore owns its dispatch cancellation callback:
+Close stops that connection's pending admission, and observer cancellation
+propagates. Closing one connection must not cancel sibling streams or their
+shared physical pool. Error paths close any returned connection and unregister
+callbacks. The actual dispatch ownership primitive is defined by spec002.
+
+Independent verification: `TestContractProbeConnectionOwnsDispatchContext` in
+`app/observatory/burst/contracts_http_test.go`; run
+`go test -race -count=1 -timeout=5m ./app/observatory/... ./app/router/...`.
+The later AnyTLS integration suite verifies this consumer with real TLS/pools;
+it does not replace the protocol-independent contract test.
+
 [技术计划](plan.md) · [任务](tasks.md) · [检查清单](checklists/requirements.md)
