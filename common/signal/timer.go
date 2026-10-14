@@ -20,7 +20,6 @@ type ActivityTimer struct {
 	checkTask *task.Periodic
 	onTimeout func()
 	consumed  atomic.Bool
-	once      sync.Once
 }
 
 func (t *ActivityTimer) Update() {
@@ -30,24 +29,34 @@ func (t *ActivityTimer) Update() {
 	}
 }
 
-func (t *ActivityTimer) check() error {
+func (t *ActivityTimer) check(owner *task.Periodic) error {
+	t.mu.Lock()
+	if t.consumed.Load() || t.checkTask != owner {
+		t.mu.Unlock()
+		return nil
+	}
 	select {
 	case <-t.updated:
+		t.mu.Unlock()
 	default:
-		t.finish()
+		t.consumed.Store(true)
+		common.CloseIfExists(t.checkTask)
+		t.mu.Unlock()
+		t.onTimeout()
 	}
 	return nil
 }
 
 func (t *ActivityTimer) finish() {
-	t.once.Do(func() {
-		t.consumed.Store(true)
-		t.mu.Lock()
-		defer t.mu.Unlock()
-
-		common.CloseIfExists(t.checkTask)
-		t.onTimeout()
-	})
+	t.mu.Lock()
+	if t.consumed.Load() {
+		t.mu.Unlock()
+		return
+	}
+	t.consumed.Store(true)
+	common.CloseIfExists(t.checkTask)
+	t.mu.Unlock()
+	t.onTimeout()
 }
 
 func (t *ActivityTimer) SetTimeout(timeout time.Duration) {
@@ -67,11 +76,22 @@ func (t *ActivityTimer) SetTimeout(timeout time.Duration) {
 	}
 	newCheckTask := &task.Periodic{
 		Interval: timeout,
-		Execute:  t.check,
+	}
+	var primed atomic.Bool
+	newCheckTask.Execute = func() error {
+		// Periodic.Start executes synchronously while SetTimeout owns mu.
+		// Arm the interval without checking activity until its first tick.
+		if primed.CompareAndSwap(false, true) {
+			return nil
+		}
+		return t.check(newCheckTask)
 	}
 	common.CloseIfExists(t.checkTask)
 	t.checkTask = newCheckTask
-	t.Update()
+	select {
+	case <-t.updated:
+	default:
+	}
 	common.Must(newCheckTask.Start())
 }
 
