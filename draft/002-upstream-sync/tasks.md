@@ -1,5 +1,20 @@
 # Tasks
 
+## Refresh 2026-10-14
+
+- [x] Fetch complete origin/main objects and lock user-selected full SHA.
+- [x] Recompute commit/path/config inventory and non-worktree merge preview;
+  verify deterministic regeneration with --check.
+- [x] Source-review native SS authentication deadline clearing, cached UDP
+  identity, allocation lifetime, and Hy2 post-tag fixes; record unresolved tests.
+- [x] Map specs002-009 and cross-repository generated proxySettings consumers.
+- [x] Inspect compact matcher/weak cache changes; no measured savings claimed.
+- [ ] Reproduce source-level SS UDP risks; verify revocation, bounds and identity.
+- [ ] Establish upstream runtime baseline and run candidate migration gates.
+
+See [current audit](review-20261014.md). The historical implementation tasks
+below are not an instruction to cherry-pick everything after selecting main.
+
 ## Research Completed
 
 - [x] T001 [US-001] Restore instructions, owning specs, worktree and approved refs.
@@ -13,8 +28,8 @@
 
 ## Remaining Research Gates
 
-- [ ] T009 [US-001] Fetch/pin current origin/main full objects in an authorized writable
-  research checkout; reconcile September 30 web evidence and regenerate complete diff.
+- [x] T009 [US-001] Fetch/pin current origin/main full objects and refresh the
+  complete path/commit inventory on 2026-10-14; all full diffs available from Git.
 - [ ] T010 [US-002] Review complete native SS deadline-clear helpers, framing, UDP/session
   cleanup, dynamic-user revocation and dependency graph; depends on T009.
 - [ ] T011 [US-004] Review complete newer matcher patches and derive measurable budgets;
@@ -43,6 +58,6 @@
 ## Present Result
 
 Research documents and dated evidence are installed in canonical Core draft002;
-upstream implementation/deployment remain unchecked. Current remote freshness and
-the full newer SS review are explicit residuals. AnyTLS address-adapter adoption
+upstream implementation/deployment remain unchecked. Remote freshness was restored
+on 2026-10-14; runtime verification of the SS review remains open. AnyTLS address-adapter adoption
 is a separately approved spec008 change, not completion of these backports.

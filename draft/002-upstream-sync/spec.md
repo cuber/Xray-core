@@ -1,5 +1,14 @@
 # WIP: Selective Upstream Synchronization
 
+## Current Decision (2026-10-14)
+
+The user selected fixed main `0888beb38a9ba45440557175e71ce21cf8ba3b13`
+as the upgrade candidate. See [the refreshed audit](review-20261014.md) and
+[machine inventory](evidence/review-20261014.json). Fetch/full-source availability
+is no longer blocked. The earlier selective-backport preference and unavailable
+source statements below describe the dated October 4 investigation, not the
+current recommendation. Implementation/rebase/deployment remain unauthorized.
+
 - Owner: xray-core; draft ID 002, explicitly assigned by the user on 2026-10-05.
 - Created: 2026-10-04. Status: Draft / WIP, research only.
 - Request: investigate upstream fixes related to pgz.luck memory/socket retention,

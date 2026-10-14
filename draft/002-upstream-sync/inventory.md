@@ -1,5 +1,9 @@
 # Difference Inventory
 
+Current fixed-main comparison: [2026-10-14 audit](review-20261014.md) and
+[redacted machine inventory](evidence/review-20261014.json). The following
+counts/tool remain the separate, reproducible October 4 baseline.
+
 ## Reproduce
 
 Run from the canonical Core root. The refs are fixed; the configuration scan

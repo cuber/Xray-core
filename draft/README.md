@@ -8,7 +8,7 @@ documents and record the mapping here; never keep two authoritative copies.
 
 | ID | Status | Proposal |
 |---|---|---|
-| [002](002-upstream-sync/spec.md) | Draft / WIP, research only | Selective upstream synchronization, SS handshake lifetime and memory/security fixes |
+| [002](002-upstream-sync/spec.md) | Draft / WIP, research only | Fixed-main upgrade audit, SS handshake lifetime and memory/security fixes; [2026-10-14 refresh](002-upstream-sync/review-20261014.md) |
 
 On 2026-10-05 the user explicitly assigned this proposal draft002 and requested
 its installation in the canonical Core repository, not a cache clone. The earlier

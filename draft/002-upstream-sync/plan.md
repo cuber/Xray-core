@@ -1,5 +1,13 @@
 # Technical Plan (Proposed, Not Implemented)
 
+## Current Plan Override (2026-10-14)
+
+Use the user-selected fixed main SHA and contract-led porting order in
+[review-20261014.md](review-20261014.md). The selective-backport phases below
+remain historical alternatives for an urgent isolated fix, not the selected
+full-upgrade plan. No rebase, runtime implementation, pin update or deployment
+has been authorized or performed by the refresh.
+
 ## Decision
 
 Prefer **selective, evidence-driven backports**, not a wholesale rebase to origin.

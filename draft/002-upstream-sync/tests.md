@@ -6,6 +6,37 @@ are reusable coverage, not proof they passed against an unimplemented candidate.
 Store results with commit, dirty state, OS/Go version, config/DAT/client hashes,
 command, exit status, test count/skips, resource cleanup and elapsed time.
 
+## Fixed Main Refresh: Migration Gates (2026-10-14)
+
+Candidate upstream is `0888beb38a9ba45440557175e71ce21cf8ba3b13`, not moving
+origin/main. The [refreshed review](review-20261014.md) records 18/254 commits,
+363/680 paths, 68 overlaps and 34 merge-tree conflicts. Its separate evidence
+generator and --check passed. The older V-001 numbers below remain historical.
+
+The following U-* cases are proposed test work, NOT existing passing tests.
+Run each relevant case on the selected unmodified upstream and on the adapted
+candidate, distinguishing an upstream defect from an integration regression.
+
+| ID | Fixture / operation | Required oracle |
+|---|---|---|
+| U-001 SS revocation | Two users with active UDP sessions; remove A through real gRPC, send A/B packets, re-add A with a new key | Declare old-session revocation policy explicitly; verify old/new keys, no cross-user route/counter attribution, B unaffected; TCP sessions tested separately |
+| U-002 SS allocation | Controlled local invalid EIH/AEAD packets with unique session IDs, then stop traffic; fake clock or injected cleanup tick | Unauthenticated traffic must not retain an unbounded session set; prove cleanup without needing another new packet; measure session/window counts, no external flood |
+| U-003 SS concurrency | Interleave A/B UDP sessions sharing inbound transport; roam A's source; run under -race | Each dispatcher context and reply belongs to its authenticated user, no shared-context race or response to B; close/remove/re-add does not revive stale link |
+| U-004 chain migration | Generate Sidecar via and SOCKS UDS configs; TCP and UDP through SS/VLESS/AnyTLS/Hy2, with domain endpoint and refused hop | Parser accepts replacement; exact intended hop/DNS site; no direct escape; per-hop and user byte oracles unchanged; both APIs populated must fail or follow a documented compatibility rule |
+| U-005 finalRules | Convert each intentional empty ipsBlocked fixture; private/public A+AAAA, loopback, WG address, UDS, explicit block and dialerProxy | Preserve prior intended allow paths; explicit block never dials target; distinguish timeout from deliberate delayed block; AnyTLS policy matches documented contract |
+| U-006 Stats API | Concurrent first-use registrations plus spec006 writer/error/EOF/sniff tests | Same counter instance, exact normal totals, no lost first bytes, no duplicate domain bytes; disabled DomainTraffic does not disable ordinary Stats |
+| U-007 proto/control | Old and candidate Sidecar clients query and modify an isolated candidate; regenerate descriptors | ListInbounds/users/certificates/OB/ListRule/domain traffic decode correctly; rejected incompatible mutation is explicit and atomic, not a silently misread field |
+| U-008 OB | Fake clock plus real local H2 server and cancelable dialer | 3s configured cadence preserved; latest-dead/N-success startup contract unchanged; retry stays inside total timeout; probe transport identity distinct from measured subject; Close joins work |
+| U-009 Hy2 | Cancel while waiting client lock and during QUIC auth; cleanup concurrent with another destination; repeated Core start/stop | Request cancellation does not kill unrelated live sessions; cleanup does not hold map lock across I/O; retired instances release transports/map entries and cannot dial again |
+| U-010 router | Reload with valid webhook followed by invalid rule/balancer; concurrent ListRule/selection | Failed reload leaves previous rules usable and closes newly owned resources; successful publication returns coherent metadata/selection; weighted distribution and failover preserve spec005 |
+| U-011 TLS/UDS | Public-like test CA explicitly configured, system-only CA, wrong name, stale/live/symlink API sockets | Expected trust policy enforced without allowInsecure; API listener never steals a live socket or removes an unrelated path; restart and gRPC reconnect work |
+| U-012 matcher | Current DAT hashes and independent matcher oracle; repeated reload/GC with active references | Exact matching including case/regex/attrs; active matchers survive; retired caches collectible; measure peak/live heap/RSS/lookup time independently, no invented savings |
+
+Retain all spec002-009 tests in addition to U-*; these additions do not narrow the
+existing external-client, Windows readv, mux, chain, snapshot and resource gates.
+No runtime tests were run for the new upstream in this audit; previous fork-green
+results cannot be transferred to a candidate that has not been implemented.
+
 ## V-001: Inventory and Provenance (Executed for Cached Refs)
 
 Run inventory.py and then --check with the arguments in inventory.md. Assert:
