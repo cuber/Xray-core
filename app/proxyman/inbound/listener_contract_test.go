@@ -388,6 +388,16 @@ func TestListenerContractMultiUserAndCounters(t *testing.T) {
 		if err != nil || !bytes.Equal(got, payload) {
 			t.Fatal("shared user exchange", err)
 		}
+		// The peer can receive the last bytes before CounterConnection.Write
+		// returns and publishes their count. Wait for that publication, not for
+		// another transfer; exact byte assertions below remain unchanged.
+		deadline := time.Now().Add(2 * time.Second)
+		for up.Value()-beforeUp < 65536+68 || down.Value()-beforeDown < 65536 {
+			if time.Now().After(deadline) {
+				break
+			}
+			time.Sleep(time.Millisecond)
+		}
 		du, dd := up.Value()-beforeUp, down.Value()-beforeDown
 		if dd != 65536 || du != 65536+68 {
 			t.Fatalf("unexpected shared tag delta up=%d down=%d", du, dd)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	. "github.com/xtls/xray-core/app/stats"
 	"github.com/xtls/xray-core/features/stats"
@@ -109,5 +110,52 @@ func TestAtomicStatsNoop(t *testing.T) {
 	}
 	if ch, err := m.GetOrRegisterChannel("test"); ch != nil || err == nil {
 		t.Fatal("noop channel")
+	}
+}
+
+func TestAtomicStatsConcurrentManagerClose(t *testing.T) {
+	m, err := NewManager(context.Background(), &Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { m.Close() })
+	if err := m.Start(); err != nil {
+		t.Fatal(err)
+	}
+	ch, err := m.GetOrRegisterChannel("close-once")
+	if err != nil {
+		t.Fatal(err)
+	}
+	subscriber, err := ch.Subscribe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := make(chan struct{})
+	var workers sync.WaitGroup
+	for i := 0; i < 128; i++ {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			<-start
+			if err := m.Close(); err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	close(start)
+	workers.Wait()
+	if m.GetChannel("close-once") != nil || ch.(*Channel).Running() {
+		t.Fatal("closed manager retained a running channel")
+	}
+	select {
+	case _, open := <-subscriber:
+		if open {
+			t.Fatal("subscriber was not closed")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("channel worker did not close subscriber")
+	}
+	if len(ch.Subscribers()) != 0 {
+		t.Fatal("closed channel retained subscribers")
 	}
 }

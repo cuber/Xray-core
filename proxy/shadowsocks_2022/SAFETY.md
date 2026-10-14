@@ -335,6 +335,18 @@ contract and needs new lifecycle/race/resource tests. It has NOT been implemente
 No production credential/user was changed or deleted. The real-config migration
 blocker remains until an explicit migration or compatibility policy is approved.
 
+On 2026-10-15 the user requested continuing with fixes. The isolated Config
+candidate now assigns a distinct admin key and updates ASZ's matching management
+caller. The node-user key, Hy2 identities and all production files remain
+unchanged. A real local SS wire/control test verifies both users' route markers,
+exact isolated counters, and removal of admin while the node's existing and new
+connections survive. Config's 45/45 runtime parser gate and 519-test suite pass
+at the recorded checkpoint. Thus this specific candidate migration blocker is
+resolved, not bypassed by relaxing key uniqueness; coordinated production
+deployment is still required. Evidence is owned by Config's
+`docs/audits/2026-10-14-ss2022-policy-handoff.md` and
+`test/routing/test_la_ss2_identity.py` on the matching upgrade branch.
+
 ## Remaining acceptance boundaries
 
 One-hour candidate resource acceptance and short old/upstream/candidate baseline
@@ -346,3 +358,25 @@ Not established by this task: Linux amd64 execution,
 production canary/24-48 hour behavior, all explicit half-close-policy transition
 cases, or the complete spec010/whole-Core race gate. Unrelated ports and the
 reported REALITY issue belong to other agents. No production resources were used.
+
+### Subsequent Local Acceptance (2026-10-15)
+
+The complete SS2022 package executed successfully as a linux/amd64 static test
+binary in Docker under the host's arm64-to-amd64 translation support. This is
+actual Linux executable testing, not native amd64 hardware or race instrumentation.
+The opt-in one-hour soak was not repeated in that package invocation. Log:
+`/tmp/core-upgrade-ss2022-linux-amd64.log` (the prior one-hour Linux/arm64 race
+soak remains independent evidence).
+
+`TestTransportTCPHalfClosePolicy` adds explicit uplink-EOF, downlink-EOF and
+idle-policy coverage of the shared SS transport. Each half-close still delivers
+exact bytes in the remaining direction, then requires that direction's shorter
+policy to terminate the connection. Owned readers retire after caller shutdown.
+Darwin race count=10 passed (8.646s). A temporary read-only Go overlay replacing
+both half-close timeout selections with ConnectionIdle failed BOTH half-close
+cases as intended (6.502s); no production source was mutated by this control.
+Negative log: `/tmp/core-halfclose-mutation-negative.log`.
+The same three cases passed count=20 on translated Linux/amd64 as well:
+`/tmp/core-halfclose-linux-amd64.log`. Full SS2022 and inbound packages then
+passed Darwin race count=3 (158.823s / 14.371s), including these new cases:
+`/tmp/core-ss-inbound-resume-race.log`.
