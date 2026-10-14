@@ -1,0 +1,548 @@
+{
+  "mode": "baseline",
+  "platform": [
+    "Linux",
+    "0154d66a16a4",
+    "7.0.11-orbstack-00360-gc9bc4d96ac70",
+    "#1 SMP PREEMPT Thu Jun  4 16:40:25 UTC 2026",
+    "aarch64"
+  ],
+  "binaries": {
+    "old": {
+      "sha256": "45250777f9118b97c78fd280241d35f96a3892c2ada069afcab1db35f74689ee",
+      "version": "Xray 26.4.25 (Xray, Penetrates Everything.) Custom (go1.26.1 linux/arm64)\nA unified platform for anti-censorship.\n"
+    },
+    "pristine": {
+      "sha256": "8ce6f3ca595c6284712dd9e24c109ab4371afb0766435f0236e494f8012f63aa",
+      "version": "Xray 26.10.10 (Xray, Penetrates Everything.) Custom (go1.27.0 linux/arm64)\nA unified platform for anti-censorship.\n"
+    },
+    "candidate": {
+      "sha256": "2ec073c0ec20b419f25feea911cd400a9d4ed6d64a67b256d8ef2264fb17eac0",
+      "version": "Xray 26.10.10 (Xray, Penetrates Everything.) Custom (go1.27.0 linux/arm64)\nA unified platform for anti-censorship.\n"
+    }
+  },
+  "results": [
+    {
+      "binary": "old",
+      "kind": "single",
+      "baseline_fd": 8,
+      "samples": [
+        {
+          "wave": 0,
+          "server_fd": 28,
+          "still_open": 20
+        },
+        {
+          "wave": 1,
+          "server_fd": 48,
+          "still_open": 40
+        },
+        {
+          "wave": 2,
+          "server_fd": 68,
+          "still_open": 60
+        },
+        {
+          "wave": 3,
+          "server_fd": 88,
+          "still_open": 80
+        },
+        {
+          "wave": 4,
+          "server_fd": 108,
+          "still_open": 100
+        },
+        {
+          "wave": 5,
+          "server_fd": 128,
+          "still_open": 120
+        },
+        {
+          "wave": 6,
+          "server_fd": 148,
+          "still_open": 140
+        },
+        {
+          "wave": 7,
+          "server_fd": 168,
+          "still_open": 160
+        },
+        {
+          "wave": 8,
+          "server_fd": 188,
+          "still_open": 180
+        },
+        {
+          "wave": 9,
+          "server_fd": 208,
+          "still_open": 200
+        }
+      ],
+      "after_peer_close_fd": 8
+    },
+    {
+      "binary": "old",
+      "kind": "multi",
+      "baseline_fd": 8,
+      "samples": [
+        {
+          "wave": 0,
+          "server_fd": 28,
+          "still_open": 20
+        },
+        {
+          "wave": 1,
+          "server_fd": 48,
+          "still_open": 40
+        },
+        {
+          "wave": 2,
+          "server_fd": 68,
+          "still_open": 60
+        },
+        {
+          "wave": 3,
+          "server_fd": 88,
+          "still_open": 80
+        },
+        {
+          "wave": 4,
+          "server_fd": 108,
+          "still_open": 100
+        },
+        {
+          "wave": 5,
+          "server_fd": 128,
+          "still_open": 120
+        },
+        {
+          "wave": 6,
+          "server_fd": 148,
+          "still_open": 140
+        },
+        {
+          "wave": 7,
+          "server_fd": 168,
+          "still_open": 160
+        },
+        {
+          "wave": 8,
+          "server_fd": 188,
+          "still_open": 180
+        },
+        {
+          "wave": 9,
+          "server_fd": 208,
+          "still_open": 200
+        }
+      ],
+      "after_peer_close_fd": 8
+    },
+    {
+      "binary": "old",
+      "kind": "relay",
+      "baseline_fd": 8,
+      "samples": [
+        {
+          "wave": 0,
+          "server_fd": 28,
+          "still_open": 20
+        },
+        {
+          "wave": 1,
+          "server_fd": 48,
+          "still_open": 40
+        },
+        {
+          "wave": 2,
+          "server_fd": 68,
+          "still_open": 60
+        },
+        {
+          "wave": 3,
+          "server_fd": 88,
+          "still_open": 80
+        },
+        {
+          "wave": 4,
+          "server_fd": 108,
+          "still_open": 100
+        },
+        {
+          "wave": 5,
+          "server_fd": 128,
+          "still_open": 120
+        },
+        {
+          "wave": 6,
+          "server_fd": 148,
+          "still_open": 140
+        },
+        {
+          "wave": 7,
+          "server_fd": 168,
+          "still_open": 160
+        },
+        {
+          "wave": 8,
+          "server_fd": 188,
+          "still_open": 180
+        },
+        {
+          "wave": 9,
+          "server_fd": 208,
+          "still_open": 200
+        }
+      ],
+      "after_peer_close_fd": 8
+    },
+    {
+      "binary": "pristine",
+      "kind": "single",
+      "baseline_fd": 8,
+      "samples": [
+        {
+          "wave": 0,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 1,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 2,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 3,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 4,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 5,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 6,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 7,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 8,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 9,
+          "server_fd": 8,
+          "still_open": 0
+        }
+      ],
+      "after_peer_close_fd": 8
+    },
+    {
+      "binary": "pristine",
+      "kind": "multi",
+      "baseline_fd": 8,
+      "samples": [
+        {
+          "wave": 0,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 1,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 2,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 3,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 4,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 5,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 6,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 7,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 8,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 9,
+          "server_fd": 8,
+          "still_open": 0
+        }
+      ],
+      "after_peer_close_fd": 8
+    },
+    {
+      "binary": "pristine",
+      "kind": "relay",
+      "baseline_fd": 8,
+      "samples": [
+        {
+          "wave": 0,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 1,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 2,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 3,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 4,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 5,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 6,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 7,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 8,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 9,
+          "server_fd": 8,
+          "still_open": 0
+        }
+      ],
+      "after_peer_close_fd": 8
+    },
+    {
+      "binary": "candidate",
+      "kind": "single",
+      "baseline_fd": 8,
+      "samples": [
+        {
+          "wave": 0,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 1,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 2,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 3,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 4,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 5,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 6,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 7,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 8,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 9,
+          "server_fd": 8,
+          "still_open": 0
+        }
+      ],
+      "after_peer_close_fd": 8
+    },
+    {
+      "binary": "candidate",
+      "kind": "multi",
+      "baseline_fd": 8,
+      "samples": [
+        {
+          "wave": 0,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 1,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 2,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 3,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 4,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 5,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 6,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 7,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 8,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 9,
+          "server_fd": 8,
+          "still_open": 0
+        }
+      ],
+      "after_peer_close_fd": 8
+    },
+    {
+      "binary": "candidate",
+      "kind": "relay",
+      "baseline_fd": 8,
+      "samples": [
+        {
+          "wave": 0,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 1,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 2,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 3,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 4,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 5,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 6,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 7,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 8,
+          "server_fd": 8,
+          "still_open": 0
+        },
+        {
+          "wave": 9,
+          "server_fd": 8,
+          "still_open": 0
+        }
+      ],
+      "after_peer_close_fd": 8
+    }
+  ]
+}

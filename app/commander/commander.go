@@ -3,6 +3,8 @@ package commander
 import (
 	"context"
 	"net"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -76,19 +78,7 @@ func (c *Commander) Start() error {
 	}
 
 	if len(c.listen) > 0 {
-		var addr net.Addr
-
-		if strings.HasPrefix(c.listen, "/") || strings.HasPrefix(c.listen, "@") {
-			addr = &net.UnixAddr{Name: c.listen, Net: "unix"}
-		} else {
-			tcpAddr, err := net.ResolveTCPAddr("tcp", c.listen)
-			if err != nil {
-				errors.LogErrorInner(context.Background(), err, "API server failed to parse listen address ", c.listen)
-				return err
-			}
-			addr = tcpAddr
-		}
-		l, err := internet.ListenSystem(context.Background(), addr, nil)
+		l, err := listenAPI(c.listen)
 		if err != nil {
 			errors.LogErrorInner(context.Background(), err, "API server failed to listen on ", c.listen)
 			return err
@@ -113,6 +103,29 @@ func (c *Commander) Start() error {
 		tag:      c.tag,
 		listener: listener,
 	})
+}
+
+func listenAPI(address string) (net.Listener, error) {
+	if strings.HasPrefix(address, "/") {
+		path, mode, explicitMode := strings.Cut(address, ",")
+		if !filepath.IsAbs(path) || strings.Contains(mode, ",") {
+			return nil, errors.New("invalid API Unix listener")
+		}
+		if !explicitMode {
+			address += ",0600"
+		} else if _, err := strconv.ParseUint(mode, 8, 9); err != nil {
+			return nil, errors.New("invalid API Unix permission").Base(err)
+		}
+		return internet.ListenExclusiveUnix(context.Background(), address)
+	}
+	if strings.HasPrefix(address, "@") {
+		return internet.ListenSystem(context.Background(), &net.UnixAddr{Name: address, Net: "unix"}, nil)
+	}
+	addr, err := net.ResolveTCPAddr("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+	return internet.ListenSystem(context.Background(), addr, nil)
 }
 
 // Close implements common.Closable.

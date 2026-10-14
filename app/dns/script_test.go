@@ -9,8 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/xtls/xray-core/common/geodata"
 	"github.com/xtls/xray-core/common/net"
 	featureDNS "github.com/xtls/xray-core/features/dns"
+	"google.golang.org/protobuf/proto"
 )
 
 type scriptNameServer struct {
@@ -125,10 +127,22 @@ end
 }
 
 func TestDNSScriptGeoIPFallback(t *testing.T) {
-	t.Setenv("xray.location.asset", filepath.Join("..", "..", "resources"))
+	// Exercise the real DAT loader without depending on a public IP's current
+	// country assignment. The owned IPv6 prefix must select the primary server.
+	assetDir := t.TempDir()
+	t.Setenv("xray.location.asset", assetDir)
+	data, err := proto.Marshal(&geodata.GeoIPList{Entry: []*geodata.GeoIP{{
+		Code: "US", Cidr: []*geodata.CIDR{{Ip: net.ParseIP("2001:db8::").To16(), Prefix: 32}},
+	}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(assetDir, "script-geoip.dat"), data, 0o600); err != nil {
+		t.Fatal(err)
+	}
 	script := `
 local servers = require("xray.dns").Servers
-local us_ips = require("xray.geodata").BuildIPMatcher("geoip:us")
+local us_ips = require("xray.geodata").BuildIPMatcher("ext-ip:script-geoip.dat:us")
 
 local by_id = {}
 for _, server in ipairs(servers) do
@@ -152,7 +166,7 @@ end
 	primary := &scriptNameServer{
 		name: "primary",
 		answers: map[string]net.IP{
-			"us.example":    net.ParseIP("2001:4860:4860::8888"),
+			"us.example":    net.ParseIP("2001:db8::8888"),
 			"other.example": net.ParseIP("127.0.0.1"),
 		},
 		ttl: 30,
@@ -191,7 +205,7 @@ end
 		ip     net.IP
 		ttl    uint32
 	}{
-		{"Us.Example.", net.ParseIP("2001:4860:4860::8888"), 30},
+		{"Us.Example.", net.ParseIP("2001:db8::8888"), 30},
 		{"other.example", net.ParseIP("9.9.9.9"), 60},
 	} {
 		ips, ttl, err := server.LookupIP(tc.domain, option)

@@ -36,9 +36,11 @@ func TestBlackholeHTTPResponse(t *testing.T) {
 	}
 	common.Must(handler.Process(ctx, &link, nil))
 	mb := <-dataCh
+	defer buf.ReleaseMulti(mb)
 	data := make([]byte, mb.Len())
 	mb.Copy(data)
 	resp := common.Must2(http.ReadResponse(bufio.NewReader(bytes.NewBuffer(data)), nil))
+	defer resp.Body.Close()
 	if resp.StatusCode != 403 {
 		t.Errorf("expected 403 response, got %d", resp.StatusCode)
 	}
@@ -62,12 +64,16 @@ func TestBlackholeCustomResponse(t *testing.T) {
 	reader, writer := pipe.New(pipe.WithoutSizeLimit())
 	var actual buf.MultiBuffer
 	var rerr error
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		actual, rerr = reader.ReadMultiBuffer()
 	}()
 
 	link := transport.Link{Reader: reader, Writer: writer}
 	common.Must(handler.Process(ctx, &link, nil))
+	<-done
+	defer buf.ReleaseMulti(actual)
 	common.Must(rerr)
 
 	if actual.String() != string(expected) {

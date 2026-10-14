@@ -59,9 +59,14 @@ below are not an instruction to cherry-pick everything after selecting main.
 - [ ] T020 [US-004] Authorized canary and 24-48h observation via xrayctl/SOP; V-014;
   deployment requires a separate request, not inferred from T019.
 
-## Present Result
+## Historical Draft Result
 
 Research documents and dated evidence are installed in canonical Core draft002;
 upstream implementation/deployment remain unchecked. Remote freshness was restored
 on 2026-10-14; runtime verification of the SS review remains open. AnyTLS address-adapter adoption
 is a separately approved spec008 change, not completion of these backports.
+
+The user subsequently authorized the isolated main-based upgrade. This document
+retains the historical backport checklist for provenance; current implementation
+and verification status belongs to [implementation.md](implementation.md), not
+the preceding draft conclusion. Production adoption remains a separate phase.

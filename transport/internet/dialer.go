@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
-	"github.com/xtls/xray-core/common/buf"
 	"github.com/xtls/xray-core/common/dice"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/net"
@@ -45,7 +45,7 @@ func RegisterTransportDialer(protocol string, dialer dialFunc) error {
 
 // Dial dials a internet connection towards the given destination.
 func Dial(ctx context.Context, dest net.Destination, streamSettings *MemoryStreamConfig) (stat.Connection, error) {
-	if dest.Network == net.Network_TCP {
+	if isStreamNetwork(dest.Network) {
 		if streamSettings == nil {
 			s, err := ToMemoryStreamConfig(nil)
 			if err != nil {
@@ -78,12 +78,39 @@ func DestIpAddress() net.IP {
 	return effectiveSystemDialer.DestIpAddress()
 }
 
+func isStreamNetwork(network net.Network) bool {
+	return network == net.Network_TCP || network == net.Network_UNIX
+}
+
 var (
-	dnsClient dns.Client
-	obm       outbound.Manager
+	dnsClient   dns.Client
+	dnsClientMu sync.RWMutex
 )
 
+// ResolveOutboundManager is installed by core at package initialization to
+// avoid a transport -> core import cycle. Never fall back to another instance.
+var ResolveOutboundManager func(context.Context) outbound.Manager
+
+// ResolveDNSClient selects the request owner's DNS without a global fallback.
+var ResolveDNSClient func(context.Context) dns.Client
+
 func LookupForIP(domain string, strategy DomainStrategy, localAddr net.Address) ([]net.IP, error) {
+	dnsClientMu.RLock()
+	dnsClient := dnsClient
+	dnsClientMu.RUnlock()
+	return lookupForIP(dnsClient, domain, strategy, localAddr)
+}
+
+// LookupForIPContext never borrows another instance's DNS client.
+func LookupForIPContext(ctx context.Context, domain string, strategy DomainStrategy, localAddr net.Address) ([]net.IP, error) {
+	var client dns.Client
+	if ResolveDNSClient != nil {
+		client = ResolveDNSClient(ctx)
+	}
+	return lookupForIP(client, domain, strategy, localAddr)
+}
+
+func lookupForIP(dnsClient dns.Client, domain string, strategy DomainStrategy, localAddr net.Address) ([]net.IP, error) {
 	if dnsClient == nil {
 		return nil, errors.New("DNS client not initialized")
 	}
@@ -107,18 +134,6 @@ func LookupForIP(domain string, strategy DomainStrategy, localAddr net.Address) 
 	return ips, err
 }
 
-type redirectConnection struct {
-	net.Conn
-	buf.Reader
-	buf.Writer
-	cancel context.CancelFunc
-}
-
-func (c *redirectConnection) Close() error {
-	c.cancel()
-	return c.Conn.Close()
-}
-
 func redirect(ctx context.Context, dst net.Destination, obt string, h outbound.Handler) net.Conn {
 	errors.LogInfo(ctx, "redirecting request "+dst.String()+" to "+obt)
 	outbounds := session.OutboundsFromContext(ctx)
@@ -129,19 +144,17 @@ func redirect(ctx context.Context, dst net.Destination, obt string, h outbound.H
 	})) // add another outbound in session ctx
 
 	output := transport.DispatchConnOutputStream
-	if dst.Network != net.Network_TCP {
+	if !isStreamNetwork(dst.Network) {
 		output = transport.DispatchConnOutputPacket
 	}
 	// A pooled connection outlives its dialing request; closing its owner must
 	// still cancel relay admission before the handler starts reading the pipes.
-	ctx, cancel := context.WithCancel(context.WithoutCancel(ctx))
-	conn := transport.NewDispatchConn(
-		ctx,
+	return transport.NewDispatchConn(
+		context.WithoutCancel(ctx),
 		pipe.OptionsFromContext(ctx),
 		output,
 		h.Dispatch,
 	)
-	return &redirectConnection{Conn: conn, Reader: conn.(buf.Reader), Writer: conn.(buf.Writer), cancel: cancel}
 }
 
 func checkAddressPortStrategy(ctx context.Context, dest net.Destination, sockopt *SocketConfig) (*net.Destination, error) {
@@ -262,7 +275,7 @@ func DialSystem(ctx context.Context, dest net.Destination, sockopt *SocketConfig
 		if outboundName == "freedom" && dest.Network == net.Network_UDP && origTargetAddr != nil && src == nil {
 			finalStrategy = finalStrategy.GetDynamicStrategy(origTargetAddr.Family())
 		}
-		ips, err := LookupForIP(dest.Address.Domain(), finalStrategy, src)
+		ips, err := LookupForIPContext(ctx, dest.Address.Domain(), finalStrategy, src)
 		if err != nil {
 			errors.LogErrorInner(ctx, err, "failed to resolve ip")
 			if sockopt.DomainStrategy.ForceIP() {
@@ -277,6 +290,10 @@ func DialSystem(ctx context.Context, dest net.Destination, sockopt *SocketConfig
 	}
 
 	if len(sockopt.DialerProxy) > 0 {
+		var obm outbound.Manager
+		if ResolveOutboundManager != nil {
+			obm = ResolveOutboundManager(ctx)
+		}
 		if obm == nil {
 			return nil, errors.New("there is no outbound manager for dialerProxy")
 		}
@@ -291,6 +308,7 @@ func DialSystem(ctx context.Context, dest net.Destination, sockopt *SocketConfig
 }
 
 func InitSystemDialer(dc dns.Client, om outbound.Manager) {
+	dnsClientMu.Lock()
 	dnsClient = dc
-	obm = om
+	dnsClientMu.Unlock()
 }

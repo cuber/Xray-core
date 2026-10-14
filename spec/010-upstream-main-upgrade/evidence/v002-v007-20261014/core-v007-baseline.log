@@ -1,0 +1,36 @@
+--- FAIL: TestBufferedWriterPartialCapacityBoundaries (0.00s)
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=0/write=8193/multi=false (0.00s)
+        writer_regression_test.go:81: payload n=8192 want=8193 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=0/write=8193/multi=true (0.00s)
+        writer_regression_test.go:81: payload n=8192 want=8193 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=0/write=16401/multi=false (0.00s)
+        writer_regression_test.go:81: payload n=8192 want=16401 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=0/write=16401/multi=true (0.00s)
+        writer_regression_test.go:81: payload n=8192 want=16401 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=1/write=8192/multi=false (0.00s)
+        writer_regression_test.go:81: payload n=8191 want=8192 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=1/write=8192/multi=true (0.00s)
+        writer_regression_test.go:81: payload n=8191 want=8192 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=1/write=16401/multi=false (0.00s)
+        writer_regression_test.go:81: payload n=8191 want=16401 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=1/write=16401/multi=true (0.00s)
+        writer_regression_test.go:81: payload n=8191 want=16401 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=4096/write=4097/multi=false (0.00s)
+        writer_regression_test.go:81: payload n=4096 want=4097 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=4096/write=4097/multi=true (0.00s)
+        writer_regression_test.go:81: payload n=4096 want=4097 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=4096/write=16401/multi=false (0.00s)
+        writer_regression_test.go:81: payload n=4096 want=16401 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=4096/write=16401/multi=true (0.00s)
+        writer_regression_test.go:81: payload n=4096 want=16401 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=8191/write=2/multi=false (0.00s)
+        writer_regression_test.go:81: payload n=1 want=2 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=8191/write=2/multi=true (0.00s)
+        writer_regression_test.go:81: payload n=1 want=2 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=8191/write=16401/multi=false (0.00s)
+        writer_regression_test.go:81: payload n=1 want=16401 err=common/buf: buffer is full
+    --- FAIL: TestBufferedWriterPartialCapacityBoundaries/used=8191/write=16401/multi=true (0.00s)
+        writer_regression_test.go:81: payload n=1 want=16401 err=common/buf: buffer is full
+FAIL
+FAIL	github.com/xtls/xray-core/common/buf	2.933s
+FAIL

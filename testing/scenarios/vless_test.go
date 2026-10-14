@@ -371,6 +371,7 @@ func TestVlessXtlsVision(t *testing.T) {
 }
 
 func TestVlessXtlsVisionReality(t *testing.T) {
+	realityTarget := localRealityTarget(t)
 	tcpServer := tcp.Server{
 		MsgProcessor: xor,
 	}
@@ -403,8 +404,8 @@ func TestVlessXtlsVisionReality(t *testing.T) {
 						SecuritySettings: []*serial.TypedMessage{
 							serial.ToTypedMessage(&reality.Config{
 								Show:        true,
-								Dest:        "www.google.com:443", // use google for now, may fail in some region
-								ServerNames: []string{"www.google.com"},
+								Dest:        realityTarget,
+								ServerNames: []string{"reality.test"},
 								PrivateKey:  privateKey,
 								ShortIds:    shortIds,
 								Type:        "tcp",
@@ -482,7 +483,7 @@ func TestVlessXtlsVisionReality(t *testing.T) {
 							serial.ToTypedMessage(&reality.Config{
 								Show:        true,
 								Fingerprint: "chrome",
-								ServerName:  "www.google.com",
+								ServerName:  "reality.test",
 								PublicKey:   publicKey,
 								ShortId:     shortIds[0],
 								SpiderX:     "/",
@@ -511,6 +512,7 @@ func TestVlessXtlsVisionReality(t *testing.T) {
 // Beacuse figerprint support may be broken after utls/reality update
 // Known working fingerprint: chrome, firefox, safari
 func TestVlessRealityFingerprints(t *testing.T) {
+	realityTarget := localRealityTarget(t)
 	TestFingerprint := func(fingerprint string) error {
 		tcpServer := tcp.Server{
 			MsgProcessor: xor,
@@ -543,8 +545,8 @@ func TestVlessRealityFingerprints(t *testing.T) {
 							SecuritySettings: []*serial.TypedMessage{
 								serial.ToTypedMessage(&reality.Config{
 									Show:        false,
-									Dest:        "www.google.com:443", // use google for now, may fail in some region
-									ServerNames: []string{"www.google.com"},
+									Dest:        realityTarget,
+									ServerNames: []string{"reality.test"},
 									PrivateKey:  privateKey,
 									ShortIds:    shortIds,
 									Type:        "tcp",
@@ -619,7 +621,7 @@ func TestVlessRealityFingerprints(t *testing.T) {
 								serial.ToTypedMessage(&reality.Config{
 									Show:        false,
 									Fingerprint: fingerprint,
-									ServerName:  "www.google.com",
+									ServerName:  "reality.test",
 									PublicKey:   publicKey,
 									ShortId:     shortIds[0],
 									SpiderX:     "/",

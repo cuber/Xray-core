@@ -1,0 +1,22 @@
+--- FAIL: TestReloadFailureClosesOnlyUnpublishedWebhooks (0.00s)
+    --- FAIL: TestReloadFailureClosesOnlyUnpublishedWebhooks/append=false/condition (0.00s)
+        reload_contract_test.go:65: unpublished webhook was not closed
+    --- FAIL: TestReloadFailureClosesOnlyUnpublishedWebhooks/append=false/duplicate (0.00s)
+        reload_contract_test.go:65: unpublished webhook was not closed
+    --- FAIL: TestReloadFailureClosesOnlyUnpublishedWebhooks/append=false/balancer (0.00s)
+        reload_contract_test.go:65: unpublished webhook was not closed
+        reload_contract_test.go:65: unpublished webhook was not closed
+    --- FAIL: TestReloadFailureClosesOnlyUnpublishedWebhooks/append=false/notifier (0.00s)
+        reload_contract_test.go:65: unpublished webhook was not closed
+    --- FAIL: TestReloadFailureClosesOnlyUnpublishedWebhooks/append=true/condition (0.00s)
+        reload_contract_test.go:65: unpublished webhook was not closed
+    --- FAIL: TestReloadFailureClosesOnlyUnpublishedWebhooks/append=true/duplicate (0.00s)
+        reload_contract_test.go:65: unpublished webhook was not closed
+    --- FAIL: TestReloadFailureClosesOnlyUnpublishedWebhooks/append=true/balancer (0.00s)
+        reload_contract_test.go:65: unpublished webhook was not closed
+        reload_contract_test.go:65: unpublished webhook was not closed
+    --- FAIL: TestReloadFailureClosesOnlyUnpublishedWebhooks/append=true/notifier (0.00s)
+        reload_contract_test.go:65: unpublished webhook was not closed
+FAIL
+FAIL	github.com/xtls/xray-core/app/router	0.603s
+FAIL

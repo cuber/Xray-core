@@ -1,6 +1,7 @@
 package dns_test
 
 import (
+	"github.com/xtls/xray-core/testing/servers/dnsfixture"
 	"testing"
 	"time"
 
@@ -19,7 +20,6 @@ import (
 	"github.com/xtls/xray-core/core"
 	feature_dns "github.com/xtls/xray-core/features/dns"
 	"github.com/xtls/xray-core/proxy/freedom"
-	"github.com/xtls/xray-core/testing/servers/udp"
 )
 
 type staticHandler struct{}
@@ -112,16 +112,16 @@ func (*staticHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 }
 
 func TestUDPServerSubnet(t *testing.T) {
-	port := udp.PickPort()
-
-	dnsServer := dns.Server{
-		Addr:    "127.0.0.1:" + port.String(),
-		Net:     "udp",
-		Handler: &staticHandler{},
-		UDPSize: 1200,
+	address, stopDNS := dnsfixture.StartWithStop(t, "udp", &staticHandler{})
+	_ = stopDNS
+	_, portText, err := net.SplitHostPort(address)
+	if err != nil {
+		t.Fatal(err)
 	}
-	go dnsServer.ListenAndServe()
-	time.Sleep(time.Second)
+	port, err := net.PortFromString(portText)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	config := &core.Config{
 		App: []*serial.TypedMessage{
@@ -156,6 +156,7 @@ func TestUDPServerSubnet(t *testing.T) {
 
 	v, err := core.New(config)
 	common.Must(err)
+	t.Cleanup(func() { _ = v.Close() })
 
 	client := v.GetFeature(feature_dns.ClientType()).(feature_dns.Client)
 
@@ -174,17 +175,16 @@ func TestUDPServerSubnet(t *testing.T) {
 }
 
 func TestUDPServer(t *testing.T) {
-	port := udp.PickPort()
-
-	dnsServer := dns.Server{
-		Addr:    "127.0.0.1:" + port.String(),
-		Net:     "udp",
-		Handler: &staticHandler{},
-		UDPSize: 1200,
+	address, stopDNS := dnsfixture.StartWithStop(t, "udp", &staticHandler{})
+	_ = stopDNS
+	_, portText, err := net.SplitHostPort(address)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	go dnsServer.ListenAndServe()
-	time.Sleep(time.Second)
+	port, err := net.PortFromString(portText)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	config := &core.Config{
 		App: []*serial.TypedMessage{
@@ -218,6 +218,7 @@ func TestUDPServer(t *testing.T) {
 
 	v, err := core.New(config)
 	common.Must(err)
+	t.Cleanup(func() { _ = v.Close() })
 
 	client := v.GetFeature(feature_dns.ClientType()).(feature_dns.Client)
 
@@ -279,7 +280,7 @@ func TestUDPServer(t *testing.T) {
 		}
 	}
 
-	dnsServer.Shutdown()
+	stopDNS()
 
 	{
 		ips, _, err := client.LookupIP("google.com", feature_dns.IPOption{
@@ -298,17 +299,16 @@ func TestUDPServer(t *testing.T) {
 }
 
 func TestPrioritizedDomain(t *testing.T) {
-	port := udp.PickPort()
-
-	dnsServer := dns.Server{
-		Addr:    "127.0.0.1:" + port.String(),
-		Net:     "udp",
-		Handler: &staticHandler{},
-		UDPSize: 1200,
+	address, stopDNS := dnsfixture.StartWithStop(t, "udp", &staticHandler{})
+	_ = stopDNS
+	_, portText, err := net.SplitHostPort(address)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	go dnsServer.ListenAndServe()
-	time.Sleep(time.Second)
+	port, err := net.PortFromString(portText)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	config := &core.Config{
 		App: []*serial.TypedMessage{
@@ -358,6 +358,7 @@ func TestPrioritizedDomain(t *testing.T) {
 
 	v, err := core.New(config)
 	common.Must(err)
+	t.Cleanup(func() { _ = v.Close() })
 
 	client := v.GetFeature(feature_dns.ClientType()).(feature_dns.Client)
 
@@ -385,17 +386,16 @@ func TestPrioritizedDomain(t *testing.T) {
 }
 
 func TestUDPServerIPv6(t *testing.T) {
-	port := udp.PickPort()
-
-	dnsServer := dns.Server{
-		Addr:    "127.0.0.1:" + port.String(),
-		Net:     "udp",
-		Handler: &staticHandler{},
-		UDPSize: 1200,
+	address, stopDNS := dnsfixture.StartWithStop(t, "udp", &staticHandler{})
+	_ = stopDNS
+	_, portText, err := net.SplitHostPort(address)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	go dnsServer.ListenAndServe()
-	time.Sleep(time.Second)
+	port, err := net.PortFromString(portText)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	config := &core.Config{
 		App: []*serial.TypedMessage{
@@ -429,6 +429,7 @@ func TestUDPServerIPv6(t *testing.T) {
 
 	v, err := core.New(config)
 	common.Must(err)
+	t.Cleanup(func() { _ = v.Close() })
 
 	client := v.GetFeature(feature_dns.ClientType()).(feature_dns.Client)
 	{
@@ -448,17 +449,16 @@ func TestUDPServerIPv6(t *testing.T) {
 }
 
 func TestStaticHostDomain(t *testing.T) {
-	port := udp.PickPort()
-
-	dnsServer := dns.Server{
-		Addr:    "127.0.0.1:" + port.String(),
-		Net:     "udp",
-		Handler: &staticHandler{},
-		UDPSize: 1200,
+	address, stopDNS := dnsfixture.StartWithStop(t, "udp", &staticHandler{})
+	_ = stopDNS
+	_, portText, err := net.SplitHostPort(address)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	go dnsServer.ListenAndServe()
-	time.Sleep(time.Second)
+	port, err := net.PortFromString(portText)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	config := &core.Config{
 		App: []*serial.TypedMessage{
@@ -498,6 +498,7 @@ func TestStaticHostDomain(t *testing.T) {
 
 	v, err := core.New(config)
 	common.Must(err)
+	t.Cleanup(func() { _ = v.Close() })
 
 	client := v.GetFeature(feature_dns.ClientType()).(feature_dns.Client)
 
@@ -516,21 +517,20 @@ func TestStaticHostDomain(t *testing.T) {
 		}
 	}
 
-	dnsServer.Shutdown()
+	stopDNS()
 }
 
 func TestIPMatch(t *testing.T) {
-	port := udp.PickPort()
-
-	dnsServer := dns.Server{
-		Addr:    "127.0.0.1:" + port.String(),
-		Net:     "udp",
-		Handler: &staticHandler{},
-		UDPSize: 1200,
+	address, stopDNS := dnsfixture.StartWithStop(t, "udp", &staticHandler{})
+	_ = stopDNS
+	_, portText, err := net.SplitHostPort(address)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	go dnsServer.ListenAndServe()
-	time.Sleep(time.Second)
+	port, err := net.PortFromString(portText)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	config := &core.Config{
 		App: []*serial.TypedMessage{
@@ -585,6 +585,7 @@ func TestIPMatch(t *testing.T) {
 
 	v, err := core.New(config)
 	common.Must(err)
+	t.Cleanup(func() { _ = v.Close() })
 
 	client := v.GetFeature(feature_dns.ClientType()).(feature_dns.Client)
 
@@ -612,23 +613,32 @@ func TestIPMatch(t *testing.T) {
 }
 
 func TestLocalDomain(t *testing.T) {
-	port := udp.PickPort()
-
-	dnsServer := dns.Server{
-		Addr:    "127.0.0.1:" + port.String(),
-		Net:     "udp",
-		Handler: &staticHandler{},
-		UDPSize: 1200,
+	address := dnsfixture.Start(t, "udp", &staticHandler{})
+	_, portText, err := net.SplitHostPort(address)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	go dnsServer.ListenAndServe()
-	time.Sleep(time.Second)
+	port, err := net.PortFromString(portText)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// An owned silent resolver makes fallback timing independent of port 9999.
+	silent := dnsfixture.Start(t, "udp", dns.HandlerFunc(func(dns.ResponseWriter, *dns.Msg) {}))
+	_, silentPortText, err := net.SplitHostPort(silent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	silentPort, err := net.PortFromString(silentPortText)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	config := &core.Config{
 		App: []*serial.TypedMessage{
 			serial.ToTypedMessage(&Config{
 				NameServer: []*NameServer{
 					{
+						TimeoutMs: 50,
 						Address: &net.Endpoint{
 							Network: net.Network_UDP,
 							Address: &net.IPOrDomain{
@@ -636,7 +646,7 @@ func TestLocalDomain(t *testing.T) {
 									Ip: []byte{127, 0, 0, 1},
 								},
 							},
-							Port: 9999, /* unreachable */
+							Port: uint32(silentPort),
 						},
 					},
 					{
@@ -704,6 +714,7 @@ func TestLocalDomain(t *testing.T) {
 
 	v, err := core.New(config)
 	common.Must(err)
+	t.Cleanup(func() { _ = v.Close() })
 
 	client := v.GetFeature(feature_dns.ClientType()).(feature_dns.Client)
 
@@ -830,23 +841,22 @@ func TestLocalDomain(t *testing.T) {
 	}
 
 	endTime := time.Now()
-	if startTime.After(endTime.Add(time.Second * 2)) {
+	if endTime.Sub(startTime) > 2*time.Second {
 		t.Error("DNS query doesn't finish in 2 seconds.")
 	}
 }
 
 func TestMultiMatchPrioritizedDomain(t *testing.T) {
-	port := udp.PickPort()
-
-	dnsServer := dns.Server{
-		Addr:    "127.0.0.1:" + port.String(),
-		Net:     "udp",
-		Handler: &staticHandler{},
-		UDPSize: 1200,
+	address, stopDNS := dnsfixture.StartWithStop(t, "udp", &staticHandler{})
+	_ = stopDNS
+	_, portText, err := net.SplitHostPort(address)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	go dnsServer.ListenAndServe()
-	time.Sleep(time.Second)
+	port, err := net.PortFromString(portText)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	config := &core.Config{
 		App: []*serial.TypedMessage{
@@ -961,6 +971,7 @@ func TestMultiMatchPrioritizedDomain(t *testing.T) {
 
 	v, err := core.New(config)
 	common.Must(err)
+	t.Cleanup(func() { _ = v.Close() })
 
 	client := v.GetFeature(feature_dns.ClientType()).(feature_dns.Client)
 

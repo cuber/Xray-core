@@ -17,7 +17,12 @@ func BuildXray() error {
 	}
 
 	fmt.Printf("Building Xray into path (%s)\n", testBinaryPath)
-	cmd := exec.Command("go", "build", "-o="+testBinaryPath, GetSourcePath())
+	args := []string{"build", "-o=" + testBinaryPath}
+	if scenarioRaceEnabled {
+		args = append(args, "-race")
+	}
+	args = append(args, GetSourcePath())
+	cmd := exec.Command("go", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
@@ -29,6 +34,7 @@ func RunXrayProtobuf(config []byte) *exec.Cmd {
 	proc.Stdin = bytes.NewBuffer(config)
 	proc.Stderr = os.Stderr
 	proc.Stdout = os.Stdout
+	captureScenarioRace(proc)
 
 	return proc
 }

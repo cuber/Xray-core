@@ -173,6 +173,16 @@ func (s *ServerSession) handshake5(nMethod byte, reader io.Reader, writer net.Co
 			writeSocks5Response(writer, statusCmdNotSupport, net.AnyIP, net.Port(0))
 			return nil, nil, errors.New("UDP is not enabled.")
 		}
+		// UnixConnWrapper exposes a synthetic TCP RemoteAddr; the local address
+		// still identifies the actual Unix control listener.
+		if _, unix := writer.LocalAddr().(*net.UnixAddr); unix {
+			writeSocks5Response(writer, statusCmdNotSupport, net.AnyIP, net.Port(0))
+			return nil, nil, errors.New("UDP associate requires a TCP control connection.")
+		}
+		if _, ok := writer.RemoteAddr().(*net.TCPAddr); !ok {
+			writeSocks5Response(writer, statusCmdNotSupport, net.AnyIP, net.Port(0))
+			return nil, nil, errors.New("UDP associate requires a TCP control connection.")
+		}
 		request.Command = protocol.RequestCommandUDP
 	case cmdTCPBind:
 		writeSocks5Response(writer, statusCmdNotSupport, net.AnyIP, net.Port(0))

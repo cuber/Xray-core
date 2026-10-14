@@ -1,5 +1,8 @@
 # 回归基础设施与通用修复验证矩阵
 
+Fixed-upstream candidate results (2026-10-14), including exact offline/public
+boundaries and executed commands: [upgrade evidence](upgrade-20261014.md).
+
 ## Readv and DoQ increment (2026-10-14)
 
 ```sh

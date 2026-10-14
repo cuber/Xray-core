@@ -1,0 +1,131 @@
+{
+  "mode": "duplicates",
+  "platform": [
+    "Linux",
+    "3fde376453b4",
+    "7.0.11-orbstack-00360-gc9bc4d96ac70",
+    "#1 SMP PREEMPT Thu Jun  4 16:40:25 UTC 2026",
+    "aarch64"
+  ],
+  "binaries": {
+    "old": {
+      "sha256": "45250777f9118b97c78fd280241d35f96a3892c2ada069afcab1db35f74689ee",
+      "version": "Xray 26.4.25 (Xray, Penetrates Everything.) Custom (go1.26.1 linux/arm64)\nA unified platform for anti-censorship.\n"
+    },
+    "pristine": {
+      "sha256": "8ce6f3ca595c6284712dd9e24c109ab4371afb0766435f0236e494f8012f63aa",
+      "version": "Xray 26.10.10 (Xray, Penetrates Everything.) Custom (go1.27.0 linux/arm64)\nA unified platform for anti-censorship.\n"
+    },
+    "candidate": {
+      "sha256": "2ec073c0ec20b419f25feea911cd400a9d4ed6d64a67b256d8ef2264fb17eac0",
+      "version": "Xray 26.10.10 (Xray, Penetrates Everything.) Custom (go1.27.0 linux/arm64)\nA unified platform for anti-censorship.\n"
+    }
+  },
+  "results": [
+    {
+      "binary": "old",
+      "reverse_order": false,
+      "distinct_keys": false,
+      "remove_admin": false,
+      "config_exit": 0,
+      "access": "2026/10/14 16:02:36.569330 from 127.0.0.1:57736 accepted 127.0.0.1:59053 email: la.akile.lite\n",
+      "selected_email": "la.akile.lite"
+    },
+    {
+      "binary": "old",
+      "reverse_order": true,
+      "distinct_keys": false,
+      "remove_admin": false,
+      "config_exit": 0,
+      "access": "2026/10/14 16:02:36.803729 from 127.0.0.1:37912 accepted 127.0.0.1:59053 email: admin\n",
+      "selected_email": "admin"
+    },
+    {
+      "binary": "old",
+      "reverse_order": false,
+      "distinct_keys": true,
+      "remove_admin": false,
+      "config_exit": 0,
+      "access": "2026/10/14 16:02:37.038796 from 127.0.0.1:54994 accepted 127.0.0.1:59053 email: admin\n2026/10/14 16:02:37.208377 from 127.0.0.1:55000 accepted 127.0.0.1:59053 email: la.akile.lite\n"
+    },
+    {
+      "binary": "old",
+      "reverse_order": false,
+      "distinct_keys": false,
+      "remove_admin": true,
+      "config_exit": 0,
+      "remaining_user_works": true,
+      "access": "2026/10/14 16:02:37.447746 from 127.0.0.1:50956 accepted 127.0.0.1:59053 email: la.akile.lite\n2026/10/14 16:02:37.567871 from 127.0.0.1:36902 accepted tcp:127.0.0.1:40703 [api -> api]\n2026/10/14 16:02:37.633620 from 127.0.0.1:50962 accepted 127.0.0.1:59053 email: la.akile.lite\n",
+      "selected_email": "la.akile.lite"
+    },
+    {
+      "binary": "pristine",
+      "reverse_order": false,
+      "distinct_keys": false,
+      "remove_admin": false,
+      "config_exit": 0,
+      "access": "2026/10/14 16:02:37.783912 from 127.0.0.1:46108 accepted tcp:127.0.0.1:59053 email: la.akile.lite\n",
+      "selected_email": "la.akile.lite"
+    },
+    {
+      "binary": "pristine",
+      "reverse_order": true,
+      "distinct_keys": false,
+      "remove_admin": false,
+      "config_exit": 0,
+      "access": "2026/10/14 16:02:38.029446 from 127.0.0.1:56568 accepted tcp:127.0.0.1:59053 email: admin\n",
+      "selected_email": "admin"
+    },
+    {
+      "binary": "pristine",
+      "reverse_order": false,
+      "distinct_keys": true,
+      "remove_admin": false,
+      "config_exit": 0,
+      "access": "2026/10/14 16:02:38.267977 from 127.0.0.1:50128 accepted tcp:127.0.0.1:59053 email: admin\n2026/10/14 16:02:38.446319 from 127.0.0.1:50144 accepted tcp:127.0.0.1:59053 email: la.akile.lite\n"
+    },
+    {
+      "binary": "pristine",
+      "reverse_order": false,
+      "distinct_keys": false,
+      "remove_admin": true,
+      "config_exit": 0,
+      "remaining_user_works": false,
+      "access": "2026/10/14 16:02:38.697721 from 127.0.0.1:54128 accepted tcp:127.0.0.1:59053 email: la.akile.lite\n2026/10/14 16:02:38.828541 from 127.0.0.1:42242 accepted tcp:127.0.0.1:41905 [api -> api]\n",
+      "selected_email": "la.akile.lite"
+    },
+    {
+      "binary": "candidate",
+      "reverse_order": false,
+      "distinct_keys": false,
+      "remove_admin": false,
+      "config_exit": 23,
+      "config_output": "Xray 26.10.10 (Xray, Penetrates Everything.) Custom (go1.27.0 linux/arm64)\nA unified platform for anti-censorship.\n2026/10/14 16:02:38.898262 [Info] infra/conf/serial: Reading config: &{Name:/out/tmptxgw7f8g/server.json Format:json}\n2026/10/14 16:02:38.898774 [Warning] common/errors: The feature Shadowsocks (with no Forward Secrecy, etc.) is deprecated, not recommended for using and might be removed. Please migrate to VLESS Encryption as soon as possible.\nFailed to start: main: failed to create server > proxy/shadowsocks_2022: user key already exists\n"
+    },
+    {
+      "binary": "candidate",
+      "reverse_order": true,
+      "distinct_keys": false,
+      "remove_admin": false,
+      "config_exit": 23,
+      "config_output": "Xray 26.10.10 (Xray, Penetrates Everything.) Custom (go1.27.0 linux/arm64)\nA unified platform for anti-censorship.\n2026/10/14 16:02:38.907062 [Info] infra/conf/serial: Reading config: &{Name:/out/tmpy2lqs3ar/server.json Format:json}\n2026/10/14 16:02:38.907297 [Warning] common/errors: The feature Shadowsocks (with no Forward Secrecy, etc.) is deprecated, not recommended for using and might be removed. Please migrate to VLESS Encryption as soon as possible.\nFailed to start: main: failed to create server > proxy/shadowsocks_2022: user key already exists\n"
+    },
+    {
+      "binary": "candidate",
+      "reverse_order": false,
+      "distinct_keys": true,
+      "remove_admin": false,
+      "config_exit": 0,
+      "access": "2026/10/14 16:02:39.039854 from 127.0.0.1:43040 accepted tcp:127.0.0.1:59053 email: admin\n2026/10/14 16:02:39.206970 from 127.0.0.1:43046 accepted tcp:127.0.0.1:59053 email: la.akile.lite\n"
+    },
+    {
+      "binary": "candidate",
+      "reverse_order": false,
+      "distinct_keys": true,
+      "remove_admin": true,
+      "config_exit": 0,
+      "remaining_user_works": true,
+      "access": "2026/10/14 16:02:39.456297 from 127.0.0.1:33374 accepted tcp:127.0.0.1:59053 email: admin\n2026/10/14 16:02:39.627440 from 127.0.0.1:33376 accepted tcp:127.0.0.1:59053 email: la.akile.lite\n2026/10/14 16:02:39.755329 from 127.0.0.1:47224 accepted tcp:127.0.0.1:41289 [api -> api]\n2026/10/14 16:02:39.820212 from 127.0.0.1:33386 accepted tcp:127.0.0.1:59053 email: la.akile.lite\n"
+    }
+  ]
+}

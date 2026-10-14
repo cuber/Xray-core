@@ -11,9 +11,12 @@ import (
 	"crypto/rand"
 	"io"
 	"math/big"
+	"reflect"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/pires/go-proxyproto"
 	"github.com/xtls/xray-core/app/dispatcher"
@@ -102,6 +105,8 @@ type GetOutbound interface {
 // TrafficState is used to track uplink and downlink of one connection
 // It is used by XTLS to determine if switch to raw copy mode, It is used by Vision to calculate padding
 type TrafficState struct {
+	// TLS detection is shared by the independent read and write directions.
+	mu                     sync.Mutex
 	UserUUID               []byte
 	NumberOfPacketToFilter int
 	EnableXtls             bool
@@ -171,6 +176,87 @@ func NewTrafficState(userUUID []byte) *TrafficState {
 	}
 }
 
+// VisionBuffers retains the connection, not a snapshot of its pooled buffers.
+// The Vision reader must exclusively own connection reads when Take is called.
+type VisionBuffers struct {
+	owner    any
+	input    *bytes.Reader
+	raw      unsafe.Pointer
+	indirect bool
+	readMu   *sync.Mutex
+	taken    bool
+}
+
+func NewVisionBuffers(owner any) (*VisionBuffers, error) {
+	v := reflect.ValueOf(owner)
+	if !v.IsValid() || v.Kind() != reflect.Pointer || v.IsNil() || v.Type().Elem().Kind() != reflect.Struct {
+		return nil, errors.New("unsupported Vision buffer owner")
+	}
+	t := v.Type().Elem()
+	i, iOK := t.FieldByName("input")
+	r, rOK := t.FieldByName("rawInput")
+	if !iOK || !rOK || len(i.Index) != 1 || len(r.Index) != 1 || i.Type != reflect.TypeFor[bytes.Reader]() || (r.Type != reflect.TypeFor[bytes.Buffer]() && r.Type != reflect.TypeFor[*bytes.Buffer]()) {
+		return nil, errors.New("unsupported Vision buffer layout: ", t)
+	}
+	p := v.UnsafePointer()
+	b := &VisionBuffers{owner: owner, input: (*bytes.Reader)(unsafe.Add(p, i.Offset)), raw: unsafe.Add(p, r.Offset), indirect: r.Type == reflect.TypeFor[*bytes.Buffer]()}
+	if in, ok := t.FieldByName("in"); ok {
+		if len(in.Index) != 1 || in.Type.Kind() != reflect.Struct {
+			return nil, errors.New("unsupported Vision read lock layout: ", t)
+		}
+		mu, ok := in.Type.FieldByName("Mutex")
+		if !ok || len(mu.Index) != 1 || mu.Type != reflect.TypeFor[sync.Mutex]() {
+			return nil, errors.New("unsupported Vision read lock layout: ", t)
+		}
+		b.readMu = (*sync.Mutex)(unsafe.Add(p, in.Offset+mu.Offset))
+	}
+	return b, nil
+}
+
+func (b *VisionBuffers) Take() (buf.MultiBuffer, error) {
+	if b == nil {
+		return nil, errors.New("missing Vision buffers")
+	}
+	if b.readMu != nil {
+		b.readMu.Lock()
+		defer b.readMu.Unlock()
+	}
+	if b.taken {
+		return nil, errors.New("Vision buffers already transferred")
+	}
+	b.taken = true
+	defer runtime.KeepAlive(b.owner)
+	var raw *bytes.Buffer
+	if b.indirect {
+		// Reality may return the previous buffer to its pool on any Read.
+		raw = *(**bytes.Buffer)(b.raw)
+	} else {
+		raw = (*bytes.Buffer)(b.raw)
+	}
+	result, err := buf.ReadFrom(b.input)
+	if err != nil {
+		buf.ReleaseMulti(result)
+		return nil, err
+	}
+	if raw != nil {
+		rest, err := buf.ReadFrom(raw)
+		if err != nil {
+			buf.ReleaseMulti(result)
+			buf.ReleaseMulti(rest)
+			return nil, err
+		}
+		result, _ = buf.MergeMulti(result, rest)
+	}
+	// input can alias rawInput's storage: copy both before releasing either.
+	*b.input = bytes.Reader{}
+	if b.indirect {
+		*(**bytes.Buffer)(b.raw) = nil
+	} else {
+		*raw = bytes.Buffer{}
+	}
+	return result, nil
+}
+
 // VisionReader is used to read xtls vision protocol
 // Note Vision probably only make sense as the inner most layer of reader, since it need assess traffic state from origin proxy traffic
 type VisionReader struct {
@@ -179,23 +265,21 @@ type VisionReader struct {
 	ctx          context.Context
 	isUplink     bool
 	conn         net.Conn
-	input        *bytes.Reader
-	rawInput     *bytes.Buffer
+	buffers      *VisionBuffers
 	ob           *session.Outbound
 
 	// internal
 	directReadCounter stats.Counter
 }
 
-func NewVisionReader(reader buf.Reader, trafficState *TrafficState, isUplink bool, ctx context.Context, conn net.Conn, input *bytes.Reader, rawInput *bytes.Buffer, ob *session.Outbound) *VisionReader {
+func NewVisionReader(reader buf.Reader, trafficState *TrafficState, isUplink bool, ctx context.Context, conn net.Conn, buffers *VisionBuffers, ob *session.Outbound) *VisionReader {
 	return &VisionReader{
 		Reader:       reader,
 		trafficState: trafficState,
 		ctx:          ctx,
 		isUplink:     isUplink,
 		conn:         conn,
-		input:        input,
-		rawInput:     rawInput,
+		buffers:      buffers,
 		ob:           ob,
 	}
 }
@@ -205,6 +289,8 @@ func (w *VisionReader) ReadMultiBuffer() (buf.MultiBuffer, error) {
 	if buffer.IsEmpty() {
 		return buffer, err
 	}
+	w.trafficState.mu.Lock()
+	defer w.trafficState.mu.Unlock()
 
 	var withinPaddingBuffers *bool
 	var remainingContent *int32
@@ -257,17 +343,14 @@ func (w *VisionReader) ReadMultiBuffer() (buf.MultiBuffer, error) {
 	}
 
 	if *switchToDirectCopy {
-		// XTLS Vision processes TLS-like conn's input and rawInput
-		if inputBuffer, err := buf.ReadFrom(w.input); err == nil && !inputBuffer.IsEmpty() {
-			buffer, _ = buf.MergeMulti(buffer, inputBuffer)
+		rest, takeErr := w.buffers.Take()
+		if takeErr != nil {
+			*switchToDirectCopy = false
+			buf.ReleaseMulti(buffer)
+			return nil, takeErr
 		}
-		if rawInputBuffer, err := buf.ReadFrom(w.rawInput); err == nil && !rawInputBuffer.IsEmpty() {
-			buffer, _ = buf.MergeMulti(buffer, rawInputBuffer)
-		}
-		*w.input = bytes.Reader{} // release memory
-		w.input = nil
-		*w.rawInput = bytes.Buffer{} // release memory
-		w.rawInput = nil
+		buffer, _ = buf.MergeMulti(buffer, rest)
+		w.buffers = nil
 
 		if inbound := session.InboundFromContext(w.ctx); inbound != nil && inbound.Conn != nil {
 			// if w.isUplink && inbound.CanSpliceCopy == 2 { // TODO: enable uplink splice
@@ -351,6 +434,7 @@ func (w *VisionWriter) WriteMultiBuffer(mb buf.MultiBuffer) error {
 		w.directWriteCounter.Add(int64(mb.Len()))
 	}
 
+	w.trafficState.mu.Lock()
 	if w.trafficState.NumberOfPacketToFilter > 0 {
 		XtlsFilterTls(mb, w.trafficState, w.ctx)
 	}
@@ -394,6 +478,8 @@ func (w *VisionWriter) WriteMultiBuffer(mb buf.MultiBuffer) error {
 			}
 		}
 	}
+	// Never hold the shared detection lock across network I/O.
+	w.trafficState.mu.Unlock()
 	if err := w.Writer.WriteMultiBuffer(mb); err != nil {
 		return err
 	}

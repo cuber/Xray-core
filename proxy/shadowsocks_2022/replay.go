@@ -1,6 +1,7 @@
 package shadowsocks_2022
 
 import (
+	"context"
 	"crypto/cipher"
 	"sync"
 	"sync/atomic"
@@ -11,6 +12,7 @@ import (
 	"github.com/xtls/xray-core/common/signal"
 	"github.com/xtls/xray-core/common/utils"
 	"github.com/xtls/xray-core/transport"
+	"github.com/xtls/xray-core/transport/internet/stat"
 )
 
 const (
@@ -77,11 +79,12 @@ func (f *SlidingWindow) CheckAndAdd(counter uint64) bool {
 
 type ServerUDPSession struct {
 	sync.Mutex
-	SessionID  uint64
-	Window     *SlidingWindow
-	User       *protocol.MemoryUser
-	UserPSK    []byte
-	LastActive atomic.Int64 // Unix timestamp in seconds
+	SessionID   uint64
+	Window      *SlidingWindow
+	User        *protocol.MemoryUser
+	UserPSK     []byte
+	relayTarget *relayDest
+	LastActive  atomic.Int64 // Unix timestamp in seconds
 
 	clientBodyCipher cipher.AEAD
 
@@ -91,10 +94,34 @@ type ServerUDPSession struct {
 	serverHeaderBlock cipher.Block
 	serverChaCha      cipher.AEAD
 
-	manager     *UDPSessionManager
-	link        atomic.Pointer[transport.Link]
-	timer       *signal.ActivityTimer
-	currentConn atomic.Value // stores stat.Connection
+	manager      *UDPSessionManager
+	link         atomic.Pointer[transport.Link]
+	timer        *signal.ActivityTimer
+	currentConn  atomic.Pointer[udpClientConn]
+	closed       bool
+	expiry       *time.Timer
+	cancel       context.CancelFunc
+	done         chan struct{}
+	initializing chan struct{}
+}
+
+type udpClientConn struct{ conn stat.Connection }
+
+func (s *ServerUDPSession) touch(timeout time.Duration) {
+	s.Lock()
+	defer s.Unlock()
+	if s.closed {
+		return
+	}
+	s.LastActive.Store(time.Now().Unix())
+	if timeout <= 0 {
+		timeout = time.Minute
+	}
+	if s.expiry == nil {
+		s.expiry = time.AfterFunc(timeout, s.Close)
+	} else {
+		s.expiry.Reset(timeout)
+	}
 }
 
 func (s *ServerUDPSession) CheckPacketID(packetID uint64) bool {
@@ -116,9 +143,10 @@ func (s *ServerUDPSession) AddPacketID(packetID uint64) {
 }
 
 type UDPSessionManager struct {
-	sessions  *utils.TypedSyncMap[uint64, *ServerUDPSession]
-	timeout   time.Duration
-	lastClean atomic.Int64 // Unix timestamp in seconds
+	sync.Mutex
+	sessions *utils.TypedSyncMap[uint64, *ServerUDPSession]
+	timeout  time.Duration
+	closed   bool
 }
 
 func NewUDPSessionManager(timeout time.Duration) *UDPSessionManager {
@@ -129,9 +157,13 @@ func NewUDPSessionManager(timeout time.Duration) *UDPSessionManager {
 }
 
 func (m *UDPSessionManager) GetOrCreate(sessionID uint64) *ServerUDPSession {
-	now := time.Now().Unix()
+	m.Lock()
+	defer m.Unlock()
+	if m.closed {
+		return nil
+	}
 	if s, ok := m.sessions.Load(sessionID); ok {
-		s.LastActive.Store(now)
+		s.touch(m.timeout)
 		return s
 	}
 
@@ -139,21 +171,18 @@ func (m *UDPSessionManager) GetOrCreate(sessionID uint64) *ServerUDPSession {
 		SessionID: sessionID,
 		manager:   m,
 	}
-	s.LastActive.Store(now)
-
-	actual, loaded := m.sessions.LoadOrStore(sessionID, s)
-	if loaded {
-		actual.LastActive.Store(now)
-		return actual
-	}
-
-	// Trigger cleanup if at least 30 seconds have passed since last cleanup
-	last := m.lastClean.Load()
-	if now-last > 30 && m.lastClean.CompareAndSwap(last, now) {
-		go m.cleanup(now)
-	}
+	m.sessions.Store(sessionID, s)
+	s.touch(m.timeout)
 
 	return s
+}
+
+func (m *UDPSessionManager) Close() error {
+	m.Lock()
+	defer m.Unlock()
+	m.closed = true
+	m.sessions.Range(func(_ uint64, s *ServerUDPSession) bool { s.Close(); return true })
+	return nil
 }
 
 func (m *UDPSessionManager) cleanup(now int64) {
@@ -163,7 +192,6 @@ func (m *UDPSessionManager) cleanup(now int64) {
 	}
 	m.sessions.Range(func(k uint64, v *ServerUDPSession) bool {
 		if now-v.LastActive.Load() > timeoutSec {
-			m.sessions.Delete(k)
 			v.Close()
 		}
 		return true
@@ -171,13 +199,47 @@ func (m *UDPSessionManager) cleanup(now int64) {
 }
 
 func (m *UDPSessionManager) Delete(sessionID uint64) {
-	m.sessions.Delete(sessionID)
+	if s, ok := m.sessions.Load(sessionID); ok {
+		s.Close()
+	}
 }
 
 func (m *UDPSessionManager) EncodeServerPacket(method *CipherMethod, psk []byte, clientSessionID uint64, dest net.Destination, payload []byte) ([]byte, error) {
-	sessionItem := m.GetOrCreate(clientSessionID)
+	sessionItem, ok := m.sessions.Load(clientSessionID)
+	if !ok {
+		return nil, ErrInvalidRequest
+	}
 	if err := sessionItem.EnsureServerState(method, psk); err != nil {
 		return nil, err
 	}
 	return sessionItem.EncodeServerPacket(method, clientSessionID, dest, payload)
+}
+
+// Authenticate publishes replay/cipher state only after authentication succeeds.
+// Serializing publication also makes replay check-and-add atomic across transports.
+func (m *UDPSessionManager) authenticate(id uint64, user *protocol.MemoryUser, decode func(*ServerUDPSession) (DecodedUDPPacket, error)) (DecodedUDPPacket, *ServerUDPSession, error) {
+	m.Lock()
+	defer m.Unlock()
+	if m.closed {
+		return DecodedUDPPacket{}, nil, ErrInvalidRequest
+	}
+	s, exists := m.sessions.Load(id)
+	if !exists {
+		s = &ServerUDPSession{SessionID: id, manager: m, User: user}
+	}
+	s.Lock()
+	rejected := s.closed || (user != nil && s.User != user)
+	s.Unlock()
+	if rejected {
+		return DecodedUDPPacket{}, nil, ErrInvalidRequest
+	}
+	p, err := decode(s)
+	if err != nil {
+		return DecodedUDPPacket{}, nil, err
+	}
+	if !exists {
+		m.sessions.Store(id, s)
+	}
+	s.touch(m.timeout)
+	return p, s, nil
 }

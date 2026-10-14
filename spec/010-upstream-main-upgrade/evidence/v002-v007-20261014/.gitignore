@@ -1,0 +1,3 @@
+# These generated logs are intentional, immutable validation evidence.
+!*.log
+!*.json.gz

@@ -1,0 +1,3 @@
+# Intentional permanent test and measurement evidence.
+!*.log
+!*.json.gz

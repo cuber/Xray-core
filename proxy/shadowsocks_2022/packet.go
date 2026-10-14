@@ -86,7 +86,8 @@ func (c *UDPCodec) GetSession(sessionID uint64) *ServerUDPSession {
 	if c.sessions == nil {
 		return nil
 	}
-	return c.sessions.GetOrCreate(sessionID)
+	s, _ := c.sessions.sessions.Load(sessionID)
+	return s
 }
 
 type DecodedUDPPacket struct {
@@ -215,11 +216,6 @@ func (c *UDPCodec) DecodePacket(data []byte) (DecodedUDPPacket, error) {
 		sessionID := binary.BigEndian.Uint64(plain[:8])
 		packetID := binary.BigEndian.Uint64(plain[8:16])
 
-		sessionItem := c.sessions.GetOrCreate(sessionID)
-		if !sessionItem.CheckPacketID(packetID) {
-			return DecodedUDPPacket{}, ErrPacketIdNotUnique
-		}
-
 		decoded, err := parsePlainUDPPacket(sessionID, packetID, plain[16:])
 		if err != nil {
 			return DecodedUDPPacket{}, err
@@ -229,8 +225,18 @@ func (c *UDPCodec) DecodePacket(data []byte) (DecodedUDPPacket, error) {
 			return DecodedUDPPacket{}, ErrBadHeaderType
 		}
 
-		sessionItem.AddPacketID(packetID)
-		return decoded, nil
+		p, _, err := c.sessions.authenticate(sessionID, nil, func(s *ServerUDPSession) (DecodedUDPPacket, error) {
+			s.Lock()
+			defer s.Unlock()
+			if s.Window == nil {
+				s.Window = new(SlidingWindow)
+			}
+			if !s.Window.CheckAndAdd(packetID) {
+				return DecodedUDPPacket{}, ErrPacketIdNotUnique
+			}
+			return decoded, nil
+		})
+		return p, err
 	}
 
 	// AES mode
@@ -239,15 +245,21 @@ func (c *UDPCodec) DecodePacket(data []byte) (DecodedUDPPacket, error) {
 	sessionID := binary.BigEndian.Uint64(rawHeader[:8])
 	packetID := binary.BigEndian.Uint64(rawHeader[8:16])
 
-	sessionItem := c.sessions.GetOrCreate(sessionID)
-	if !sessionItem.CheckPacketID(packetID) {
-		return DecodedUDPPacket{}, ErrPacketIdNotUnique
-	}
-
-	return sessionItem.DecryptAESPayload(c.method, c.psk, sessionID, packetID, rawHeader[:], data[16:])
+	p, _, err := c.sessions.authenticate(sessionID, nil, func(s *ServerUDPSession) (DecodedUDPPacket, error) {
+		return s.DecryptAESPayload(c.method, c.psk, sessionID, packetID, rawHeader[:], data[16:])
+	})
+	return p, err
 }
 
 func (s *ServerUDPSession) DecryptAESPayload(method *CipherMethod, psk []byte, sessionID, packetID uint64, rawHeader, bodyCipher []byte) (DecodedUDPPacket, error) {
+	s.Lock()
+	defer s.Unlock()
+	if s.closed {
+		return DecodedUDPPacket{}, ErrInvalidRequest
+	}
+	if s.Window != nil && !s.Window.Check(packetID) {
+		return DecodedUDPPacket{}, ErrPacketIdNotUnique
+	}
 	bodyAead := s.clientBodyCipher
 	isNewCipher := false
 	if bodyAead == nil {
@@ -275,7 +287,10 @@ func (s *ServerUDPSession) DecryptAESPayload(method *CipherMethod, psk []byte, s
 		return DecodedUDPPacket{}, ErrBadHeaderType
 	}
 
-	s.AddPacketID(packetID)
+	if s.Window == nil {
+		s.Window = new(SlidingWindow)
+	}
+	s.Window.Add(packetID)
 
 	if isNewCipher {
 		s.clientBodyCipher = bodyAead
@@ -287,6 +302,9 @@ func (s *ServerUDPSession) DecryptAESPayload(method *CipherMethod, psk []byte, s
 func (s *ServerUDPSession) EnsureServerState(method *CipherMethod, psk []byte) error {
 	s.Lock()
 	defer s.Unlock()
+	if s.closed {
+		return ErrInvalidRequest
+	}
 	if s.ServerSessionID != 0 {
 		return nil
 	}
@@ -322,6 +340,11 @@ func (s *ServerUDPSession) EnsureServerState(method *CipherMethod, psk []byte) e
 }
 
 func (s *ServerUDPSession) EncodeServerPacket(method *CipherMethod, clientSessionID uint64, dest net.Destination, payload []byte) ([]byte, error) {
+	s.Lock()
+	defer s.Unlock()
+	if s.closed {
+		return nil, ErrInvalidRequest
+	}
 	serverSessionID := s.ServerSessionID
 	serverPacketID := s.ServerPacketID.Add(1) - 1
 

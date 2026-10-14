@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	stdnet "net"
 	"strings"
 	"testing"
 	"time"
@@ -80,6 +81,20 @@ func TestCommanderListenConfigurationItem(t *testing.T) {
 	common.Must(err)
 	defer CloseAllServers(servers)
 
+	// Wait for the freshly linked process to listen rather than assuming a
+	// fixed startup sleep is sufficient on every host.
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		conn, err := stdnet.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", clientPort), 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("Xray listener did not become ready: %v", err)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 	if err := testTCPConn(clientPort, 1024, time.Second*5)(); err != nil {
 		t.Fatal(err)
 	}

@@ -77,6 +77,8 @@ func (i *Inbound) Network() []net.Network {
 	return i.networks
 }
 
+func (i *Inbound) Close() error { return i.udpCodec.sessions.Close() }
+
 func (i *Inbound) Process(ctx context.Context, network net.Network, connection stat.Connection, dispatcher routing.Dispatcher) error {
 	inbound := session.InboundFromContext(ctx)
 	inbound.Name = "shadowsocks-2022"
@@ -100,8 +102,8 @@ func (i *Inbound) processTCP(ctx context.Context, conn net.Conn, dispatcher rout
 	// 1. Single read call for Salt + Fixed-length header chunk per SIP022 §3.1.4
 	headerLen := i.method.KeySaltLength + RequestHeaderFixedChunkLength + AEADTagSize
 	headerBuf := make([]byte, headerLen)
-	n, err := conn.Read(headerBuf)
-	if err != nil || n < headerLen {
+	n, _ := conn.Read(headerBuf)
+	if n < headerLen {
 		ResetTCPConn(conn)
 		return errors.New("failed to read complete handshake header")
 	}
@@ -134,6 +136,8 @@ func (i *Inbound) processTCP(ctx context.Context, conn net.Conn, dispatcher rout
 	if err != nil {
 		return err
 	}
+	defer common.Interrupt(link.Reader)
+	defer common.Interrupt(link.Writer)
 
 	if len(reqHeader.EarlyData) > 0 {
 		mb := buf.MergeBytes(nil, reqHeader.EarlyData)
@@ -162,20 +166,24 @@ func (i *Inbound) processUDP(ctx context.Context, conn stat.Connection, dispatch
 			}
 
 			sessionItem := i.udpCodec.GetSession(decoded.SessionID)
-			if sessionItem.User == nil {
-				sessionItem.Lock()
-				if sessionItem.User == nil {
-					sessionItem.User = i.user
-				}
-				sessionItem.Unlock()
+			if sessionItem == nil {
+				continue
 			}
+			sessionItem.Lock()
+			if sessionItem.User == nil {
+				sessionItem.User = i.user
+			}
+			sessionItem.Unlock()
 			link := sessionItem.link.Load()
 			if link != nil {
 				sessionItem.UpdateConn(conn)
 			} else {
 				var err error
 				link, err = sessionItem.EnsureLink(ctx, conn, decoded.Destination, dispatcher, i.policyManager, func(dest net.Destination, payload []byte) ([]byte, error) {
-					return i.udpCodec.EncodeServerPacket(decoded.SessionID, dest, payload)
+					if err := sessionItem.EnsureServerState(i.method, i.psk); err != nil {
+						return nil, err
+					}
+					return sessionItem.EncodeServerPacket(i.method, decoded.SessionID, dest, payload)
 				})
 				if err != nil {
 					continue

@@ -31,6 +31,7 @@ const (
 // and preemptively closing the response pipe there delivers a zero-payload
 // FIN to the caller before any data flowed.
 func NewDispatchConn(ctx context.Context, opts []pipe.Option, output DispatchConnOutput, run func(context.Context, *Link)) xnet.Conn {
+	ctx, cancel := context.WithCancel(ctx)
 	requestReader, requestWriter := pipe.New(opts...)
 	responseReader, responseWriter := pipe.New(opts...)
 
@@ -47,8 +48,18 @@ func NewDispatchConn(ctx context.Context, opts []pipe.Option, output DispatchCon
 	return cnc.NewConnection(
 		cnc.ConnectionInputMulti(requestWriter),
 		readerOpt,
-		cnc.ConnectionOnClose(common.ChainedClosable{requestWriter, responseWriter}),
+		cnc.ConnectionOnClose(dispatchCloser{cancel: cancel, pipes: common.ChainedClosable{requestWriter, responseWriter}}),
 	)
+}
+
+type dispatchCloser struct {
+	cancel context.CancelFunc
+	pipes  common.ChainedClosable
+}
+
+func (c dispatchCloser) Close() error {
+	c.cancel()
+	return c.pipes.Close()
 }
 
 type borrowedReader struct {

@@ -1,0 +1,50 @@
+=== RUN   TestU012ProductionDATResources
+    resource_test.go:25: geosite.dat bytes=2288716 sha256=35ed26a24cafa1256bd7261414224b7bcef5c944cea7760e172b030a8b266450
+    resource_test.go:25: geoip.dat bytes=23330258 sha256=1cba1f0982cf62502fa079c66047c3d0c608196da5b3305671e68f60e917a482
+=== RUN   TestU012ProductionDATResources/compact=false
+2026/10/14 23:02:22.091534 [Debug] common/geodata: geodata mph domain matcher cache MISS for 1 rules
+    resource_test.go:84: heap baseline=386968 sampled_build_peak=1285672 held_post_gc=533944 released_post_gc=396496 objects baseline=1015 held=1098 released=1047 compiled_collected=1
+=== RUN   TestU012ProductionDATResources/compact=true
+2026/10/14 23:02:22.096158 [Debug] common/geodata: geodata geosite matcher cache MISS geosite.dat:CN@
+    resource_test.go:84: heap baseline=400344 sampled_build_peak=912576 held_post_gc=535520 released_post_gc=397968 objects baseline=1051 held=1111 released=1056 compiled_collected=1
+--- PASS: TestU012ProductionDATResources (0.04s)
+    --- PASS: TestU012ProductionDATResources/compact=false (0.00s)
+    --- PASS: TestU012ProductionDATResources/compact=true (0.01s)
+goos: darwin
+goarch: arm64
+pkg: github.com/xtls/xray-core/common/geodata
+cpu: Apple M4 Pro
+BenchmarkU012ProductionLookup
+BenchmarkU012ProductionLookup/compact=false
+2026/10/14 23:02:22.105102 [Debug] common/geodata: geodata mph domain matcher cache MISS for 1 rules
+2026/10/14 23:02:22.107992 [Debug] common/geodata: geodata mph domain matcher cache MISS for 1 rules
+2026/10/14 23:02:22.111165 [Debug] common/geodata: geodata mph domain matcher cache MISS for 1 rules
+2026/10/14 23:02:22.114559 [Debug] common/geodata: geodata mph domain matcher cache MISS for 1 rules
+2026/10/14 23:02:22.133645 [Debug] common/geodata: geodata mph domain matcher cache MISS for 1 rules
+BenchmarkU012ProductionLookup/compact=false-12         	74242682	        15.69 ns/op	       0 B/op	       0 allocs/op
+BenchmarkU012ProductionLookup/compact=true
+2026/10/14 23:02:23.301373 [Debug] common/geodata: geodata geosite matcher cache MISS geosite.dat:CN@
+2026/10/14 23:02:23.304280 [Debug] common/geodata: geodata geosite matcher cache MISS geosite.dat:CN@
+2026/10/14 23:02:23.307122 [Debug] common/geodata: geodata geosite matcher cache MISS geosite.dat:CN@
+2026/10/14 23:02:23.309958 [Debug] common/geodata: geodata geosite matcher cache MISS geosite.dat:CN@
+2026/10/14 23:02:23.329228 [Debug] common/geodata: geodata geosite matcher cache MISS geosite.dat:CN@
+BenchmarkU012ProductionLookup/compact=true-12          	72170140	        16.88 ns/op	       0 B/op	       0 allocs/op
+PASS
+        3.05 real         2.46 user         0.04 sys
+            42778624  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+                2909  page reclaims
+                   0  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                 252  signals received
+                  27  voluntary context switches
+                3573  involuntary context switches
+         58543975769  instructions retired
+          9785312637  cycles elapsed
+            31965784  peak memory footprint

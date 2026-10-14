@@ -47,7 +47,7 @@ func (s *allocStrategy) Alloc() []*Buffer {
 
 type multiReader interface {
 	Init([]*Buffer)
-	Read(fd uintptr) int32
+	Read(fd uintptr) (int32, error)
 	Clear()
 }
 
@@ -83,8 +83,13 @@ func (r *ReadVReader) readMulti() (MultiBuffer, error) {
 
 	r.mr.Init(bs)
 	var nBytes int32
+	var readErr error
 	err := r.rawConn.Read(func(fd uintptr) bool {
-		n := r.mr.Read(fd)
+		n, err := r.mr.Read(fd)
+		if err != nil {
+			readErr = err
+			return true
+		}
 		if n < 0 {
 			return false
 		}
@@ -93,6 +98,9 @@ func (r *ReadVReader) readMulti() (MultiBuffer, error) {
 		return true
 	})
 	r.mr.Clear()
+	if err == nil {
+		err = readErr
+	}
 
 	if err != nil {
 		ReleaseMulti(MultiBuffer(bs))

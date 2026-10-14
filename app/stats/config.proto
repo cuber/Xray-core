@@ -6,7 +6,16 @@ option go_package = "github.com/xtls/xray-core/app/stats";
 option java_package = "com.xray.app.stats";
 option java_multiple_files = true;
 
-message Config {}
+message Config {
+  DomainTrafficConfig domain_traffic = 1;
+}
+
+message DomainTrafficConfig {
+  bool enabled = 1;
+  uint32 bucket_interval_seconds = 2;
+  uint32 retention_seconds = 3;
+  uint32 max_domains = 4;
+}
 
 message ChannelConfig {
   bool Blocking = 1;

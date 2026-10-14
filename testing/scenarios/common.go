@@ -137,13 +137,18 @@ func CloseAllServers(servers []*exec.Cmd) {
 			server.Process.Signal(syscall.SIGTERM)
 		}
 	}
+	hadRace := false
 	for _, server := range servers {
-		server.Process.Wait()
+		server.Wait() // Join stderr forwarding before inspecting race diagnostics.
+		hadRace = scenarioHadRace(server) || hadRace
 	}
 	log.Record(&log.GeneralMessage{
 		Severity: log.Severity_Info,
 		Content:  "All server closed.",
 	})
+	if hadRace {
+		panic("scenario Core child reported a data race")
+	}
 }
 
 func CloseServer(server *exec.Cmd) {
@@ -156,11 +161,14 @@ func CloseServer(server *exec.Cmd) {
 	} else {
 		server.Process.Signal(syscall.SIGTERM)
 	}
-	server.Process.Wait()
+	server.Wait()
 	log.Record(&log.GeneralMessage{
 		Severity: log.Severity_Info,
 		Content:  "Server closed.",
 	})
+	if scenarioHadRace(server) {
+		panic("scenario Core child reported a data race")
+	}
 }
 
 func withDefaultApps(config *core.Config) *core.Config {

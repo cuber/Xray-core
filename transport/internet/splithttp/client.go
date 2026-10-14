@@ -192,12 +192,13 @@ type WaitReadCloser struct {
 	reader atomic.Pointer[io.ReadCloser]
 }
 
+// Distinguish closed from awaiting Set; a closed reader must never be reopened.
+var closedWaitReader io.ReadCloser
+
 func (w *WaitReadCloser) Set(rc io.ReadCloser) {
-	w.reader.Store(&rc)
-	if w.wait.Done() {
-		if p := w.reader.Swap(nil); p != nil {
-			(*p).Close()
-		}
+	if !w.reader.CompareAndSwap(nil, &rc) {
+		rc.Close()
+		return
 	}
 	w.wait.Close()
 }
@@ -206,16 +207,18 @@ func (w *WaitReadCloser) Read(b []byte) (int, error) {
 	rc := w.reader.Load()
 	if rc == nil {
 		<-w.wait.Wait()
-		if rc = w.reader.Load(); rc == nil {
-			return 0, io.ErrClosedPipe
-		}
+		rc = w.reader.Load()
+	}
+	if rc == nil || rc == &closedWaitReader {
+		return 0, io.ErrClosedPipe
 	}
 	return (*rc).Read(b)
 }
 
 func (w *WaitReadCloser) Close() error {
+	p := w.reader.Swap(&closedWaitReader)
 	w.wait.Close()
-	if p := w.reader.Swap(nil); p != nil {
+	if p != nil && p != &closedWaitReader {
 		return (*p).Close()
 	}
 	return nil

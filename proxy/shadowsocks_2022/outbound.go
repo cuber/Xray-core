@@ -103,16 +103,19 @@ func (o *Outbound) Process(ctx context.Context, link *transport.Link, dialer int
 	var newCancel context.CancelFunc
 	if session.TimeoutOnlyFromContext(ctx) {
 		newCtx, newCancel = context.WithCancel(context.Background())
+		defer newCancel()
 	}
 
 	sessionPolicy := o.policyManager.ForLevel(0)
 	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	timer := signal.CancelAfterInactivity(ctx, func() {
 		cancel()
 		if newCancel != nil {
 			newCancel()
 		}
 	}, sessionPolicy.Timeouts.ConnectionIdle)
+	defer timer.SetTimeout(0)
 
 	ctx = policy.ContextWithBufferPolicy(ctx, sessionPolicy.Buffer)
 

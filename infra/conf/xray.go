@@ -9,7 +9,6 @@ import (
 
 	"github.com/xtls/xray-core/app/dispatcher"
 	"github.com/xtls/xray-core/app/proxyman"
-	"github.com/xtls/xray-core/app/stats"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/geodata"
 	"github.com/xtls/xray-core/common/net"
@@ -31,6 +30,7 @@ var (
 		"vless":         func() interface{} { return new(VLessInboundConfig) },
 		"vmess":         func() interface{} { return new(VMessInboundConfig) },
 		"trojan":        func() interface{} { return new(TrojanServerConfig) },
+		"anytls":        func() interface{} { return new(AnyTLSServerConfig) },
 		"wireguard":     func() interface{} { return &WireGuardConfig{IsClient: false} },
 		"hysteria":      func() interface{} { return new(HysteriaServerConfig) },
 		"masque":        func() interface{} { return new(MasqueServerConfig) },
@@ -38,6 +38,7 @@ var (
 	}, "protocol", "settings")
 
 	outboundConfigLoader = NewJSONConfigLoader(ConfigCreatorCache{
+		"anytls":      func() interface{} { return new(AnyTLSClientConfig) },
 		"block":       func() interface{} { return new(BlackholeConfig) },
 		"blackhole":   func() interface{} { return new(BlackholeConfig) },
 		"loopback":    func() interface{} { return new(LoopbackConfig) },
@@ -128,18 +129,85 @@ func (m *MuxConfig) Build() (*proxyman.MultiplexingConfig, error) {
 }
 
 type InboundDetourConfig struct {
-	Protocol       string           `json:"protocol"`
-	PortList       *PortList        `json:"port"`
-	ListenOn       *Address         `json:"listen"`
-	Settings       *json.RawMessage `json:"settings"`
-	Tag            string           `json:"tag"`
-	StreamSetting  *StreamConfig    `json:"streamSettings"`
-	SniffingConfig *SniffingConfig  `json:"sniffing"`
+	Protocol        string           `json:"protocol"`
+	PortList        *PortList        `json:"port"`
+	ListenOn        *Address         `json:"listen"`
+	ListenAddresses []*Address       `json:"-"`
+	Settings        *json.RawMessage `json:"settings"`
+	Tag             string           `json:"tag"`
+	StreamSetting   *StreamConfig    `json:"streamSettings"`
+	SniffingConfig  *SniffingConfig  `json:"sniffing"`
+}
+
+// UnmarshalJSON preserves the legacy single-address API while accepting IP lists.
+func (c *InboundDetourConfig) UnmarshalJSON(data []byte) error {
+	type plain InboundDetourConfig
+	var v struct {
+		plain
+		Listen json.RawMessage `json:"listen"`
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	*c = InboundDetourConfig(v.plain)
+	if len(v.Listen) == 0 || string(v.Listen) == "null" {
+		return nil
+	}
+	if v.Listen[0] != '[' {
+		return json.Unmarshal(v.Listen, &c.ListenOn)
+	}
+	if err := json.Unmarshal(v.Listen, &c.ListenAddresses); err != nil {
+		return err
+	}
+	return c.validateListenAddresses()
+}
+
+func (c InboundDetourConfig) MarshalJSON() ([]byte, error) {
+	type plain InboundDetourConfig
+	if c.ListenAddresses == nil {
+		return json.Marshal(plain(c))
+	}
+	return json.Marshal(struct {
+		plain
+		Listen []*Address `json:"listen"`
+	}{plain(c), c.ListenAddresses})
+}
+
+func (c *InboundDetourConfig) validateListenAddresses() error {
+	if len(c.ListenAddresses) == 0 {
+		return errors.New("listen array must not be empty")
+	}
+	seen := make(map[string]bool)
+	for _, address := range c.ListenAddresses {
+		if address == nil || !address.Family().IsIP() || address.IP().IsUnspecified() {
+			return errors.New("listen array requires explicit IP addresses")
+		}
+		key := address.IP().String()
+		if seen[key] {
+			return errors.New("duplicate listen address: ", key)
+		}
+		seen[key] = true
+	}
+	return nil
 }
 
 // Build implements Buildable.
 func (c *InboundDetourConfig) Build() (*core.InboundHandlerConfig, error) {
+	if strings.EqualFold(c.Protocol, "anytls") && (c.StreamSetting == nil || c.StreamSetting.Security != "tls" || (c.StreamSetting.Network != nil && string(*c.StreamSetting.Network) != "raw" && string(*c.StreamSetting.Network) != "tcp")) {
+		return nil, errors.New("anytls requires RAW TCP and TLS")
+	}
 	receiverSettings := &proxyman.ReceiverConfig{}
+	if c.ListenAddresses != nil {
+		if err := c.validateListenAddresses(); err != nil {
+			return nil, err
+		}
+		if c.ListenOn != nil || strings.ToLower(c.Protocol) == "tun" || c.PortList == nil {
+			return nil, errors.New("listen array requires ports, a non-TUN inbound and no single listen address")
+		}
+		for _, address := range c.ListenAddresses {
+			receiverSettings.ListenAddresses = append(receiverSettings.ListenAddresses, address.Build())
+		}
+	}
 
 	// TUN inbound doesn't need port configuration as it uses network interface instead
 	if strings.ToLower(c.Protocol) == "tun" {
@@ -373,18 +441,19 @@ func (c *OutboundDetourConfig) Build() (*core.OutboundHandlerConfig, error) {
 		}
 	}
 
+	if validator, ok := ts.(interface {
+		ValidateSender(*proxyman.SenderConfig) error
+	}); ok {
+		if err := validator.ValidateSender(senderSettings); err != nil {
+			return nil, err
+		}
+	}
+
 	return &core.OutboundHandlerConfig{
 		SenderSettings: serial.ToTypedMessage(senderSettings),
 		Tag:            c.Tag,
 		ProxySettings:  serial.ToTypedMessage(ts),
 	}, nil
-}
-
-type StatsConfig struct{}
-
-// Build implements Buildable.
-func (c *StatsConfig) Build() (*stats.Config, error) {
-	return &stats.Config{}, nil
 }
 
 type EnvConfig map[string]string
@@ -613,11 +682,6 @@ func (c *Config) Build() (*core.Config, error) {
 
 	if c.Reverse != nil {
 		return nil, errors.PrintRemovedFeatureError(`"legacy reverse"`, `"VLESS Reverse Proxy"`)
-		r, err := c.Reverse.Build()
-		if err != nil {
-			return nil, errors.New("failed to build reverse configuration").Base(err)
-		}
-		config.App = append(config.App, serial.ToTypedMessage(r))
 	}
 
 	if c.FakeDNS != nil {

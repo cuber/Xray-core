@@ -4,6 +4,7 @@ import (
 	"context"
 	goerrors "errors"
 	"io"
+	stdnet "net"
 	"sync"
 	"time"
 
@@ -59,7 +60,7 @@ func (s *Server) policy() policy.Session {
 
 // Network implements proxy.Inbound.
 func (s *Server) Network() []net.Network {
-	return []net.Network{net.Network_TCP}
+	return []net.Network{net.Network_TCP, net.Network_UNIX}
 }
 
 // Process implements proxy.Inbound.
@@ -75,7 +76,7 @@ func (s *Server) Process(ctx context.Context, network net.Network, conn stat.Con
 	}
 
 	switch network {
-	case net.Network_TCP:
+	case net.Network_TCP, net.Network_UNIX:
 		firstbyte := make([]byte, 1)
 		if n, err := conn.Read(firstbyte); n == 0 {
 			if goerrors.Is(err, io.EOF) {
@@ -109,7 +110,13 @@ func (s *Server) processTCP(ctx context.Context, conn stat.Connection, dispatche
 		config:       s.config,
 		address:      inbound.Gateway.Address,
 		port:         inbound.Gateway.Port,
-		localAddress: net.IPAddress(conn.LocalAddr().(*net.TCPAddr).IP),
+		localAddress: socksLocalAddress(conn.LocalAddr()),
+	}
+	// SOCKS address fields cannot encode a Unix path. The reply's bind address
+	// is informational for CONNECT; keep the requested destination unchanged.
+	if _, ok := conn.LocalAddr().(*stdnet.UnixAddr); ok {
+		svrSession.address = net.LocalHostIP
+		svrSession.port = 0
 	}
 
 	// Firstbyte is for forwarded conn from SOCKS inbound
@@ -190,6 +197,13 @@ func (s *Server) processTCP(ctx context.Context, conn stat.Connection, dispatche
 		return <-errCh
 	}
 	return nil
+}
+
+func socksLocalAddress(addr stdnet.Addr) net.Address {
+	if tcpAddr, ok := addr.(*stdnet.TCPAddr); ok && tcpAddr != nil && len(tcpAddr.IP) > 0 {
+		return net.IPAddress(tcpAddr.IP)
+	}
+	return net.LocalHostIP
 }
 
 func (s *Server) handleUDPPayload(ctx context.Context, conn stat.Connection, dispatcher routing.Dispatcher) error {

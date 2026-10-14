@@ -30,6 +30,8 @@ type client struct {
 	lock         chan struct{}
 	instance     *core.Instance
 	forced       bool
+	ownerContext context.Context
+	ownerCancel  context.CancelFunc
 	dest         net.Destination
 	config       *Config
 	tlsConfig    *gotls.Config
@@ -57,8 +59,10 @@ func (c *client) status() status {
 
 func (c *client) close() {
 	c.conn.CloseWithError(closeErrCodeOK, "")
-	c.tr.Close()
+	// Dispatch-backed PacketConn deadlines are no-ops. Unblock its reader
+	// before Transport.Close joins QUIC's listener goroutine.
 	c.pktConn.Close()
+	c.tr.Close()
 	c.conn = nil
 	c.tr = nil
 	c.pktConn = nil
@@ -139,7 +143,8 @@ func (c *client) dial(ctx context.Context) error {
 			pktConn = &internet.FakePacketConn{Conn: c}
 			udpAddr = &net.UDPAddr{IP: []byte{0, 0, 0, 0}}
 		default:
-			panic(reflect.TypeOf(c))
+			_ = conn.Close()
+			return errors.New("unsupported packet connection: ", reflect.TypeOf(c))
 		}
 	}
 
@@ -178,21 +183,21 @@ func (c *client) dial(ctx context.Context) error {
 	}
 	resp, err := rt.RoundTrip(req.WithContext(ctx))
 	if err != nil {
-		_ = rt.Close()
 		if conn != nil {
 			_ = conn.CloseWithError(closeErrCodeProtocolError, "")
 		}
-		_ = tr.Close()
 		_ = pktConn.Close()
+		_ = tr.Close()
+		_ = rt.Close()
 		return err
 	}
 	_ = resp.Body.Close()
 
 	if resp.StatusCode != StatusAuthOK {
-		_ = rt.Close()
 		_ = conn.CloseWithError(closeErrCodeProtocolError, "")
-		_ = tr.Close()
 		_ = pktConn.Close()
+		_ = tr.Close()
+		_ = rt.Close()
 		return errors.New("auth failed code ", resp.StatusCode)
 	}
 
@@ -234,6 +239,8 @@ func (c *client) unlock() {
 }
 
 func (c *client) tcp(ctx context.Context) (stat.Connection, error) {
+	ctx, cancel := c.dialContext(ctx)
+	defer cancel()
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -261,6 +268,8 @@ func (c *client) tcp(ctx context.Context) (stat.Connection, error) {
 }
 
 func (c *client) udp(ctx context.Context) (stat.Connection, error) {
+	ctx, cancel := c.dialContext(ctx)
+	defer cancel()
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -277,6 +286,9 @@ func (c *client) udp(ctx context.Context) (stat.Connection, error) {
 }
 
 func (c *client) clean(force bool) {
+	if force && c.ownerCancel != nil {
+		c.ownerCancel()
+	}
 	c.lock <- struct{}{}
 	if force {
 		c.forced = true
@@ -287,9 +299,19 @@ func (c *client) clean(force bool) {
 	c.unlock()
 }
 
+func (c *client) dialContext(ctx context.Context) (context.Context, func()) {
+	ctx, cancel := context.WithCancel(ctx)
+	if c.ownerContext == nil {
+		return ctx, cancel
+	}
+	stop := context.AfterFunc(c.ownerContext, cancel)
+	return ctx, func() { stop(); cancel() }
+}
+
 type dialerConf struct {
 	net.Destination
 	*internet.MemoryStreamConfig
+	owner *core.Instance
 }
 
 type clientManager struct {
@@ -300,20 +322,26 @@ type clientManager struct {
 func (m *clientManager) clean() {
 	ticker := time.NewTicker(idleCleanupInterval)
 	for range ticker.C {
-		m.RLock()
-		entries := make(map[dialerConf]*client, len(m.m))
-		for k, c := range m.m {
-			entries[k] = c
-		}
-		m.RUnlock()
-		for k, c := range entries {
-			force := c.instance != nil && !c.instance.IsRunning()
-			c.clean(force)
-			if force {
-				m.Lock()
+		m.cleanOnce()
+	}
+}
+
+func (m *clientManager) cleanOnce() {
+	m.RLock()
+	entries := make(map[dialerConf]*client, len(m.m))
+	for k, c := range m.m {
+		entries[k] = c
+	}
+	m.RUnlock()
+	for k, c := range entries {
+		force := c.instance != nil && !c.instance.IsRunning()
+		c.clean(force)
+		if force {
+			m.Lock()
+			if m.m[k] == c {
 				delete(m.m, k)
-				m.Unlock()
 			}
+			m.Unlock()
 		}
 	}
 }
@@ -339,7 +367,7 @@ func Dial(ctx context.Context, dest net.Destination, streamSettings *internet.Me
 		go manager.clean()
 	})
 
-	dialerConfKey := dialerConf{dest, streamSettings}
+	dialerConfKey := dialerConf{Destination: dest, MemoryStreamConfig: streamSettings, owner: core.FromContext(ctx)}
 
 	manager.RLock()
 	c := manager.m[dialerConfKey]
@@ -358,6 +386,20 @@ func Dial(ctx context.Context, dest net.Destination, streamSettings *internet.Me
 				socketConfig: streamSettings.SocketSettings,
 				finalMask:    streamSettings.FinalMask,
 				quicParams:   streamSettings.QuicParams,
+			}
+			c.ownerContext, c.ownerCancel = context.WithCancel(context.Background())
+			owned := c
+			if c.instance != nil && !c.instance.OnClose(func() {
+				manager.Lock()
+				if manager.m[dialerConfKey] == owned {
+					delete(manager.m, dialerConfKey)
+				}
+				manager.Unlock()
+				owned.clean(true)
+			}) {
+				manager.Unlock()
+				c.ownerCancel()
+				return nil, errors.New("instance is closing")
 			}
 			manager.m[dialerConfKey] = c
 		}

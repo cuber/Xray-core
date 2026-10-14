@@ -14,6 +14,7 @@ import "common/geodata/geodat.proto";
 
 message DestinationOverride {
   xray.common.protocol.ServerEndpoint server = 1;
+  xray.common.net.Network network = 2;
 }
 
 message Fragment {

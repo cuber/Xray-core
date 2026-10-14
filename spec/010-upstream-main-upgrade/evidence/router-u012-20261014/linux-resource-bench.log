@@ -1,0 +1,32 @@
+=== RUN   TestU012ProductionDATResources
+    resource_test.go:25: geosite.dat bytes=2288716 sha256=35ed26a24cafa1256bd7261414224b7bcef5c944cea7760e172b030a8b266450
+    resource_test.go:25: geoip.dat bytes=23330258 sha256=1cba1f0982cf62502fa079c66047c3d0c608196da5b3305671e68f60e917a482
+=== RUN   TestU012ProductionDATResources/compact=false
+2026/10/14 15:54:36.655094 [Debug] common/geodata: geodata mph domain matcher cache MISS for 1 rules
+    resource_test.go:84: heap baseline=376256 sampled_build_peak=1449424 held_post_gc=529592 released_post_gc=392240 objects baseline=946 held=1041 released=990 compiled_collected=1
+=== RUN   TestU012ProductionDATResources/compact=true
+2026/10/14 15:54:36.712293 [Debug] common/geodata: geodata geosite matcher cache MISS geosite.dat:CN@
+    resource_test.go:84: heap baseline=396088 sampled_build_peak=1436648 held_post_gc=533072 released_post_gc=395648 objects baseline=994 held=1067 released=1014 compiled_collected=1
+--- PASS: TestU012ProductionDATResources (0.11s)
+    --- PASS: TestU012ProductionDATResources/compact=false (0.06s)
+    --- PASS: TestU012ProductionDATResources/compact=true (0.04s)
+goos: linux
+goarch: arm64
+pkg: github.com/xtls/xray-core/common/geodata
+BenchmarkU012ProductionLookup
+BenchmarkU012ProductionLookup/compact=false
+2026/10/14 15:54:36.754766 [Debug] common/geodata: geodata mph domain matcher cache MISS for 1 rules
+2026/10/14 15:54:36.768862 [Debug] common/geodata: geodata mph domain matcher cache MISS for 1 rules
+2026/10/14 15:54:36.780988 [Debug] common/geodata: geodata mph domain matcher cache MISS for 1 rules
+2026/10/14 15:54:36.791061 [Debug] common/geodata: geodata mph domain matcher cache MISS for 1 rules
+2026/10/14 15:54:36.818266 [Debug] common/geodata: geodata mph domain matcher cache MISS for 1 rules
+BenchmarkU012ProductionLookup/compact=false-12         	74246490	        16.02 ns/op	       0 B/op	       0 allocs/op
+BenchmarkU012ProductionLookup/compact=true
+2026/10/14 15:54:38.018108 [Debug] common/geodata: geodata geosite matcher cache MISS geosite.dat:CN@
+2026/10/14 15:54:38.029277 [Debug] common/geodata: geodata geosite matcher cache MISS geosite.dat:CN@
+2026/10/14 15:54:38.042991 [Debug] common/geodata: geodata geosite matcher cache MISS geosite.dat:CN@
+2026/10/14 15:54:38.058261 [Debug] common/geodata: geodata geosite matcher cache MISS geosite.dat:CN@
+2026/10/14 15:54:38.083551 [Debug] common/geodata: geodata geosite matcher cache MISS geosite.dat:CN@
+BenchmarkU012ProductionLookup/compact=true-12          	72102714	        17.71 ns/op	       0 B/op	       0 allocs/op
+PASS
+maximum_resident_set_kib=36852 elapsed_seconds=2.740 exit_code=0

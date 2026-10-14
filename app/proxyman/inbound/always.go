@@ -53,6 +53,26 @@ type AlwaysOnInboundHandler struct {
 }
 
 func NewAlwaysOnInboundHandler(ctx context.Context, tag string, receiverConfig *proxyman.ReceiverConfig, proxyConfig interface{}) (*AlwaysOnInboundHandler, error) {
+	address := receiverConfig.Listen.AsAddress()
+	if address == nil {
+		address = net.AnyIP
+	}
+	addresses := []net.Address{address}
+	if len(receiverConfig.ListenAddresses) > 0 {
+		if receiverConfig.Listen != nil || receiverConfig.PortList == nil {
+			return nil, errors.New("listen_addresses requires ports and no single listen address")
+		}
+		addresses = nil
+		seen := make(map[string]bool)
+		for _, entry := range receiverConfig.ListenAddresses {
+			a := entry.AsAddress()
+			if a == nil || !a.Family().IsIP() || a.IP().IsUnspecified() || seen[a.String()] {
+				return nil, errors.New("listen_addresses requires unique explicit IP addresses")
+			}
+			seen[a.String()] = true
+			addresses = append(addresses, a)
+		}
+	}
 	sniffingRequest, err := proxyman.BuildSniffingRequest(receiverConfig.SniffingSettings)
 	if err != nil {
 		return nil, err
@@ -94,10 +114,6 @@ func NewAlwaysOnInboundHandler(ctx context.Context, tag string, receiverConfig *
 
 	nl := p.Network()
 	pl := receiverConfig.PortList
-	address := receiverConfig.Listen.AsAddress()
-	if address == nil {
-		address = net.AnyIP
-	}
 
 	if receiverConfig.ReceiveOriginalDestination {
 		if mss.SocketSettings == nil {
@@ -127,41 +143,43 @@ func NewAlwaysOnInboundHandler(ctx context.Context, tag string, receiverConfig *
 		}
 	}
 	if pl != nil {
-		for _, pr := range pl.Range {
-			for port := pr.From; port <= pr.To; port++ {
-				if net.HasNetwork(nl, net.Network_TCP) {
-					errors.LogDebug(ctx, "creating stream worker on ", address, ":", port)
+		for _, address := range addresses {
+			for _, pr := range pl.Range {
+				for port := pr.From; port <= pr.To; port++ {
+					if net.HasNetwork(nl, net.Network_TCP) {
+						errors.LogDebug(ctx, "creating stream worker on ", address, ":", port)
 
-					worker := &tcpWorker{
-						address:         address,
-						port:            net.Port(port),
-						proxy:           p,
-						stream:          mss,
-						recvOrigDest:    receiverConfig.ReceiveOriginalDestination,
-						tag:             tag,
-						dispatcher:      h.mux,
-						sniffingRequest: sniffingRequest,
-						uplinkCounter:   uplinkCounter,
-						downlinkCounter: downlinkCounter,
-						ctx:             ctx,
+						worker := &tcpWorker{
+							address:         address,
+							port:            net.Port(port),
+							proxy:           p,
+							stream:          mss,
+							recvOrigDest:    receiverConfig.ReceiveOriginalDestination,
+							tag:             tag,
+							dispatcher:      h.mux,
+							sniffingRequest: sniffingRequest,
+							uplinkCounter:   uplinkCounter,
+							downlinkCounter: downlinkCounter,
+							ctx:             ctx,
+						}
+						h.workers = append(h.workers, worker)
 					}
-					h.workers = append(h.workers, worker)
-				}
 
-				if net.HasNetwork(nl, net.Network_UDP) {
-					worker := &udpWorker{
-						tag:             tag,
-						proxy:           p,
-						address:         address,
-						port:            net.Port(port),
-						dispatcher:      h.mux,
-						sniffingRequest: sniffingRequest,
-						uplinkCounter:   uplinkCounter,
-						downlinkCounter: downlinkCounter,
-						stream:          mss,
-						ctx:             ctx,
+					if net.HasNetwork(nl, net.Network_UDP) {
+						worker := &udpWorker{
+							tag:             tag,
+							proxy:           p,
+							address:         address,
+							port:            net.Port(port),
+							dispatcher:      h.mux,
+							sniffingRequest: sniffingRequest,
+							uplinkCounter:   uplinkCounter,
+							downlinkCounter: downlinkCounter,
+							stream:          mss,
+							ctx:             ctx,
+						}
+						h.workers = append(h.workers, worker)
 					}
-					h.workers = append(h.workers, worker)
 				}
 			}
 		}
@@ -178,8 +196,12 @@ func (h *AlwaysOnInboundHandler) Start() error {
 			return errors.New("failed to start proxy").Base(err)
 		}
 	}
-	for _, worker := range h.workers {
+	for i, worker := range h.workers {
 		if err := worker.Start(); err != nil {
+			// Roll back every attempted listener, including the failing worker.
+			for j := i; j >= 0; j-- {
+				_ = h.workers[j].Close()
+			}
 			return err
 		}
 	}

@@ -1,0 +1,136 @@
+{
+  "mode": "interop",
+  "platform": [
+    "Linux",
+    "23e6a025f94b",
+    "7.0.11-orbstack-00360-gc9bc4d96ac70",
+    "#1 SMP PREEMPT Thu Jun  4 16:40:25 UTC 2026",
+    "aarch64"
+  ],
+  "binaries": {
+    "old": {
+      "sha256": "45250777f9118b97c78fd280241d35f96a3892c2ada069afcab1db35f74689ee",
+      "version": "Xray 26.4.25 (Xray, Penetrates Everything.) Custom (go1.26.1 linux/arm64)\nA unified platform for anti-censorship.\n"
+    },
+    "pristine": {
+      "sha256": "8ce6f3ca595c6284712dd9e24c109ab4371afb0766435f0236e494f8012f63aa",
+      "version": "Xray 26.10.10 (Xray, Penetrates Everything.) Custom (go1.27.0 linux/arm64)\nA unified platform for anti-censorship.\n"
+    },
+    "candidate": {
+      "sha256": "2ec073c0ec20b419f25feea911cd400a9d4ed6d64a67b256d8ef2264fb17eac0",
+      "version": "Xray 26.10.10 (Xray, Penetrates Everything.) Custom (go1.27.0 linux/arm64)\nA unified platform for anti-censorship.\n"
+    }
+  },
+  "results": [
+    {
+      "client": "old",
+      "server": "candidate",
+      "method": "2022-blake3-aes-128-gcm",
+      "multi": false,
+      "tcp_bytes_each_direction": 131136,
+      "udp_bytes_each_direction": 8832,
+      "udp_packets": 12,
+      "late_tcp_delay_seconds": 3,
+      "passed": true
+    },
+    {
+      "client": "old",
+      "server": "candidate",
+      "method": "2022-blake3-aes-128-gcm",
+      "multi": true,
+      "tcp_bytes_each_direction": 131136,
+      "udp_bytes_each_direction": 8832,
+      "udp_packets": 12,
+      "late_tcp_delay_seconds": 3,
+      "passed": true
+    },
+    {
+      "client": "old",
+      "server": "candidate",
+      "method": "2022-blake3-aes-256-gcm",
+      "multi": false,
+      "tcp_bytes_each_direction": 131136,
+      "udp_bytes_each_direction": 8832,
+      "udp_packets": 12,
+      "late_tcp_delay_seconds": 3,
+      "passed": true
+    },
+    {
+      "client": "old",
+      "server": "candidate",
+      "method": "2022-blake3-aes-256-gcm",
+      "multi": true,
+      "tcp_bytes_each_direction": 131136,
+      "udp_bytes_each_direction": 8832,
+      "udp_packets": 12,
+      "late_tcp_delay_seconds": 3,
+      "passed": true
+    },
+    {
+      "client": "old",
+      "server": "candidate",
+      "method": "2022-blake3-chacha20-poly1305",
+      "multi": false,
+      "tcp_bytes_each_direction": 131136,
+      "udp_bytes_each_direction": 8832,
+      "udp_packets": 12,
+      "late_tcp_delay_seconds": 3,
+      "passed": true
+    },
+    {
+      "client": "candidate",
+      "server": "old",
+      "method": "2022-blake3-aes-128-gcm",
+      "multi": false,
+      "tcp_bytes_each_direction": 131136,
+      "udp_bytes_each_direction": 8832,
+      "udp_packets": 12,
+      "late_tcp_delay_seconds": 3,
+      "passed": true
+    },
+    {
+      "client": "candidate",
+      "server": "old",
+      "method": "2022-blake3-aes-128-gcm",
+      "multi": true,
+      "tcp_bytes_each_direction": 131136,
+      "udp_bytes_each_direction": 8832,
+      "udp_packets": 12,
+      "late_tcp_delay_seconds": 3,
+      "passed": true
+    },
+    {
+      "client": "candidate",
+      "server": "old",
+      "method": "2022-blake3-aes-256-gcm",
+      "multi": false,
+      "tcp_bytes_each_direction": 131136,
+      "udp_bytes_each_direction": 8832,
+      "udp_packets": 12,
+      "late_tcp_delay_seconds": 3,
+      "passed": true
+    },
+    {
+      "client": "candidate",
+      "server": "old",
+      "method": "2022-blake3-aes-256-gcm",
+      "multi": true,
+      "tcp_bytes_each_direction": 131136,
+      "udp_bytes_each_direction": 8832,
+      "udp_packets": 12,
+      "late_tcp_delay_seconds": 3,
+      "passed": true
+    },
+    {
+      "client": "candidate",
+      "server": "old",
+      "method": "2022-blake3-chacha20-poly1305",
+      "multi": false,
+      "tcp_bytes_each_direction": 131136,
+      "udp_bytes_each_direction": 8832,
+      "udp_packets": 12,
+      "late_tcp_delay_seconds": 3,
+      "passed": true
+    }
+  ]
+}

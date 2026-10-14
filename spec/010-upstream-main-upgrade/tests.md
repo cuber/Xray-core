@@ -1,8 +1,10 @@
 # Verification Plan
 
-All V-* implementation tests below are **planned, not run in this investigation**.
-Only V-001 inventory/document checks have current evidence. Existing test functions
-are reusable coverage, not proof they passed against an unimplemented candidate.
+This matrix was written during the draft investigation and is now the candidate
+acceptance plan. Historical statements below describe that investigation, not
+the current execution state. Current results and owning-spec evidence are linked
+from [implementation.md](implementation.md); an unchecked gate is not accepted.
+Existing test functions alone are not proof they passed against this candidate.
 Store results with commit, dirty state, OS/Go version, config/DAT/client hashes,
 command, exit status, test count/skips, resource cleanup and elapsed time.
 

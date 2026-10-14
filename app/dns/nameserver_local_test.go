@@ -6,11 +6,11 @@ import (
 	"time"
 
 	. "github.com/xtls/xray-core/app/dns"
-	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/features/dns"
 )
 
-func TestLocalNameServer(t *testing.T) {
+func TestPublicLocalNameServer(t *testing.T) {
+	requirePublicDNS(t)
 	s := NewLocalNameServer()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	ips, _, err := s.QueryIP(ctx, "google.com", dns.IPOption{
@@ -19,7 +19,9 @@ func TestLocalNameServer(t *testing.T) {
 		FakeEnable: false,
 	})
 	cancel()
-	common.Must(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(ips) == 0 {
 		t.Error("expect some ips, but got 0")
 	}

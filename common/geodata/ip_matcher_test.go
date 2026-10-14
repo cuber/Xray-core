@@ -2,6 +2,7 @@ package geodata
 
 import (
 	"net"
+	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/xtls/xray-core/common"
 	xnet "github.com/xtls/xray-core/common/net"
+	"google.golang.org/protobuf/proto"
 )
 
 func buildIPMatcher(rawRules ...string) IPMatcher {
@@ -401,12 +403,24 @@ func TestIPMatcher4CN(t *testing.T) {
 }
 
 func TestIPMatcher6US(t *testing.T) {
-	t.Setenv("xray.location.asset", filepath.Join("..", "..", "resources"))
-
-	matcher := buildIPMatcher("geoip:us")
+	// Public GeoIP country assignments change; test DAT decoding and IPv6
+	// matching against an owned record, not today's geolocation of Google DNS.
+	dir := t.TempDir()
+	data, err := proto.Marshal(&GeoIPList{Entry: []*GeoIP{{Code: "US", Cidr: []*CIDR{{Ip: xnet.ParseAddress("2001:4860:4860::8888").IP(), Prefix: 128}}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "fixture.dat"), data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("xray.location.asset", dir)
+	matcher := buildIPMatcher("ext:fixture.dat:us")
 
 	if !matcher.Match(xnet.ParseAddress("2001:4860:4860::8888").IP()) {
 		t.Error("expect US geoip contain 2001:4860:4860::8888, but actually not")
+	}
+	if matcher.Match(xnet.ParseAddress("2001:4860:4860::8844").IP()) {
+		t.Fatal("unexpected IPv6 match outside fixture /128")
 	}
 }
 

@@ -1,0 +1,25 @@
+fuzz: elapsed: 0s, gathering baseline coverage: 0/205 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 205/205 completed, now fuzzing with 4 workers
+fuzz: elapsed: 3s, execs: 101665 (33874/sec), new interesting: 21 (total: 226)
+fuzz: elapsed: 6s, execs: 349529 (82640/sec), new interesting: 37 (total: 242)
+fuzz: elapsed: 9s, execs: 495086 (48496/sec), new interesting: 39 (total: 244)
+fuzz: elapsed: 12s, execs: 920810 (141946/sec), new interesting: 39 (total: 244)
+fuzz: elapsed: 15s, execs: 1044696 (41284/sec), new interesting: 39 (total: 244)
+fuzz: elapsed: 18s, execs: 1179234 (44872/sec), new interesting: 39 (total: 244)
+fuzz: elapsed: 21s, execs: 1295751 (38816/sec), new interesting: 39 (total: 244)
+fuzz: elapsed: 24s, execs: 1437137 (47137/sec), new interesting: 39 (total: 244)
+fuzz: elapsed: 27s, execs: 1598766 (53895/sec), new interesting: 39 (total: 244)
+fuzz: elapsed: 30s, execs: 1752176 (51110/sec), new interesting: 39 (total: 244)
+fuzz: elapsed: 33s, execs: 1936050 (61305/sec), new interesting: 39 (total: 244)
+fuzz: elapsed: 36s, execs: 2110079 (58027/sec), new interesting: 39 (total: 244)
+fuzz: elapsed: 39s, execs: 2269920 (53253/sec), new interesting: 39 (total: 244)
+fuzz: elapsed: 42s, execs: 2438283 (56121/sec), new interesting: 39 (total: 244)
+fuzz: elapsed: 45s, execs: 2646097 (69317/sec), new interesting: 40 (total: 245)
+fuzz: elapsed: 48s, execs: 2825279 (59727/sec), new interesting: 40 (total: 245)
+fuzz: elapsed: 51s, execs: 3012126 (62282/sec), new interesting: 40 (total: 245)
+fuzz: elapsed: 54s, execs: 3192727 (60190/sec), new interesting: 40 (total: 245)
+fuzz: elapsed: 57s, execs: 3378777 (61988/sec), new interesting: 40 (total: 245)
+fuzz: elapsed: 1m0s, execs: 3565230 (62193/sec), new interesting: 40 (total: 245)
+fuzz: elapsed: 1m0s, execs: 3565230 (0/sec), new interesting: 40 (total: 245)
+PASS
+ok  	github.com/xtls/xray-core/common/protocol/quic	60.300s

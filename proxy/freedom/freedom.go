@@ -164,7 +164,7 @@ func getDefaultFinalRule(inbound *session.Inbound) *FinalRule {
 	switch inbound.Name {
 	case "vless-reverse":
 		return defaultBlockAllRule
-	case "vless", "vmess", "trojan", "hysteria", "wireguard":
+	case "vless", "vmess", "trojan", "hysteria", "wireguard", "anytls":
 		return defaultBlockPrivateRule
 	default:
 		if strings.HasPrefix(inbound.Name, "shadowsocks") {
@@ -249,6 +249,10 @@ func isValidAddress(addr *net.IPOrDomain) bool {
 	return a != net.AnyIP && a != net.AnyIPv6
 }
 
+func isStreamNetwork(network net.Network) bool {
+	return network == net.Network_TCP || network == net.Network_UNIX
+}
+
 // Process implements proxy.Outbound.
 func (h *Handler) Process(ctx context.Context, link *transport.Link, dialer internet.Dialer) error {
 	outbounds := session.OutboundsFromContext(ctx)
@@ -273,6 +277,9 @@ func (h *Handler) Process(ctx context.Context, link *transport.Link, dialer inte
 	outGateway := ob.Gateway
 	UDPOverride := net.UDPDestination(nil, 0)
 	if h.config.DestinationOverride != nil {
+		if h.config.DestinationOverride.Network != net.Network_Unknown {
+			destination.Network = h.config.DestinationOverride.Network
+		}
 		server := h.config.DestinationOverride.Server
 		if isValidAddress(server.Address) {
 			destination.Address = server.Address.AsAddress()
@@ -291,7 +298,7 @@ func (h *Handler) Process(ctx context.Context, link *transport.Link, dialer inte
 	var blockedDest *net.Destination
 	var blockedRule *FinalRule
 	err := retry.ExponentialBackoff(5, 100).On(func() error {
-		if destination.Address.Family().IsDomain() {
+		if destination.Network != net.Network_UNIX && destination.Address.Family().IsDomain() {
 			if defaultRule != nil || len(h.finalRules) > 0 {
 				if strategy := h.resolveStrategy; strategy.HasStrategy() {
 					ips, err := internet.LookupForIP(destination.Address.Domain(), strategy, outGateway)
@@ -350,7 +357,7 @@ func (h *Handler) Process(ctx context.Context, link *transport.Link, dialer inte
 	if blockedDest != nil {
 		return h.blackhole(ctx, input, output, blockedRule, blockedDest)
 	}
-	if destination.Address.Family().IsDomain() && (defaultRule != nil || len(h.finalRules) > 0) {
+	if destination.Network != net.Network_UNIX && destination.Address.Family().IsDomain() && (defaultRule != nil || len(h.finalRules) > 0) {
 		// pre-check may fail or dialer may select another IP
 		remoteDest := net.DestinationFromAddr(conn.RemoteAddr())
 		if rule := h.matchFinalRule(remoteDest.Network, remoteDest.Address, remoteDest.Port, defaultRule); rule != nil && rule.action == RuleAction_Block {
@@ -391,7 +398,7 @@ func (h *Handler) Process(ctx context.Context, link *transport.Link, dialer inte
 		defer timer.SetTimeout(plcy.Timeouts.DownlinkOnly)
 
 		var writer buf.Writer
-		if destination.Network == net.Network_TCP {
+		if isStreamNetwork(destination.Network) {
 			if h.config.Fragment != nil {
 				errors.LogDebug(ctx, "FRAGMENT", h.config.Fragment.PacketsFrom, h.config.Fragment.PacketsTo, h.config.Fragment.LengthMin, h.config.Fragment.LengthMax,
 					h.config.Fragment.IntervalMin, h.config.Fragment.IntervalMax, h.config.Fragment.MaxSplitMin, h.config.Fragment.MaxSplitMax)
@@ -435,7 +442,7 @@ func (h *Handler) Process(ctx context.Context, link *transport.Link, dialer inte
 			return proxy.CopyRawConnIfExist(ctx, conn, writeConn, link.Writer, timer, inTimer)
 		}
 		var reader buf.Reader
-		if destination.Network == net.Network_TCP {
+		if isStreamNetwork(destination.Network) {
 			reader = buf.NewReader(conn)
 		} else {
 			reader = NewPacketReader(conn, h, defaultRule, UDPOverride, destination)

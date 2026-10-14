@@ -6,6 +6,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/serial"
@@ -36,6 +38,14 @@ type Route struct {
 	outboundGroupTags []string
 	outboundTag       string
 	ruleTag           string
+	rule              *RoutingRule
+}
+
+func cloneRoutingRule(rule *RoutingRule) *RoutingRule {
+	if rule == nil {
+		return nil
+	}
+	return proto.Clone(rule).(*RoutingRule)
 }
 
 // Init initializes the Router.
@@ -77,7 +87,7 @@ func (r *Router) PickRoute(ctx routing.Context) (routing.Route, error) {
 	if rule.Webhook != nil {
 		rule.Webhook.Fire(originalCtx, tag)
 	}
-	return &Route{Context: ctx, outboundTag: tag, ruleTag: rule.RuleTag}, nil
+	return &Route{Context: ctx, outboundTag: tag, ruleTag: rule.RuleTag, rule: rule.Config}, nil
 }
 
 // AddRule implements routing.Router.
@@ -93,6 +103,10 @@ func (r *Router) AddRule(config *serial.TypedMessage, shouldAppend bool) error {
 }
 
 func (r *Router) ReloadRules(config *Config, shouldAppend bool) error {
+	return r.reloadRules(config, shouldAppend, NewWebhookNotifier)
+}
+
+func (r *Router) reloadRules(config *Config, shouldAppend bool, newWebhook func(*WebhookConfig) (*WebhookNotifier, error)) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -100,6 +114,13 @@ func (r *Router) ReloadRules(config *Config, shouldAppend bool) error {
 	oldBalancers := *r.balancers.Load()
 
 	var newRules []*Rule
+	var createdRules []*Rule
+	published := false
+	defer func() {
+		if !published {
+			closeWebhooks(createdRules)
+		}
+	}()
 	newBalancers := make(map[string]*Balancer)
 	existTags := make(map[string]bool, len(oldRules)+len(config.Rule))
 	if shouldAppend {
@@ -118,11 +139,12 @@ func (r *Router) ReloadRules(config *Config, shouldAppend bool) error {
 		if err != nil {
 			return err
 		}
-		balancer.InjectContext(r.ctx)
 		newBalancers[rule.Tag] = balancer
 	}
 
 	for _, rule := range config.Rule {
+		// Own both matcher inputs and metadata independently of the caller.
+		rule = cloneRoutingRule(rule)
 		cond, err := rule.BuildCondition()
 		if err != nil {
 			return err
@@ -131,18 +153,20 @@ func (r *Router) ReloadRules(config *Config, shouldAppend bool) error {
 			Condition: cond,
 			Tag:       rule.GetTag(),
 			RuleTag:   rule.GetRuleTag(),
+			Config:    rule,
 		}
 		if rr.RuleTag != "" && existTags[rr.RuleTag] {
 			return errors.New("duplicate ruleTag ", rr.RuleTag)
 		}
 		existTags[rr.RuleTag] = true
 		if wh := rule.GetWebhook(); wh != nil {
-			notifier, err := NewWebhookNotifier(wh)
+			notifier, err := newWebhook(wh)
 			if err != nil {
 				return err
 			}
 			rr.Webhook = notifier
 		}
+		createdRules = append(createdRules, rr)
 		if btag := rule.GetBalancingTag(); len(btag) > 0 {
 			brule, found := newBalancers[btag]
 			if !found {
@@ -153,8 +177,13 @@ func (r *Router) ReloadRules(config *Config, shouldAppend bool) error {
 		newRules = append(newRules, rr)
 	}
 
+	// Register feature dependencies only after every rule has validated.
+	for _, rule := range config.BalancingRule {
+		newBalancers[rule.Tag].InjectContext(r.ctx)
+	}
 	r.balancers.Store(&newBalancers)
 	r.rules.Store(&newRules)
+	published = true
 	if !shouldAppend {
 		closeWebhooks(oldRules)
 	}
@@ -193,6 +222,7 @@ func (r *Router) ListRule() []routing.Route {
 		ruleList = append(ruleList, &Route{
 			outboundTag: rule.Tag,
 			ruleTag:     rule.RuleTag,
+			rule:        rule.Config,
 		})
 	}
 	return ruleList
@@ -279,6 +309,11 @@ func (r *Route) GetOutboundTag() string {
 
 func (r *Route) GetRuleTag() string {
 	return r.ruleTag
+}
+
+// GetRule returns an independent copy of the configured rule.
+func (r *Route) GetRule() *RoutingRule {
+	return cloneRoutingRule(r.rule)
 }
 
 func init() {

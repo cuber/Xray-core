@@ -18,8 +18,14 @@ import (
 )
 
 func (s *ServerUDPSession) UpdateConn(conn stat.Connection) {
-	s.currentConn.Store(conn)
-	s.timer.Update()
+	s.Lock()
+	defer s.Unlock()
+	if !s.closed {
+		s.currentConn.Store(&udpClientConn{conn})
+		if s.timer != nil {
+			s.timer.Update()
+		}
+	}
 }
 
 func (s *ServerUDPSession) WriteToClient(b []byte) error {
@@ -27,19 +33,34 @@ func (s *ServerUDPSession) WriteToClient(b []byte) error {
 	if connVal == nil {
 		return errors.New("client connection closed")
 	}
-	conn, ok := connVal.(stat.Connection)
-	if !ok || conn == nil {
-		return errors.New("client connection closed")
-	}
-	_, err := conn.Write(b)
+	_, err := connVal.conn.Write(b)
 	return err
 }
 
 func (s *ServerUDPSession) Close() {
-	if s.timer != nil {
-		s.timer.SetTimeout(0)
+	s.Lock()
+	if s.closed {
+		s.Unlock()
+		return
 	}
-	if link := s.link.Load(); link != nil {
+	s.closed = true
+	timer, cancel := s.timer, s.cancel
+	if s.expiry != nil {
+		s.expiry.Stop()
+	}
+	s.currentConn.Store(nil)
+	link := s.link.Swap(nil)
+	if s.manager != nil {
+		s.manager.sessions.CompareAndDelete(s.SessionID, s)
+	}
+	s.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	if timer != nil {
+		timer.SetTimeout(0)
+	}
+	if link != nil {
 		common.Interrupt(link.Reader)
 		common.Interrupt(link.Writer)
 	}
@@ -54,19 +75,37 @@ func (s *ServerUDPSession) EnsureLink(
 	responseEncoder func(dest net.Destination, payload []byte) ([]byte, error),
 ) (*transport.Link, error) {
 	s.Lock()
-	defer s.Unlock()
-
-	if link := s.link.Load(); link != nil {
-		s.UpdateConn(conn)
-		return link, nil
+	if s.closed {
+		s.Unlock()
+		return nil, ErrInvalidRequest
 	}
 
-	s.currentConn.Store(conn)
+	if link := s.link.Load(); link != nil {
+		s.currentConn.Store(&udpClientConn{conn})
+		s.timer.Update()
+		s.Unlock()
+		return link, nil
+	}
+	if pending := s.initializing; pending != nil {
+		s.Unlock()
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-pending:
+			return s.EnsureLink(ctx, conn, dest, dispatcher, policyManager, responseEncoder)
+		}
+	}
+	s.initializing = make(chan struct{})
+
+	s.currentConn.Store(&udpClientConn{conn})
 
 	sessCtx, cancel := context.WithCancel(ctx)
+	s.cancel = cancel
 	inbound := session.InboundFromContext(sessCtx)
 	if inbound != nil && s.User != nil {
-		inbound.User = s.User
+		copyInbound := *inbound
+		copyInbound.User = s.User
+		sessCtx = session.ContextWithInbound(sessCtx, &copyInbound)
 	}
 	var email string
 	var level uint32
@@ -81,23 +120,36 @@ func (s *ServerUDPSession) EnsureLink(
 		Email:  email,
 	})
 
+	// Dispatch may block on routing/dialing. Close must be able to cancel it
+	// without waiting for the session mutex, and a late link must not revive it.
+	s.Unlock()
 	link, err := dispatcher.Dispatch(sessCtx, dest)
-	if err != nil {
+	s.Lock()
+	defer s.Unlock()
+	close(s.initializing)
+	s.initializing = nil
+	if err != nil || s.closed {
 		cancel()
+		if link != nil {
+			common.Interrupt(link.Reader)
+			common.Interrupt(link.Writer)
+		}
+		if err == nil {
+			err = ErrInvalidRequest
+		}
 		return nil, err
 	}
 
 	sessionPolicy := policyManager.ForLevel(level)
-	s.timer = signal.CancelAfterInactivity(sessCtx, func() {
-		if s.manager != nil {
-			s.manager.Delete(s.SessionID)
-		}
-		s.Close()
-		cancel()
-	}, sessionPolicy.Timeouts.ConnectionIdle)
+	// The timer can fire synchronously for a zero idle policy; do not reenter s.Lock.
+	s.timer = signal.CancelAfterInactivity(sessCtx, func() { go s.Close() }, sessionPolicy.Timeouts.ConnectionIdle)
 	s.link.Store(link)
 
-	go handleUDPResponse(s, link, dest, responseEncoder)
+	s.done = make(chan struct{})
+	go func() {
+		defer close(s.done)
+		handleUDPResponse(s, link, dest, responseEncoder)
+	}()
 	return link, nil
 }
 
@@ -111,10 +163,11 @@ func ResetTCPConn(conn net.Conn) {
 }
 
 func handleUDPResponse(s *ServerUDPSession, link *transport.Link, fallbackDest net.Destination, encode func(dest net.Destination, payload []byte) ([]byte, error)) {
-	defer s.timer.SetTimeout(0)
+	defer s.Close()
 	for {
 		resMb, err := link.Reader.ReadMultiBuffer()
 		if err != nil {
+			buf.ReleaseMulti(resMb)
 			return
 		}
 		s.timer.Update()

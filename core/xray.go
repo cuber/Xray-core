@@ -86,6 +86,9 @@ type Instance struct {
 	pendingOptionalResolutions []resolution
 	running                    bool
 	resolveLock                sync.Mutex
+	retirementLock             sync.Mutex
+	retired                    bool
+	retirementHooks            []func()
 
 	ctx context.Context
 }
@@ -266,6 +269,14 @@ func (s *Instance) Close() error {
 	defer s.statusLock.Unlock()
 
 	s.running = false
+	s.retirementLock.Lock()
+	s.retired = true
+	hooks := s.retirementHooks
+	s.retirementHooks = nil
+	s.retirementLock.Unlock()
+	for _, closeOwned := range hooks {
+		closeOwned()
+	}
 
 	var errs []interface{}
 	for _, f := range s.features {

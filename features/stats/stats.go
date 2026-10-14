@@ -116,6 +116,43 @@ type Manager interface {
 	GetAllOnlineUsers() []string
 }
 
+// DomainTrafficManager is an optional extension implemented by stats managers
+// that collect per-domain traffic. It remains separate from Manager so existing
+// embedders and test managers do not need to implement it.
+type DomainTrafficManager interface {
+	DomainTrafficEnabled() bool
+	RecordDomainTraffic(domain string, uplinkBytes, downlinkBytes uint64, user ...string)
+	DomainTrafficBuckets(afterBootID string, afterSequence uint64, maxBuckets uint32) DomainTrafficSnapshot
+}
+
+type DomainTrafficSnapshot struct {
+	Enabled        bool
+	BootID         string
+	OldestSequence uint64
+	LatestSequence uint64
+	HasGap         bool
+	Buckets        []DomainTrafficBucket
+}
+
+type DomainTrafficBucket struct {
+	BootID               string
+	Sequence             uint64
+	StartUnix            int64
+	EndUnix              int64
+	Entries              []DomainTrafficEntry
+	OtherUplinkBytes     uint64
+	OtherDownlinkBytes   uint64
+	UnknownUplinkBytes   uint64
+	UnknownDownlinkBytes uint64
+}
+
+type DomainTrafficEntry struct {
+	User          string
+	Domain        string
+	UplinkBytes   uint64
+	DownlinkBytes uint64
+}
+
 // ManagerType returns the type of Manager interface. Can be used to implement common.HasType.
 //
 // xray:api:stable

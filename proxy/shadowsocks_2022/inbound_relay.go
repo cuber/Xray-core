@@ -114,6 +114,8 @@ func (i *RelayInbound) Network() []net.Network {
 	return i.networks
 }
 
+func (i *RelayInbound) Close() error { return i.udpSessions.Close() }
+
 func (i *RelayInbound) Process(ctx context.Context, network net.Network, connection stat.Connection, dispatcher routing.Dispatcher) error {
 	inbound := session.InboundFromContext(ctx)
 	inbound.Name = "shadowsocks-2022-relay"
@@ -137,7 +139,7 @@ func (i *RelayInbound) processTCP(ctx context.Context, conn net.Conn, dispatcher
 	needed := i.method.KeySaltLength + AESBlockSize
 	requestHeader := buf.New()
 	n, err := requestHeader.ReadFrom(conn)
-	if err != nil {
+	if err != nil && n == 0 {
 		requestHeader.Release()
 		ResetTCPConn(conn)
 		return err
@@ -165,7 +167,10 @@ func (i *RelayInbound) processTCP(ctx context.Context, conn net.Conn, dispatcher
 		ResetTCPConn(conn)
 		return ErrInvalidRequest
 	}
-	conn.SetReadDeadline(time.Time{})
+	if err := conn.SetReadDeadline(time.Time{}); err != nil {
+		requestHeader.Release()
+		return err
+	}
 
 	inbound := session.InboundFromContext(ctx)
 	inbound.User = &protocol.MemoryUser{
@@ -187,6 +192,8 @@ func (i *RelayInbound) processTCP(ctx context.Context, conn net.Conn, dispatcher
 		requestHeader.Release()
 		return err
 	}
+	defer common.Interrupt(link.Reader)
+	defer common.Interrupt(link.Writer)
 
 	// Unwrap outer EIH: send client salt and remaining handshake bytes to next hop
 	// in a single write call, satisfying downstream server's single-read handshake expectation (SIP022 §3.1.3).
@@ -243,15 +250,23 @@ func (i *RelayInbound) processUDP(ctx context.Context, conn stat.Connection, dis
 			dest.Network = net.Network_UDP
 
 			sessionItem := i.udpSessions.GetOrCreate(sessionID)
+			if sessionItem == nil {
+				b.Release()
+				continue
+			}
+			sessionItem.Lock()
 			if sessionItem.User == nil {
-				sessionItem.Lock()
-				if sessionItem.User == nil {
-					sessionItem.User = &protocol.MemoryUser{
-						Email: targetDest.email,
-						Level: targetDest.level,
-					}
+				sessionItem.relayTarget = targetDest
+				sessionItem.User = &protocol.MemoryUser{
+					Email: targetDest.email,
+					Level: targetDest.level,
 				}
-				sessionItem.Unlock()
+			}
+			isolated := sessionItem.relayTarget == targetDest
+			sessionItem.Unlock()
+			if !isolated {
+				b.Release()
+				continue
 			}
 			link := sessionItem.link.Load()
 			if link != nil {

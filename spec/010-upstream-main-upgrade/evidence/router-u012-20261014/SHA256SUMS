@@ -1,0 +1,14 @@
+50bef6c8a452ba973a5eac23dd601694970d4955afaebc85208c8e58d4ae2731  spec/010-upstream-main-upgrade/evidence/router-u012-20261014/.gitignore
+68a289f772112687597efb080a72adda6415675a8a70eef6893e1fdee81ca2f6  spec/010-upstream-main-upgrade/evidence/router-u012-20261014/README.md
+ebc1ab0e99540053bf0eb1bd6877816d3bb9fa404e65d56738d926ac609226db  spec/010-upstream-main-upgrade/evidence/router-u012-20261014/FREEZE_SHA256SUMS
+5b71e9f7887039864764a6883454abaf70e8c126b22fbcc79345489c52e9dddf  spec/010-upstream-main-upgrade/evidence/router-u012-20261014/SOURCE_SHA256SUMS
+737aebcb1be8bb7a198b5e7510016aea6fb06056270035c10db928a07f29b760  spec/010-upstream-main-upgrade/evidence/router-u012-20261014/darwin-full-race.json.gz
+5043058cba3ce48a43ed3754bd73b2149362c2ea284593d4b5f8902eece197e1  spec/010-upstream-main-upgrade/evidence/router-u012-20261014/darwin-u012-repeat.json.gz
+0b5b7207b41a8fd82199bfd8858c49049d638ea0973add421714a07fcbd3e7eb  spec/010-upstream-main-upgrade/evidence/router-u012-20261014/linux-full-race.json.gz
+a1f6c142acfd2a3e7f54560caadb534299d465a25a27c9688c4d0734addec5ae  spec/010-upstream-main-upgrade/evidence/router-u012-20261014/linux-u012-repeat.json.gz
+e5e8e24200cee5438f8b3055d2696809f714a9c628dcd92b9effff7706c673fd  spec/010-upstream-main-upgrade/evidence/router-u012-20261014/core-spec005-repeat-final.log
+1464ac3717bc2f026cdaeb7f6634dd10fff41c64dc7fcf032d8a3dc92046c307  spec/010-upstream-main-upgrade/evidence/router-u012-20261014/core-spec005-u010-negative.log
+df7610f6286757f0e261d18aa09778a637e7d06c140fff3caa90a8a19a56367c  spec/010-upstream-main-upgrade/evidence/router-u012-20261014/core-u012-resource-darwin.log
+4f74e3994548668464b7e0f1b171f50ba19933116f57e4769de6af6a6e3fd069  spec/010-upstream-main-upgrade/evidence/router-u012-20261014/linux-container.log
+8ef94467b0679dbc6b588fb1a4bbc3d266ccfff25cffa4c976a3fcd1949b8114  spec/010-upstream-main-upgrade/evidence/router-u012-20261014/linux-image.log
+e80f4e1c2cea8bf7a9c72049acb3cb674f5ae49ac110d2dc20449f906c730fdc  spec/010-upstream-main-upgrade/evidence/router-u012-20261014/linux-resource-bench.log

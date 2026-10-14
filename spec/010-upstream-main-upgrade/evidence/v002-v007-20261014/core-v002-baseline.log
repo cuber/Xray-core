@@ -1,0 +1,21 @@
+--- FAIL: TestQUICTruncatedProtectionSamples (0.00s)
+    --- FAIL: TestQUICTruncatedProtectionSamples/version=1/pn=1/sample=0 (0.00s)
+panic: runtime error: slice bounds out of range [:37] with capacity 32 [recovered, repanicked]
+
+goroutine 7 [running]:
+testing.tRunner.func1.2({0x100fdf348, 0x22dc247c360})
+	/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/src/testing/testing.go:2123 +0x1a0
+testing.tRunner.func1()
+	/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/src/testing/testing.go:2126 +0x2c8
+panic({0x100fdf348?, 0x22dc247c360?})
+	/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/src/runtime/panic.go:859 +0x120
+github.com/xtls/xray-core/common/protocol/quic.SniffQUIC({0x22dc2665540, 0x15, 0x20})
+	/Volumes/Linux/opensource/cuber/xray-core-rebase-20261014/common/protocol/quic/sniff.go:149 +0x1628
+github.com/xtls/xray-core/common/protocol/quic_test.TestQUICTruncatedProtectionSamples.func1(0x22dc25bcb48)
+	/Volumes/Linux/opensource/cuber/xray-core-rebase-20261014/common/protocol/quic/sniff_regression_test.go:46 +0xb0
+testing.tRunner(0x22dc25bcb48, 0x22dc24f5700)
+	/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/src/testing/testing.go:2193 +0xc4
+created by testing.(*T).Run in goroutine 6
+	/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/src/testing/testing.go:2258 +0x3b8
+FAIL	github.com/xtls/xray-core/common/protocol/quic	3.101s
+FAIL

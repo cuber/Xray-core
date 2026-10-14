@@ -619,16 +619,18 @@ func InitServerStream(conn net.Conn, method *CipherMethod, psk, saltSlice []byte
 	if err != nil {
 		return nil, nil, err
 	}
-	_ = conn.SetReadDeadline(time.Time{})
-
 	if !saltFilter.Check(salt) {
 		return nil, nil, ErrSaltNotUnique
+	}
+	if err := conn.SetReadDeadline(time.Time{}); err != nil {
+		return nil, nil, err
 	}
 	return reader, reqHeader, nil
 }
 
 func TransportTCP(ctx context.Context, sessionPolicy policy.Session, reader buf.Reader, writer buf.Writer, link *transport.Link) error {
 	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	timer := signal.CancelAfterInactivity(ctx, cancel, sessionPolicy.Timeouts.ConnectionIdle)
 	defer timer.SetTimeout(0)
 	ctx = policy.ContextWithBufferPolicy(ctx, sessionPolicy.Buffer)

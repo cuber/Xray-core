@@ -45,13 +45,19 @@ func (m *Manager) AddHandler(ctx context.Context, handler inbound.Handler) error
 		if _, found := m.taggedHandlers[tag]; found {
 			return errors.New("existing tag found: " + tag)
 		}
-		m.taggedHandlers[tag] = handler
-	} else {
-		m.untaggedHandlers = append(m.untaggedHandlers, handler)
 	}
 
 	if m.running {
-		return handler.Start()
+		if err := handler.Start(); err != nil {
+			return err
+		}
+	}
+	// Publish only after successful startup so failed API additions do not
+	// leave a ghost handler behind. The caller owns cleanup on failure.
+	if len(tag) > 0 {
+		m.taggedHandlers[tag] = handler
+	} else {
+		m.untaggedHandlers = append(m.untaggedHandlers, handler)
 	}
 
 	return nil

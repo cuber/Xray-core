@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	routerConfig "github.com/xtls/xray-core/app/router"
 	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/core"
@@ -71,10 +72,16 @@ func (s *routingServer) ListRule(ctx context.Context, request *ListRuleRequest) 
 	if bo, ok := s.router.(routing.Router); ok {
 		response := &ListRuleResponse{}
 		for _, v := range bo.ListRule() {
-			response.Rules = append(response.Rules, &ListRuleItem{
+			item := &ListRuleItem{
 				Tag:     v.GetOutboundTag(),
 				RuleTag: v.GetRuleTag(),
-			})
+			}
+			if detailed, ok := v.(interface {
+				GetRule() *routerConfig.RoutingRule
+			}); ok {
+				item.Rule = detailed.GetRule()
+			}
+			response.Rules = append(response.Rules, item)
 		}
 		return response, nil
 	}
@@ -98,7 +105,10 @@ func (s *routingServer) TestRoute(ctx context.Context, request *TestRouteRequest
 		return nil, err
 	}
 	if request.PublishResult && s.routingStats != nil {
-		ctx, _ := context.WithTimeout(context.Background(), 4*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+		// Publish queues ctx for asynchronous delivery; release it at its
+		// deadline rather than canceling delivery when the RPC returns.
+		context.AfterFunc(ctx, cancel)
 		s.routingStats.Publish(ctx, route)
 	}
 	return AsProtobufMessage(request.FieldSelectors)(route), nil
