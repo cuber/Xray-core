@@ -1,0 +1,59 @@
+{
+  "review_date": "2026-10-04",
+  "base": "b4f08981becb71eaa995fa98ed2098ade92566bb",
+  "fork": "2074c22344fdd6f020fd0111d9c35b1f60c839a7",
+  "upstream_cached": "3519dfecbd65022ba71d9bc73e94063d0cbc8636",
+  "upstream_web_snapshot": "b26a91d (v26.9.30; short SHA, not fetched)",
+  "freshness": "Git network refresh blocked; web evidence newer than local cached ref",
+  "fork_commits": 8,
+  "cached_upstream_commits": 203,
+  "fork_paths": 326,
+  "cached_upstream_paths": 569,
+  "endpoint_paths": 827,
+  "overlap_paths": 67,
+  "path_kinds": {
+    "fork": {
+      "build-dependencies-ci": 4,
+      "documentation": 77,
+      "runtime-or-schema": 79,
+      "tests": 157,
+      "generated-protobuf": 9
+    },
+    "cached_upstream": {
+      "build-dependencies-ci": 12,
+      "documentation": 2,
+      "runtime-or-schema": 407,
+      "tests": 113,
+      "generated-protobuf": 35
+    },
+    "endpoint": {
+      "build-dependencies-ci": 13,
+      "documentation": 78,
+      "runtime-or-schema": 438,
+      "tests": 257,
+      "generated-protobuf": 41
+    }
+  },
+  "diffs": {
+    "base-to-fork.diff": {
+      "sha256": "5d0141fea185c5e0fcbebc54a56a1908e692a3a6bfd9ad75a20bbf3a520fb375",
+      "bytes": 1829873,
+      "from": "b4f08981becb71eaa995fa98ed2098ade92566bb",
+      "to": "2074c22344fdd6f020fd0111d9c35b1f60c839a7"
+    },
+    "base-to-upstream-cache.diff": {
+      "sha256": "2af080e91c4eb0b3e4ed59f8d20a32e27f297850ef25911818e97cafe8167fcb",
+      "bytes": 2119521,
+      "from": "b4f08981becb71eaa995fa98ed2098ade92566bb",
+      "to": "3519dfecbd65022ba71d9bc73e94063d0cbc8636"
+    },
+    "fork-to-upstream-cache.diff": {
+      "sha256": "59a69857da0d7a9ea8e1253d769054888ffdfec80fbd2c9ac2e5b9a9fdd0455a",
+      "bytes": 3892224,
+      "from": "2074c22344fdd6f020fd0111d9c35b1f60c839a7",
+      "to": "3519dfecbd65022ba71d9bc73e94063d0cbc8636"
+    }
+  },
+  "config_head": "70401d4d219802202b972a1fad4160b8e92e855d",
+  "config_status_sha256": "fd0e593dd1faa00f342e6597f8d012e0d1e5a6c31d775459b856ed97e23580da"
+}

@@ -1,0 +1,3126 @@
+[
+  {
+    "sha": "1836b1c6e4f672e266f629532e3252ce2a07ff54",
+    "date": "2026-04-28T20:57:20Z",
+    "title": "Browser Dialer: Potential optimized IP and non-standard port",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/splithttp/dialer.go",
+      "transport/internet/websocket/dialer.go"
+    ]
+  },
+  {
+    "sha": "108bf7ff822585833c8c391ad0e0ca785c5404fc",
+    "date": "2026-05-01T22:31:59Z",
+    "title": "Bump github.com/robfig/cron/v3 from 3.0.0 to 3.0.1 (#6020)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "5b552db78104f2dcd6435f71c6bd0567da5ea928",
+    "date": "2026-05-01T22:34:53Z",
+    "title": "README.md: Add Anywhere to Others/iOS (#5762)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "README.md"
+    ]
+  },
+  {
+    "sha": "ff6c060168cfa6ebf482e42a992902dc6c8b8de6",
+    "date": "2026-05-01T22:38:26Z",
+    "title": "README.md Add OneXray to more platforms in GUI Clients (#5990)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "README.md"
+    ]
+  },
+  {
+    "sha": "7f7fc5a829ef35427e1d0a3ed2021400ad4bdd97",
+    "date": "2026-05-01T22:46:05Z",
+    "title": "README.md: Add XrayUI-dev to Windows in GUI Clients (#6013)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "README.md"
+    ]
+  },
+  {
+    "sha": "2fff03720d2db61b4a1cf80793e3dc317c3d1dfe",
+    "date": "2026-05-01T22:51:42Z",
+    "title": "TUN inbound: Reply fake pong to ICMP ping (#6015)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/tun/README.md",
+      "proxy/tun/icmp/packet.go",
+      "proxy/tun/icmp/packet_test.go",
+      "proxy/tun/stack_gvisor.go",
+      "proxy/tun/stack_gvisor_icmp_handler.go"
+    ]
+  },
+  {
+    "sha": "7ab0a3ccb7a53c79669b9cadfdb53a8954ec427d",
+    "date": "2026-05-01T22:57:51Z",
+    "title": "FakeDNS: Little fix (#6022)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "app/dns/fakedns/fake.go"
+    ]
+  },
+  {
+    "sha": "4e87f59628ff78ab2ac720cf73079fcd07c833e7",
+    "date": "2026-05-02T01:58:43Z",
+    "title": "Direct/Freedom outbound: Add `finalRules` (matches `network`, `port` and `ip`, then `action`) with default safe policies (#6027)",
+    "priority": "BLOCK",
+    "disposition": "breaking-config",
+    "reason": "ipsBlocked ceases enforcing old policy; finalRules migration required",
+    "paths": [
+      "app/dns/dns_test.go",
+      "app/proxyman/outbound/handler_test.go",
+      "core/functions_test.go",
+      "infra/conf/dns_proxy.go",
+      "infra/conf/freedom.go",
+      "infra/conf/freedom_test.go",
+      "proxy/freedom/config.go",
+      "proxy/freedom/config.pb.go",
+      "proxy/freedom/config.proto",
+      "proxy/freedom/freedom.go",
+      "testing/scenarios/command_test.go",
+      "testing/scenarios/dokodemo_test.go",
+      "testing/scenarios/feature_test.go",
+      "testing/scenarios/http_test.go",
+      "testing/scenarios/metrics_test.go",
+      "testing/scenarios/policy_test.go",
+      "testing/scenarios/reverse_test.go",
+      "testing/scenarios/shadowsocks_2022_test.go",
+      "testing/scenarios/shadowsocks_test.go",
+      "testing/scenarios/socks_test.go",
+      "testing/scenarios/tls_test.go",
+      "testing/scenarios/transport_test.go",
+      "testing/scenarios/vless_test.go",
+      "testing/scenarios/vmess_test.go",
+      "testing/scenarios/wireguard_test.go",
+      "transport/internet/finalmask/sudoku/sudoku_test.go"
+    ]
+  },
+  {
+    "sha": "1fc6850dc4190873bf0f6b7f1a4c59ca0201b63a",
+    "date": "2026-05-02T10:33:43Z",
+    "title": "TLS ECH: Remove `echForceQuery` (ECH is forced now if configured) (#6032)",
+    "priority": "BLOCK",
+    "disposition": "breaking-config",
+    "reason": "ECH query behavior/field removal",
+    "paths": [
+      "transport/internet/tls/config.go",
+      "transport/internet/tls/config.proto",
+      "transport/internet/tls/ech.go",
+      "transport/internet/tls/ech_test.go"
+    ]
+  },
+  {
+    "sha": "16568314d84accdd5f38d63a531b9636c93f2eec",
+    "date": "2026-05-02T11:07:12Z",
+    "title": "TLS for WSS/HUS: Allow outer `\"alpn\": [\"h2\", \"http/1.1\"]` for camouflage (#6034)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/tls/tls.go"
+    ]
+  },
+  {
+    "sha": "52cf9ef5d6f54d3ce11bafc0bf5ee710e694f5f8",
+    "date": "2026-05-02T12:18:25Z",
+    "title": "TUN inbound: Better `\"autoOutboundsInterface\": \"auto\"` (#6035)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/tun/config.go",
+      "proxy/tun/tun_windows.go"
+    ]
+  },
+  {
+    "sha": "1d62941bd2a0f1ca410c7b81c1aeb198dd105825",
+    "date": "2026-05-02T12:27:27Z",
+    "title": "Hysteria: Upgrade to official v2.8.2 (#6041)",
+    "priority": "BLOCK",
+    "disposition": "dependency-review",
+    "reason": "Hy2 v2.8.2 predecessor, not an isolated memory fix",
+    "paths": [
+      "app/proxyman/inbound/worker.go",
+      "go.mod",
+      "go.sum",
+      "proxy/hysteria/client.go",
+      "proxy/hysteria/config.go",
+      "proxy/hysteria/ctx/ctx.go",
+      "proxy/hysteria/frag.go",
+      "proxy/hysteria/protocol.go",
+      "proxy/hysteria/server.go",
+      "transport/internet/hysteria/config.go",
+      "transport/internet/hysteria/conn.go",
+      "transport/internet/hysteria/dialer.go",
+      "transport/internet/hysteria/hub.go",
+      "transport/internet/hysteria/padding/padding.go",
+      "transport/internet/hysteria/udphop/addr.go",
+      "transport/internet/hysteria/udphop/conn.go",
+      "transport/internet/kcp/dialer.go",
+      "transport/internet/splithttp/dialer.go",
+      "transport/internet/splithttp/hub.go",
+      "transport/internet/udp/dialer.go"
+    ]
+  },
+  {
+    "sha": "bdff2fa72edec384b51208e167bfb3850ff63a30",
+    "date": "2026-05-02T13:11:40Z",
+    "title": "Config: Support env `XRAY_JSON_STRICT=true` (#6053)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "common/platform/platform.go",
+      "infra/conf/serial/builder.go",
+      "infra/conf/serial/loader.go",
+      "main/json/json.go"
+    ]
+  },
+  {
+    "sha": "1ead940a71f61171755db0908234e10071ac0f15",
+    "date": "2026-05-02T13:32:59Z",
+    "title": "Config: Parallel `for` for inbounds' `clients` (#6055)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "common/task/parallel.go",
+      "common/task/parallel_test.go",
+      "infra/conf/hysteria.go",
+      "infra/conf/shadowsocks.go",
+      "infra/conf/trojan.go",
+      "infra/conf/vless.go",
+      "infra/conf/vmess.go"
+    ]
+  },
+  {
+    "sha": "8381a5a8a6c94d853d6ebe0ada427ee7c815260a",
+    "date": "2026-05-02T15:27:30Z",
+    "title": "Block/Blackhole outbound: Better blocking UDP (#6057)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/blackhole/blackhole.go"
+    ]
+  },
+  {
+    "sha": "958eb9ea8f1c157e7b4b48eb6aaf5c14d8c15ae2",
+    "date": "2026-05-02T20:40:46Z",
+    "title": "Direct/Freedom outbound: Add `blockDelay` to `finalRules` (30~90s by default) (#6060)",
+    "priority": "BLOCK",
+    "disposition": "breaking-config",
+    "reason": "finalRules adds delayed blocking defaults",
+    "paths": [
+      "infra/conf/freedom.go",
+      "infra/conf/freedom_test.go",
+      "proxy/freedom/config.pb.go",
+      "proxy/freedom/config.proto",
+      "proxy/freedom/freedom.go"
+    ]
+  },
+  {
+    "sha": "e61eeae258065b32214630c053bff33c420a516b",
+    "date": "2026-05-02T20:56:47Z",
+    "title": "Tunnel inbound: Fix panic when listening on UDS for Xray's internal services (e.g. API) (#6062)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "app/commander/commander.go",
+      "proxy/dokodemo/dokodemo.go"
+    ]
+  },
+  {
+    "sha": "b279076ba1a78fef3d92cc9d540e84d0ff8a182f",
+    "date": "2026-05-02T21:55:12Z",
+    "title": "Browser Dialer: Fix WSS with no early data",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/browser_dialer/dialer.go"
+    ]
+  },
+  {
+    "sha": "756a2d1327008190bac1da53a3a9efd094ede46d",
+    "date": "2026-05-03T07:18:23Z",
+    "title": "Hysteria client: Fix `sendThrough` (#6063)",
+    "priority": "P2",
+    "disposition": "dependency-review",
+    "reason": "Hy2 sendThrough crosses dialer/proto/platform files",
+    "paths": [
+      "transport/internet/config.pb.go",
+      "transport/internet/config.proto",
+      "transport/internet/hysteria/dialer.go",
+      "transport/internet/hysteria/udphop/conn.go",
+      "transport/internet/kcp/dialer.go",
+      "transport/internet/sockopt_darwin.go",
+      "transport/internet/sockopt_freebsd.go",
+      "transport/internet/sockopt_linux.go",
+      "transport/internet/sockopt_other.go",
+      "transport/internet/sockopt_windows.go",
+      "transport/internet/splithttp/dialer.go",
+      "transport/internet/splithttp/hub.go",
+      "transport/internet/system_dialer.go",
+      "transport/internet/udp/dialer.go"
+    ]
+  },
+  {
+    "sha": "4951994ebe89ee1447984332f42d5e4efdda449a",
+    "date": "2026-05-03T08:51:14Z",
+    "title": "README.md: Remove NetProxy-Magisk from Magisk & Android Clients (#6066)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "README.md"
+    ]
+  },
+  {
+    "sha": "15968585f357f0ffc53f97b9f641a7c9c04218ea",
+    "date": "2026-05-03T11:04:54Z",
+    "title": "quicParams config: Better unmarshaling `udpHop` (#6068)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_internet.go"
+    ]
+  },
+  {
+    "sha": "228f1e13aa22739b0d6b9adbdb2b600f1e2018e1",
+    "date": "2026-05-03T11:53:13Z",
+    "title": "Xray-core v26.5.3",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "core/core.go"
+    ]
+  },
+  {
+    "sha": "4192ca082771b94e24c5a5ae83883f4d48fe29c4",
+    "date": "2026-05-07T10:43:21Z",
+    "title": "Bump google.golang.org/grpc from 1.80.0 to 1.81.0 (#6077)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "906d49a27193dec9054c8dcf47c3237f87d0ad92",
+    "date": "2026-05-07T14:12:39Z",
+    "title": "Direct/Freedom outbound: Prefer IPv4 for `finalRules`' \"AsIs\" (#6075)",
+    "priority": "BLOCK",
+    "disposition": "breaking-config",
+    "reason": "finalRules IPv4 default behavior",
+    "paths": [
+      "app/dns/dns.go",
+      "app/dns/nameserver.go",
+      "common/utils/probe_routes.go",
+      "proxy/freedom/freedom.go"
+    ]
+  },
+  {
+    "sha": "c42deab55cc0dcc73eca5487206446fb76c5f79e",
+    "date": "2026-05-07T14:13:05Z",
+    "title": "Config: Rename inbounds' `clients`/`accounts` to `users` (#6083)",
+    "priority": "P2",
+    "disposition": "alias-retained",
+    "reason": "clients remains accepted; no mandatory users rename",
+    "paths": [
+      "infra/conf/http.go",
+      "infra/conf/hysteria.go",
+      "infra/conf/shadowsocks.go",
+      "infra/conf/socks.go",
+      "infra/conf/trojan.go",
+      "infra/conf/vless.go",
+      "infra/conf/vless_test.go",
+      "infra/conf/vmess.go",
+      "main/commands/all/api/inbound_user_add.go",
+      "proxy/vless/inbound/config.pb.go",
+      "proxy/vless/inbound/config.proto",
+      "proxy/vless/inbound/inbound.go",
+      "testing/scenarios/vless_test.go",
+      "transport/internet/finalmask/sudoku/sudoku_test.go"
+    ]
+  },
+  {
+    "sha": "1dbafe629a098b552c1409d2be1fc713479b0844",
+    "date": "2026-05-07T14:13:25Z",
+    "title": "Config: Rename `network`/`address`/`port` in Tunnel inbound and DNS outbound (#6084)",
+    "priority": "P2",
+    "disposition": "alias-review",
+    "reason": "Tunnel/DNS aliases must be checked before full upgrade",
+    "paths": [
+      "core/xray_test.go",
+      "infra/conf/dns_proxy.go",
+      "infra/conf/dns_proxy_test.go",
+      "infra/conf/dokodemo.go",
+      "infra/conf/dokodemo_test.go",
+      "proxy/dns/config.pb.go",
+      "proxy/dns/config.proto",
+      "proxy/dns/dns.go",
+      "proxy/dns/dns_test.go",
+      "proxy/dokodemo/config.go",
+      "proxy/dokodemo/config.pb.go",
+      "proxy/dokodemo/config.proto",
+      "proxy/dokodemo/dokodemo.go",
+      "testing/scenarios/command_test.go",
+      "testing/scenarios/dokodemo_test.go",
+      "testing/scenarios/feature_test.go",
+      "testing/scenarios/metrics_test.go",
+      "testing/scenarios/policy_test.go",
+      "testing/scenarios/reverse_test.go",
+      "testing/scenarios/shadowsocks_2022_test.go",
+      "testing/scenarios/shadowsocks_test.go",
+      "testing/scenarios/socks_test.go",
+      "testing/scenarios/tls_test.go",
+      "testing/scenarios/transport_test.go",
+      "testing/scenarios/vless_test.go",
+      "testing/scenarios/vmess_test.go",
+      "testing/scenarios/wireguard_test.go",
+      "transport/internet/finalmask/sudoku/sudoku_test.go"
+    ]
+  },
+  {
+    "sha": "eb32d166af71bcb99145863d55a7e53b620245f6",
+    "date": "2026-05-09T12:35:16Z",
+    "title": "Docker: Update confdir's default files (#6089)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      ".github/docker/Dockerfile",
+      ".github/docker/Dockerfile.usa"
+    ]
+  },
+  {
+    "sha": "9d9eaf399fbcba14e883c34a53dffcdfe5143669",
+    "date": "2026-05-09T16:54:57Z",
+    "title": "XHTTP client: Fix potential memory leak in stream-up/one (#6095)",
+    "priority": "P2",
+    "disposition": "missing-conditional",
+    "reason": "XHTTP request body closure still missing; production usage gate",
+    "paths": [
+      "transport/internet/splithttp/client.go"
+    ]
+  },
+  {
+    "sha": "d38ba9d507b4938bb67fabfa3d02effc33dbdc11",
+    "date": "2026-05-09T17:30:08Z",
+    "title": "XDNS finalmask: Allow \"domain+udp://0.0.0.0:0\" for using `dialerProxy` (#6086)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/finalmask/xdns/client.go"
+    ]
+  },
+  {
+    "sha": "1bdb488c9ec09ea51e6899697d5b7437f3cf6eb2",
+    "date": "2026-05-09T17:36:29Z",
+    "title": "Xray-core v26.5.9",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "core/core.go"
+    ]
+  },
+  {
+    "sha": "a3c054a54c21a49013e24880a6c8bc2138d75c28",
+    "date": "2026-05-22T19:37:25Z",
+    "title": "Bump golang.org/x/net from 0.53.0 to 0.54.0 (#6113)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "5488b86c6723188982eb392891de98285bfeae27",
+    "date": "2026-05-22T19:37:44Z",
+    "title": "Bump google.golang.org/grpc from 1.81.0 to 1.81.1 (#6133)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "da9ba693cb0604d877aca6367ac9a1cd5ee43840",
+    "date": "2026-05-22T19:49:19Z",
+    "title": "Config: Support abstract unix sockets in remote loader (#6111)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "app/router/webhook.go",
+      "common/utils/unixsocket.go",
+      "main/confloader/external/external.go"
+    ]
+  },
+  {
+    "sha": "359a28f8765ad230422ae62e34667c9d9b1a58c0",
+    "date": "2026-05-23T09:24:37Z",
+    "title": "XDNS finalmask: Support AAAA & A (#6123)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/finalmask/xdns/client.go",
+      "transport/internet/finalmask/xdns/dns.go",
+      "transport/internet/finalmask/xdns/dns_test.go",
+      "transport/internet/finalmask/xdns/record_transport.go",
+      "transport/internet/finalmask/xdns/server.go",
+      "transport/internet/finalmask/xdns/spec.go"
+    ]
+  },
+  {
+    "sha": "56bb63668c391987e409fa12df42685fcf00d6c1",
+    "date": "2026-05-23T12:23:52Z",
+    "title": "Geodata: Cleanup unneeded shared matchers (weakly referenced in map) (#6139)",
+    "priority": "P1",
+    "disposition": "missing-memory",
+    "reason": "Weak shared matcher cache; with registry cleanup",
+    "paths": [
+      "common/geodata/domain_matcher.go",
+      "common/geodata/domain_matcher_test.go",
+      "common/geodata/ip_matcher.go",
+      "common/utils/weak_cache.go"
+    ]
+  },
+  {
+    "sha": "ab69985fccb3206300c761cf1792258e53f82749",
+    "date": "2026-05-23T13:50:01Z",
+    "title": "Config: Warn when `sockopt.trustedXForwardedFor` is not set for XHTTP/WS/HU inbounds (#6159)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/xray.go"
+    ]
+  },
+  {
+    "sha": "4c3842711dd6abc8401f83678f30bb56e3f8819b",
+    "date": "2026-05-24T12:05:40Z",
+    "title": "XHTTP client: Fix packet-up `OpenUsage` counting and H3 `keepAlivePeriod` parameter (#6140)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/splithttp/dialer.go"
+    ]
+  },
+  {
+    "sha": "81d993f49dc4c9a036bc285864f3ed348bbdd36c",
+    "date": "2026-05-24T12:19:00Z",
+    "title": "README.md: Remove Xray4Magisk; Add AsteriskNG to Android in GUI Clients (#6153)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "README.md"
+    ]
+  },
+  {
+    "sha": "ee2b2c5ab6eeb4b4cec4457d5f5aa46cf50d9c55",
+    "date": "2026-05-24T12:27:12Z",
+    "title": "leastLoad balancer: Implement missing `tolerance` (#6156)",
+    "priority": "KEEP",
+    "disposition": "equivalent-in-fork",
+    "reason": "leastLoad tolerance already implemented in fork",
+    "paths": [
+      "app/router/strategy_leastload.go"
+    ]
+  },
+  {
+    "sha": "d878fc83f8be0f56cebbc5fb9a9baf0aa48d9990",
+    "date": "2026-05-24T12:50:02Z",
+    "title": "SS2022 inbound: Fix potential panic when dispatching (#6162)",
+    "priority": "P1",
+    "disposition": "partial-overlap",
+    "reason": "Post-auth SS bridge lifecycle; not a handshake fix",
+    "paths": [
+      "common/singbridge/destination.go",
+      "common/singbridge/dialer.go",
+      "common/singbridge/handler.go",
+      "common/singbridge/packet.go",
+      "common/singbridge/pipe.go",
+      "proxy/shadowsocks_2022/inbound.go",
+      "proxy/shadowsocks_2022/inbound_multi.go",
+      "proxy/shadowsocks_2022/inbound_relay.go",
+      "proxy/shadowsocks_2022/outbound.go"
+    ]
+  },
+  {
+    "sha": "787aa7677b47c24f19aae84111d50ef4123072be",
+    "date": "2026-05-24T14:35:12Z",
+    "title": "Hysteria server: `tls.WithNextProto(\"h3\")` by default (#6186)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/hysteria/hub.go"
+    ]
+  },
+  {
+    "sha": "e26f5e95487a9c0064dd9f9e34ebef53f0018460",
+    "date": "2026-05-28T14:22:57Z",
+    "title": "Socks5 server: More standard UDP ASSOCIATE (RFC 1928) (#6149)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/socks/protocol.go",
+      "proxy/socks/server.go",
+      "proxy/socks/temp_udp_listen.go",
+      "proxy/socks/udpfilter.go"
+    ]
+  },
+  {
+    "sha": "fa466f81746bd692ca2213413bf7dc854abec5c0",
+    "date": "2026-05-28T18:20:27Z",
+    "title": "Bump golang.org/x/net from 0.54.0 to 0.55.0 (#6192)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "cb206ddc74766509f57321c48d08ec807b9dfbad",
+    "date": "2026-05-28T18:27:08Z",
+    "title": "DNS: Avoid passing domain to WriteTo func (#6163)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "app/dns/nameserver_udp.go",
+      "proxy/wireguard/client.go"
+    ]
+  },
+  {
+    "sha": "09002ab763a8b7a8d8be2f7603b98024043f150d",
+    "date": "2026-05-28T19:24:22Z",
+    "title": "noise finalmask: Better `reset` (#6188)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/finalmask/noise/conn.go"
+    ]
+  },
+  {
+    "sha": "1cd7d25fecb71edac3dadffa8ca1255321253a29",
+    "date": "2026-05-28T19:44:16Z",
+    "title": "header-custom finalmask: Remove headerConnMode headerReadAddrAware interface (#6193)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "common/serial/typed_message_test.go",
+      "infra/conf/transport_internet.go",
+      "infra/conf/transport_test.go",
+      "transport/internet/finalmask/finalmask.go",
+      "transport/internet/finalmask/header/custom/config.go",
+      "transport/internet/finalmask/header/custom/config.pb.go",
+      "transport/internet/finalmask/header/custom/config.proto",
+      "transport/internet/finalmask/header/custom/metadata_test.go",
+      "transport/internet/finalmask/header/custom/udp.go",
+      "transport/internet/finalmask/udp_test.go"
+    ]
+  },
+  {
+    "sha": "a2cec2e580e8ea1900701b11b425e0351de2ec71",
+    "date": "2026-05-28T20:06:32Z",
+    "title": "DNS: Avoid panic on domain too long (#6207)",
+    "priority": "P1",
+    "disposition": "missing-correctness",
+    "reason": "DNS oversized-name panic and error propagation",
+    "paths": [
+      "app/dns/dnscommon.go",
+      "app/dns/dnscommon_test.go",
+      "app/dns/nameserver_doh.go",
+      "app/dns/nameserver_quic.go",
+      "app/dns/nameserver_tcp.go",
+      "app/dns/nameserver_udp.go"
+    ]
+  },
+  {
+    "sha": "4dcf802ae3a7c51a6cac68724f4e0e17b447d861",
+    "date": "2026-05-28T20:15:38Z",
+    "title": "README.md: Add flutter_vless to Xray Wrapper in Others (#6197)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "README.md"
+    ]
+  },
+  {
+    "sha": "36303694d1edfeb1b83bf6e0f79caebf4651c063",
+    "date": "2026-05-29T08:29:53Z",
+    "title": "Finalmask: Add Realm (UDP hole punching in Hysteria v2.9.1) (#6137)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      ".github/workflows/release.yml",
+      "README.md",
+      "go.mod",
+      "go.sum",
+      "infra/conf/transport_internet.go",
+      "transport/internet/finalmask/realm/client.go",
+      "transport/internet/finalmask/realm/config.go",
+      "transport/internet/finalmask/realm/config.pb.go",
+      "transport/internet/finalmask/realm/config.proto",
+      "transport/internet/finalmask/realm/http.go",
+      "transport/internet/finalmask/realm/punch.go",
+      "transport/internet/finalmask/realm/server.go",
+      "transport/internet/finalmask/realm/stun.go",
+      "transport/internet/hysteria/congestion/bbr/bandwidth_sampler.go",
+      "transport/internet/hysteria/congestion/bbr/bbr_sender.go"
+    ]
+  },
+  {
+    "sha": "66a81007379656b803d55ac2c093f0ad2408f2b2",
+    "date": "2026-05-29T08:51:41Z",
+    "title": "Salamander finalmask: Support `packetSize` (Gecko in Hysteria v2.9.2) (#6198)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_internet.go",
+      "proxy/hysteria/protocol.go",
+      "transport/internet/finalmask/finalmask.go",
+      "transport/internet/finalmask/mkcp/aes128gcm/aes128gcm_test.go",
+      "transport/internet/finalmask/mkcp/aes128gcm/config.go",
+      "transport/internet/finalmask/mkcp/aes128gcm/conn.go",
+      "transport/internet/finalmask/mkcp/original/config.go",
+      "transport/internet/finalmask/mkcp/original/conn.go",
+      "transport/internet/finalmask/mkcp/original/simple_test.go",
+      "transport/internet/finalmask/salamander/config.go",
+      "transport/internet/finalmask/salamander/config.pb.go",
+      "transport/internet/finalmask/salamander/config.proto",
+      "transport/internet/finalmask/salamander/conn.go",
+      "transport/internet/finalmask/salamander/gecko.go",
+      "transport/internet/finalmask/salamander/salamander.go",
+      "transport/internet/finalmask/salamander/salamander_test.go",
+      "transport/internet/finalmask/udp_test.go"
+    ]
+  },
+  {
+    "sha": "2b4269962360bdb4abc9c1d0117d52a92162a4a9",
+    "date": "2026-05-29T09:44:06Z",
+    "title": "XICMP finalmask: Refactor & Speed up; Add multi `ips` and `dgram` mode (client) (#6168)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_internet.go",
+      "transport/internet/finalmask/xicmp/client.go",
+      "transport/internet/finalmask/xicmp/config.pb.go",
+      "transport/internet/finalmask/xicmp/config.proto",
+      "transport/internet/finalmask/xicmp/server.go"
+    ]
+  },
+  {
+    "sha": "569459c54c30b2c375bf92141488daac6c4781e1",
+    "date": "2026-05-29T10:47:58Z",
+    "title": "Sudoku finalmask: Harden UDP ReadFrom() against invalid packets (#6185)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/finalmask/sudoku/conn_udp.go"
+    ]
+  },
+  {
+    "sha": "aba22722a65d31c4c17ef5d9619e75a9ca474ce7",
+    "date": "2026-05-29T11:57:32Z",
+    "title": "Finalmask: Add mkcp-legacy (UDP) to replace mkcp-* and legacy header-* (#6201)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_internet.go",
+      "transport/internet/finalmask/header/custom/config.go",
+      "transport/internet/finalmask/header/custom/udp.go",
+      "transport/internet/finalmask/header/custom/udp_runtime_test.go",
+      "transport/internet/finalmask/header/dns/config.go",
+      "transport/internet/finalmask/header/dns/config.pb.go",
+      "transport/internet/finalmask/header/dns/config.proto",
+      "transport/internet/finalmask/header/dns/conn.go",
+      "transport/internet/finalmask/header/dtls/config.go",
+      "transport/internet/finalmask/header/dtls/config.pb.go",
+      "transport/internet/finalmask/header/dtls/config.proto",
+      "transport/internet/finalmask/header/dtls/conn.go",
+      "transport/internet/finalmask/header/srtp/config.go",
+      "transport/internet/finalmask/header/srtp/config.pb.go",
+      "transport/internet/finalmask/header/srtp/config.proto",
+      "transport/internet/finalmask/header/srtp/conn.go",
+      "transport/internet/finalmask/header/utp/config.go",
+      "transport/internet/finalmask/header/utp/config.pb.go",
+      "transport/internet/finalmask/header/utp/config.proto",
+      "transport/internet/finalmask/header/utp/conn.go",
+      "transport/internet/finalmask/header/wechat/config.go",
+      "transport/internet/finalmask/header/wechat/config.pb.go",
+      "transport/internet/finalmask/header/wechat/config.proto",
+      "transport/internet/finalmask/header/wechat/conn.go",
+      "transport/internet/finalmask/header/wireguard/config.go",
+      "transport/internet/finalmask/header/wireguard/config.pb.go",
+      "transport/internet/finalmask/header/wireguard/config.proto",
+      "transport/internet/finalmask/header/wireguard/conn.go",
+      "transport/internet/finalmask/mkcp/header/config.go",
+      "transport/internet/finalmask/mkcp/header/config.pb.go",
+      "transport/internet/finalmask/mkcp/header/config.proto",
+      "transport/internet/finalmask/mkcp/header/conn.go",
+      "transport/internet/finalmask/mkcp/header/header.go",
+      "transport/internet/finalmask/mkcp/header/header_dns.go",
+      "transport/internet/finalmask/mkcp/header/header_dtls.go",
+      "transport/internet/finalmask/mkcp/header/header_srtp.go",
+      "transport/internet/finalmask/mkcp/header/header_utp.go",
+      "transport/internet/finalmask/mkcp/header/header_wechat.go",
+      "transport/internet/finalmask/mkcp/header/header_wireguard.go",
+      "transport/internet/finalmask/udp_test.go"
+    ]
+  },
+  {
+    "sha": "ca4b156b57b11d77545039b4000ed3bbc2fdabdd",
+    "date": "2026-05-29T11:59:24Z",
+    "title": "Burst observatory: Fix time compare, cancel pending ping on instance close or new schedule started (#6106)",
+    "priority": "P2",
+    "disposition": "partial-overlap",
+    "reason": "Fork closes probes already; DO NOT import 10-second minimum",
+    "paths": [
+      "app/observatory/burst/healthping.go",
+      "app/observatory/burst/healthping_result.go"
+    ]
+  },
+  {
+    "sha": "d43a808ea50265383646d17321426b193594fb21",
+    "date": "2026-05-29T15:04:59Z",
+    "title": "GitHub Action CI: Add Go source file format check (#6090)",
+    "priority": "KEEP",
+    "disposition": "equivalent-in-fork",
+    "reason": "Fork has its own formatting gate",
+    "paths": [
+      ".github/workflows/test.yml",
+      "app/commander/commander.go",
+      "app/dns/cache_controller.go",
+      "app/dns/dns.go",
+      "app/dns/dnscommon_test.go",
+      "app/dns/fakedns/fakedns_test.go",
+      "app/dns/nameserver.go",
+      "app/dns/nameserver_local.go",
+      "app/metrics/metrics.go",
+      "app/observatory/burst/burstobserver.go",
+      "app/observatory/observer.go",
+      "app/proxyman/command/command.go",
+      "app/proxyman/inbound/inbound.go",
+      "app/proxyman/outbound/handler.go",
+      "app/proxyman/outbound/handler_test.go",
+      "app/proxyman/outbound/outbound.go",
+      "app/router/command/command.go",
+      "app/router/router.go",
+      "app/router/strategy_leastload_test.go",
+      "app/router/webhook.go",
+      "app/stats/stats_test.go",
+      "app/version/version.go",
+      "common/buf/multi_buffer.go",
+      "common/buf/reader_test.go",
+      "common/buf/readv_posix.go",
+      "common/geodata/ip_matcher_test.go",
+      "common/log/logger.go",
+      "common/platform/platform_test.go",
+      "common/protocol/id.go",
+      "common/protocol/quic/sniff_test.go",
+      "common/protocol/server_spec.go",
+      "common/reflect/marshal.go",
+      "common/reflect/marshal_test.go",
+      "common/units/bytesize_test.go",
+      "common/utils/browser.go",
+      "common/utils/typed_sync_map.go",
+      "common/utils/unixsocket.go",
+      "features/routing/session/context.go",
+      "infra/conf/blackhole.go",
+      "infra/conf/router_strategy.go",
+      "infra/conf/serial/loader.go",
+      "infra/conf/transport_authenticators.go",
+      "infra/conf/transport_internet.go",
+      "infra/conf/version.go",
+      "infra/conf/xray.go",
+      "infra/vformat/main.go",
+      "main/commands/all/api/balancer_info.go",
+      "main/commands/all/api/inbound_user_add.go",
+      "main/commands/all/api/inbound_user_remove.go",
+      "main/commands/all/api/rules_add.go",
+      "main/commands/all/api/rules_remove.go",
+      "main/commands/all/api/source_ip_block.go",
+      "main/commands/all/convert/json.go",
+      "main/commands/all/convert/protobuf.go",
+      "main/commands/all/tls/ech.go",
+      "main/commands/all/x25519.go",
+      "main/confloader/confloader.go",
+      "main/confloader/external/external.go",
+      "proxy/dokodemo/dokodemo.go",
+      "proxy/freedom/freedom.go",
+      "proxy/http/server.go",
+      "proxy/hysteria/account/config.go",
+      "proxy/proxy.go",
+      "proxy/socks/server.go",
+      "proxy/trojan/config.go",
+      "proxy/trojan/server.go",
+      "proxy/trojan/validator.go",
+      "proxy/tun/stack_gvisor.go",
+      "proxy/tun/stack_gvisor_endpoint.go",
+      "proxy/tun/tun_darwin.go",
+      "proxy/tun/tun_default.go",
+      "proxy/tun/tun_freebsd.go",
+      "proxy/vless/encoding/encoding_test.go",
+      "proxy/vless/encryption/client.go",
+      "proxy/vless/encryption/server.go",
+      "proxy/vless/inbound/inbound.go",
+      "proxy/vless/validator.go",
+      "proxy/vmess/account.go",
+      "proxy/vmess/inbound/inbound.go",
+      "proxy/vmess/outbound/command.go",
+      "proxy/vmess/outbound/outbound.go",
+      "proxy/wireguard/bind.go",
+      "proxy/wireguard/server.go",
+      "proxy/wireguard/server_test.go",
+      "proxy/wireguard/tun.go",
+      "testing/scenarios/command_test.go",
+      "transport/internet/browser_dialer/dialer.go",
+      "transport/internet/config.go",
+      "transport/internet/dialer.go",
+      "transport/internet/finalmask/realm/client.go",
+      "transport/internet/finalmask/realm/server.go",
+      "transport/internet/finalmask/realm/stun.go",
+      "transport/internet/finalmask/sudoku/sudoku_test.go",
+      "transport/internet/finalmask/tcp_test.go",
+      "transport/internet/finalmask/udp_test.go",
+      "transport/internet/finalmask/xdns/client.go",
+      "transport/internet/finalmask/xdns/dns_test.go",
+      "transport/internet/grpc/dial.go",
+      "transport/internet/happy_eyeballs.go",
+      "transport/internet/hysteria/dialer.go",
+      "transport/internet/kcp/connection.go",
+      "transport/internet/kcp/connection_test.go",
+      "transport/internet/reality/config.go",
+      "transport/internet/sockopt_darwin.go",
+      "transport/internet/sockopt_linux.go",
+      "transport/internet/sockopt_windows.go",
+      "transport/internet/splithttp/hub.go",
+      "transport/internet/system_dialer.go",
+      "transport/internet/tls/config.go",
+      "transport/internet/tls/ech.go",
+      "transport/internet/tls/ech_test.go",
+      "transport/internet/tls/tls.go",
+      "transport/pipe/pipe.go",
+      "transport/pipe/pipe_test.go"
+    ]
+  },
+  {
+    "sha": "ba538619eb8a21ec0e44fc97357ac9e142bbd3bd",
+    "date": "2026-05-30T09:30:23Z",
+    "title": "Realm finalmask: Fix client punch peers (#6213)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/finalmask/realm/client.go",
+      "transport/internet/finalmask/realm/stun.go"
+    ]
+  },
+  {
+    "sha": "455f6bc2d5915be0465d66fe6d7d06974c2729d3",
+    "date": "2026-05-30T17:29:33Z",
+    "title": "uTLS: Update `ModernFingerprints` map and `OtherFingerprints` map (#6181)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/tls/tls.go"
+    ]
+  },
+  {
+    "sha": "cb8cd048c12f902b673a0e4ed6e4c51017a85439",
+    "date": "2026-06-01T01:25:47Z",
+    "title": "DNS outbound: Replace \"reject\" with \"return\" (`rCode` is 0 by default) (#6214)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/common.go",
+      "infra/conf/dns_proxy.go",
+      "infra/conf/dns_proxy_test.go",
+      "proxy/dns/config.pb.go",
+      "proxy/dns/config.proto",
+      "proxy/dns/dns.go",
+      "proxy/dns/dns_test.go"
+    ]
+  },
+  {
+    "sha": "c4dfcd4c1a998cc7eb5be61ef7c2e5dbb65dfcff",
+    "date": "2026-06-01T01:30:40Z",
+    "title": "Burst observatory: Fix init check (#6221)",
+    "priority": "P2",
+    "disposition": "partial-overlap",
+    "reason": "Retain fork initial-check and recovery semantics",
+    "paths": [
+      "app/observatory/burst/healthping.go"
+    ]
+  },
+  {
+    "sha": "94ffd50060f1cfd5d7482ec90a23a92bdefdff68",
+    "date": "2026-06-01T02:11:09Z",
+    "title": "Xray-core v26.6.1",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "core/core.go"
+    ]
+  },
+  {
+    "sha": "55956f8d70f0f92e861cea57957f62afffda31d4",
+    "date": "2026-06-02T23:36:42Z",
+    "title": "TLS config: Remove some deprecated fields (#6226)",
+    "priority": "BLOCK",
+    "disposition": "breaking-config",
+    "reason": "TLS deprecated fields removed; scan actual consumers",
+    "paths": [
+      "infra/conf/transport_internet.go",
+      "transport/internet/tls/config.go",
+      "transport/internet/tls/config.pb.go",
+      "transport/internet/tls/config.proto"
+    ]
+  },
+  {
+    "sha": "d792fba59cd423f50da19460fdc82107de4a1875",
+    "date": "2026-06-02T23:40:17Z",
+    "title": "GitHub Actions CI: Builders run only once in pull requests in the same repository (#6222)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      ".github/workflows/release-win7.yml",
+      ".github/workflows/release.yml"
+    ]
+  },
+  {
+    "sha": "fdb9b616fc0edf8fb4c3285870388947b92669fc",
+    "date": "2026-06-02T23:58:56Z",
+    "title": "README.md: Add Hey to HarmonyOS in GUI Clients (#6244)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "README.md"
+    ]
+  },
+  {
+    "sha": "2249f8b5c67531a96063921c7ae69c6a748e7363",
+    "date": "2026-06-08T19:29:14Z",
+    "title": "Bump github.com/pion/stun/v3 from 3.1.2 to 3.1.5 (#6291)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "83cf229909dfb8f0513db5a407abb190f60ab2c4",
+    "date": "2026-06-08T19:55:06Z",
+    "title": "Salamander finalmask: Replace `math/rand` with `crypto/rand` in salt generation (#6228)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/finalmask/salamander/salamander.go",
+      "transport/internet/finalmask/sudoku/codec.go",
+      "transport/internet/finalmask/sudoku/conn_tcp_packed.go",
+      "transport/internet/finalmask/sudoku/table.go"
+    ]
+  },
+  {
+    "sha": "a0e9347f1b4f8d76444d975ab4d3696ecf3e84a6",
+    "date": "2026-06-09T09:03:24Z",
+    "title": "TLS ECH: Handle \"h2c://\" query correctly (#6261)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/tls/ech.go"
+    ]
+  },
+  {
+    "sha": "6189d2bfd564171d4e1cc0f4e31b43b0e1032d85",
+    "date": "2026-06-09T09:14:54Z",
+    "title": "XICMP finalmask: Refine Linux sever (#6272)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/finalmask/xicmp/server.go",
+      "transport/internet/finalmask/xicmp/server_oob.go"
+    ]
+  },
+  {
+    "sha": "06b4931743b2ee0487faa9739ae8be535d2d0a8f",
+    "date": "2026-06-09T09:22:33Z",
+    "title": "TUN inbound: Start TUN by AlwaysOnInboundHandler (#6275)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "app/proxyman/inbound/always.go",
+      "proxy/tun/handler.go"
+    ]
+  },
+  {
+    "sha": "3239d21168c8731b0100570e17a904394be8f947",
+    "date": "2026-06-09T09:40:55Z",
+    "title": "TUN inbound: `autoOutboundsInterface` bypasses loopback addresses (#6276)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/tun/handler.go"
+    ]
+  },
+  {
+    "sha": "95e9816223faa154a8f86c43b565a1e203b61937",
+    "date": "2026-06-09T10:55:42Z",
+    "title": "Chore: Limit sing* dependencies to shadowsocks_2022 only (#6286)",
+    "priority": "BLOCK",
+    "disposition": "breaking-contract",
+    "reason": "SS UoT removal/dependency changes; AnyTLS dependency must stay",
+    "paths": [
+      "app/proxyman/outbound/handler.go",
+      "app/proxyman/outbound/uot.go",
+      "infra/conf/shadowsocks.go",
+      "proxy/shadowsocks_2022/config.pb.go",
+      "proxy/shadowsocks_2022/config.proto",
+      "proxy/shadowsocks_2022/outbound.go",
+      "transport/internet/finalmask/udp_test.go"
+    ]
+  },
+  {
+    "sha": "26a022c90534323704ca456cf640eeec94aabf88",
+    "date": "2026-06-09T12:08:38Z",
+    "title": "GitHub Action CI, README.md: Refinements and add compliance contents (#6283)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      ".github/build/windows/xray_no_window.cmd",
+      ".github/build/windows/xray_no_window.ps1",
+      ".github/build/windows/xray_no_window.vbs",
+      ".github/workflows/release-win7.yml",
+      ".github/workflows/release.yml",
+      ".github/workflows/scheduled-assets-update.yml",
+      "README.md"
+    ]
+  },
+  {
+    "sha": "e10347bf01f28bca118002963ee29bbcf529cb25",
+    "date": "2026-06-09T15:58:02Z",
+    "title": "XHTTP transport: Add `sessionIDTable` and `sessionIDLength`; Rename `session*` to `sessionID*` (#6258)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_internet.go",
+      "transport/internet/splithttp/config.go",
+      "transport/internet/splithttp/config.pb.go",
+      "transport/internet/splithttp/config.proto",
+      "transport/internet/splithttp/dialer.go",
+      "transport/internet/splithttp/xpadding.go"
+    ]
+  },
+  {
+    "sha": "da21a8f77f31b295e77e1b55e9ef408ca3bf9402",
+    "date": "2026-06-09T20:53:55Z",
+    "title": "TUN & WireGuard inbounds: Ignore b.UDP's domain when receiving it from outbound (#6285)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/tun/udp_fullcone.go",
+      "proxy/wireguard/tun.go"
+    ]
+  },
+  {
+    "sha": "d27b3e46e2df7d087c8a2acb0a5a9a41cdcf75b0",
+    "date": "2026-06-16T11:45:27Z",
+    "title": "Bump golang.org/x/net from 0.55.0 to 0.56.0 (#6310)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "862631172dd195679be14485c63ebb67b230615d",
+    "date": "2026-06-17T12:02:10Z",
+    "title": "WireGuard proxy: Refactor (#6287)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "app/proxyman/inbound/always.go",
+      "app/proxyman/outbound/handler.go",
+      "common/session/context.go",
+      "infra/conf/wireguard.go",
+      "infra/conf/wireguard_test.go",
+      "proxy/hysteria/client.go",
+      "proxy/hysteria/server.go",
+      "proxy/wireguard/bind.go",
+      "proxy/wireguard/client.go",
+      "proxy/wireguard/config.go",
+      "proxy/wireguard/config.pb.go",
+      "proxy/wireguard/config.proto",
+      "proxy/wireguard/gvisortun/tun.go",
+      "proxy/wireguard/netstack.go",
+      "proxy/wireguard/server.go",
+      "proxy/wireguard/server_test.go",
+      "proxy/wireguard/tun.go",
+      "proxy/wireguard/tun_default.go",
+      "proxy/wireguard/tun_linux.go",
+      "proxy/wireguard/wireguard.go"
+    ]
+  },
+  {
+    "sha": "829d54d7be3e5df9521c42948fe060d6c4660e19",
+    "date": "2026-06-17T12:20:28Z",
+    "title": "Hysteria & XHTTP/3 clients: `udpHop` supports `dialerProxy` (#6320)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/hysteria/dialer.go",
+      "transport/internet/hysteria/udphop/conn.go",
+      "transport/internet/splithttp/dialer.go"
+    ]
+  },
+  {
+    "sha": "ad2e4cb0e19f8d1ae3ae0856d943e1254ecfec84",
+    "date": "2026-06-17T14:44:12Z",
+    "title": "Finalmask: Fix unexpected order and UDP's buf issue (#6331)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_internet.go",
+      "transport/internet/finalmask/finalmask.go"
+    ]
+  },
+  {
+    "sha": "641273848694934d6aec7992bb71162ec69f2a53",
+    "date": "2026-06-17T14:44:40Z",
+    "title": "Socks5 inbound: Fix issues in new UDP ASSOCIATE (#6325)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/socks/protocol.go",
+      "proxy/socks/server.go"
+    ]
+  },
+  {
+    "sha": "711aea4e34b0a00073d2fea6577f28a5d7c9b5eb",
+    "date": "2026-06-18T22:31:21Z",
+    "title": "XHTTP & WS & HU & gRPC servers: Require `sockopt.trustedXForwardedFor` (#6309)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "common/protocol/http/headers.go",
+      "common/protocol/http/headers_test.go",
+      "infra/conf/xray.go",
+      "transport/internet/grpc/dial.go",
+      "transport/internet/grpc/encoding/hunkconn.go",
+      "transport/internet/grpc/encoding/multiconn.go",
+      "transport/internet/grpc/encoding/remoteaddr.go",
+      "transport/internet/grpc/encoding/remoteaddr_test.go",
+      "transport/internet/grpc/hub.go",
+      "transport/internet/httpupgrade/httpupgrade_test.go",
+      "transport/internet/httpupgrade/hub.go",
+      "transport/internet/splithttp/hub.go",
+      "transport/internet/splithttp/splithttp_test.go",
+      "transport/internet/websocket/hub.go",
+      "transport/internet/websocket/ws_test.go"
+    ]
+  },
+  {
+    "sha": "986c512e0f7bc40069e84de903ae2d5a32e324b4",
+    "date": "2026-06-18T22:55:18Z",
+    "title": "XHTTP client: Avoid panic when `host` is invalid (#6316)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/splithttp/client.go"
+    ]
+  },
+  {
+    "sha": "c815c2f2df61dd37fe8c5cec2037e3b93c27266c",
+    "date": "2026-06-18T23:17:01Z",
+    "title": "Loopback outbound: Add `sniffing` (#6326)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/loopback.go",
+      "proxy/loopback/config.pb.go",
+      "proxy/loopback/config.proto",
+      "proxy/loopback/loopback.go"
+    ]
+  },
+  {
+    "sha": "1e036ce1c5076f695d149a672ca578ebf907f882",
+    "date": "2026-06-18T23:55:11Z",
+    "title": "XHTTP/3 client: Actively close underlying QUIC & UDP (#6332)",
+    "priority": "P2",
+    "disposition": "missing-conditional",
+    "reason": "XHTTP/3 underlying QUIC/UDP closure",
+    "paths": [
+      "transport/internet/splithttp/client.go",
+      "transport/internet/splithttp/dialer.go",
+      "transport/internet/splithttp/mux.go",
+      "transport/internet/splithttp/mux_test.go"
+    ]
+  },
+  {
+    "sha": "8734774e4a6000a7e2a68ad4e25d60475253e84e",
+    "date": "2026-06-19T11:23:41Z",
+    "title": "Bump actions/checkout from 6 to 7 (#6344)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      ".github/workflows/docker.yml",
+      ".github/workflows/release-win7.yml",
+      ".github/workflows/release.yml",
+      ".github/workflows/test.yml"
+    ]
+  },
+  {
+    "sha": "be8009c62509322682299bfbe969a62cee03f4d5",
+    "date": "2026-06-19T12:02:27Z",
+    "title": "Geodata: Cleanup unneeded matchers & `domain:` ignore case (#6342)",
+    "priority": "P1",
+    "disposition": "missing-memory",
+    "reason": "Weak matcher registry; also changes domain case handling",
+    "paths": [
+      "common/geodata/domain_matcher.go",
+      "common/geodata/domain_registry.go",
+      "common/geodata/ip_registry.go",
+      "common/geodata/rule_parser.go",
+      "common/utils/weak_cache.go"
+    ]
+  },
+  {
+    "sha": "5aefcb41fbe0c2a7c59ac77a281ef88cfcd8220d",
+    "date": "2026-06-22T16:05:47Z",
+    "title": "Bump github.com/pion/stun/v3 from 3.1.5 to 3.1.6 (#6357)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "567500c4af132f8bbe213c0098a5a9445b6465ed",
+    "date": "2026-06-22T17:38:12Z",
+    "title": "Fragment finalmask: Add `lengths` and `delays` (#6334)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_internet.go",
+      "transport/internet/finalmask/fragment/config.pb.go",
+      "transport/internet/finalmask/fragment/config.proto",
+      "transport/internet/finalmask/fragment/conn.go"
+    ]
+  },
+  {
+    "sha": "9cd9382e3d7da0bddbbd12edb109bf80848b0da9",
+    "date": "2026-06-22T17:38:36Z",
+    "title": "TUN inbound: Support env `XRAY_TUN_FD` on Linux as well (#6338)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/tun/tun_linux.go"
+    ]
+  },
+  {
+    "sha": "583bb4a63f726745199b596fb1fab86861731e16",
+    "date": "2026-06-22T18:51:47Z",
+    "title": "XHTTP server: Fix `scStreamUpServerSecs` when `xPaddingObfsMode` is true (#6343)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/splithttp/hub.go"
+    ]
+  },
+  {
+    "sha": "b99c3e56574fb0317608c49dd1dd9af816db7a9e",
+    "date": "2026-06-22T18:55:10Z",
+    "title": "Xray-core v26.6.22",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "core/core.go"
+    ]
+  },
+  {
+    "sha": "fab4bcc1edf8c031913da030cdb482fa6b00dbe2",
+    "date": "2026-06-23T10:34:07Z",
+    "title": "Bump github.com/cloudflare/circl from 1.6.3 to 1.6.4 (#6362)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "e7e9254630bd0557363a13dc8e5dfe3a9754a3c8",
+    "date": "2026-06-23T11:37:21Z",
+    "title": "TUN inbound: Avoid panic on nil RemoteAddr due to quickly closed connection (#6365)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/tun/handler.go"
+    ]
+  },
+  {
+    "sha": "ac04c445bd09541cc9c35a120ee01d8a177a4d83",
+    "date": "2026-06-23T11:48:17Z",
+    "title": "DNS: Fix unexpected TTL clamp (#6363)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "app/dns/dnscommon.go"
+    ]
+  },
+  {
+    "sha": "f9eb1597adb6b95b1139f76697f7039862d40859",
+    "date": "2026-06-24T10:48:21Z",
+    "title": "Bump actions/cache from 5 to 6 (#6368)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      ".github/workflows/release-win7.yml",
+      ".github/workflows/release.yml",
+      ".github/workflows/scheduled-assets-update.yml",
+      ".github/workflows/test.yml"
+    ]
+  },
+  {
+    "sha": "7e7e820763dbe257ae6f48929e6476505fcfe5bb",
+    "date": "2026-06-24T10:52:28Z",
+    "title": "Geodata: Apply uTLS Chrome fingerprint when downloading (#6371)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "app/geodata/download.go"
+    ]
+  },
+  {
+    "sha": "241aa38ac00c3c396efb7c70eee4eb3a80efb19c",
+    "date": "2026-06-24T11:06:00Z",
+    "title": "TUN inbound: Support `autoSystemRoutingTable` and `autoOutboundsInterface` on macOS and Linux as well (#6366)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/tun/config.go",
+      "proxy/tun/tun_android.go",
+      "proxy/tun/tun_darwin.go",
+      "proxy/tun/tun_default.go",
+      "proxy/tun/tun_freebsd.go",
+      "proxy/tun/tun_linux.go",
+      "proxy/tun/tun_windows.go"
+    ]
+  },
+  {
+    "sha": "dda2b10c9d18f2329d65f4a2effc09fed6ac9cd1",
+    "date": "2026-06-24T12:00:22Z",
+    "title": "TUN inbound: Add traffic counters; Metrics: Rely on instance (#6349)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "app/metrics/metrics.go",
+      "app/metrics/metrics_test.go",
+      "proxy/tun/handler.go",
+      "proxy/tun/handler_test.go"
+    ]
+  },
+  {
+    "sha": "b12bc504c8c2879a98e4aadb1c3f14d11f86cd0d",
+    "date": "2026-06-24T21:06:24Z",
+    "title": "README.md: Add Magic_V2Ray to Magisk in Installation (#6355)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "README.md"
+    ]
+  },
+  {
+    "sha": "f496437b84d4f05e07243da11fe380b302a82145",
+    "date": "2026-06-27T10:40:58Z",
+    "title": "XHTTP server: Refactor upload_queue.go (#6372)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/splithttp/upload_queue.go"
+    ]
+  },
+  {
+    "sha": "345c76f9a8ec438e24bbbc5a246bd0bfeab480b1",
+    "date": "2026-06-27T11:41:22Z",
+    "title": "WireGuard inbound: Support dynamic peer management (#6360)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/hysteria.go",
+      "infra/conf/transport_internet.go",
+      "infra/conf/wireguard.go",
+      "infra/conf/wireguard_test.go",
+      "proxy/hysteria/config.pb.go",
+      "proxy/hysteria/config.proto",
+      "proxy/wireguard/config.go",
+      "proxy/wireguard/config.pb.go",
+      "proxy/wireguard/config.proto",
+      "proxy/wireguard/server.go",
+      "transport/internet/finalmask/sudoku/sudoku_test.go",
+      "transport/internet/hysteria/config.pb.go",
+      "transport/internet/hysteria/config.proto",
+      "transport/internet/splithttp/hub.go"
+    ]
+  },
+  {
+    "sha": "452b719504ef93b6c7a2777e4eaabfffff913209",
+    "date": "2026-06-27T12:04:58Z",
+    "title": "Hysteria inbound: Support `routing`'s `vlessRoute` as well (#6375)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/hysteria/account/config.go",
+      "proxy/hysteria/server.go",
+      "transport/internet/hysteria/hub.go"
+    ]
+  },
+  {
+    "sha": "18b85adb4e288f49a7894351c6e0f2428c0beef6",
+    "date": "2026-06-27T12:41:39Z",
+    "title": "XHTTP client: Change default `maxConnections` to 6 for anti-RKN",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_internet.go"
+    ]
+  },
+  {
+    "sha": "45cf2898ab12e97a55dd8f1f3d78d903340bdc9e",
+    "date": "2026-06-27T13:18:03Z",
+    "title": "Xray-core v26.6.27",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "core/core.go"
+    ]
+  },
+  {
+    "sha": "2b828b7bc2cd1c91635ea0e9e7ed287e87589ae1",
+    "date": "2026-07-03T17:45:47Z",
+    "title": "Bump google.golang.org/grpc from 1.81.1 to 1.82.0 (#6415)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "dfdbcf86ccbd46ee582c75081933e4230b82e70a",
+    "date": "2026-07-03T17:45:51Z",
+    "title": "Bump github.com/klauspost/cpuid/v2 from 2.3.0 to 2.4.0 (#6417)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "695e68ef9ef61b68dff8ec18d762bb127bfa778f",
+    "date": "2026-07-03T17:53:15Z",
+    "title": "Bump github.com/pires/go-proxyproto from 0.12.0 to 0.14.0 (#6420)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "3dc8bf3d8b5d2249ef07f793ab544cafacd18e3c",
+    "date": "2026-07-04T01:28:21Z",
+    "title": "Hysteria inbound: Fix dynamic UUID not accepted (#6395)",
+    "priority": "P2",
+    "disposition": "dependency-review",
+    "reason": "Dynamic Hy2 UUID behavior; authentication mapping",
+    "paths": [
+      "go.mod",
+      "proxy/hysteria/account/config.go"
+    ]
+  },
+  {
+    "sha": "3263ae925506afbe905c13467e57f37b17f5a895",
+    "date": "2026-07-04T01:38:25Z",
+    "title": "TUN inbound: Fix `autoOutboundsInterface` on Linux (#6413)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/tun/tun_linux.go"
+    ]
+  },
+  {
+    "sha": "65f6f0a43b814b2980740e119aa96f1adcb82e9a",
+    "date": "2026-07-04T02:25:15Z",
+    "title": "TUN inbound: Refine `gateway` and `autoSystemRoutingTable` on Linux (#6398)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/tun/README.md",
+      "proxy/tun/tun_linux.go"
+    ]
+  },
+  {
+    "sha": "0495b17650edfccc32ccb5be4d9145026dcd90ad",
+    "date": "2026-07-07T00:28:50Z",
+    "title": "TUN inbound: Refine `gateway` and `autoSystemRoutingTable` on macOS (#6434)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/tun/README.md",
+      "proxy/tun/tun_darwin.go",
+      "proxy/tun/tun_darwin_test.go"
+    ]
+  },
+  {
+    "sha": "fb548f54d22856446e883c6d13b32d60f0dda9bd",
+    "date": "2026-07-07T01:26:15Z",
+    "title": "infra/conf/transport_internet.go: Split into multiple files; Rename `network` to `method` (#6426)",
+    "priority": "P2",
+    "disposition": "alias-retained",
+    "reason": "network remains accepted beside method",
+    "paths": [
+      "infra/conf/grpc.go",
+      "infra/conf/transport_authenticators.go",
+      "infra/conf/transport_finalmask.go",
+      "infra/conf/transport_internet.go",
+      "infra/conf/transport_method.go",
+      "infra/conf/transport_security.go",
+      "infra/conf/transport_sockopt.go"
+    ]
+  },
+  {
+    "sha": "d7fa2076c3e5401173bf9b58f7b07f9aa5174443",
+    "date": "2026-07-07T02:01:53Z",
+    "title": "Xray-core: Forbid unencrypted outbounds on public Internet for VLESS and Trojan; Remove \"none/zero/plain\" for VMess and Shadowsocks (#6303)",
+    "priority": "BLOCK",
+    "disposition": "breaking-config",
+    "reason": "Plaintext public VLESS/Trojan ban; distinguish native encryption",
+    "paths": [
+      "common/geodata/consts.go",
+      "common/protocol/headers.pb.go",
+      "common/protocol/headers.proto",
+      "infra/conf/shadowsocks.go",
+      "infra/conf/vmess.go",
+      "infra/conf/xray.go",
+      "proxy/freedom/freedom.go",
+      "proxy/shadowsocks/config.go",
+      "proxy/shadowsocks/config.pb.go",
+      "proxy/shadowsocks/config.proto",
+      "proxy/shadowsocks/protocol_test.go",
+      "proxy/shadowsocks/validator.go",
+      "proxy/vmess/encoding/auth.go",
+      "proxy/vmess/encoding/client.go",
+      "proxy/vmess/encoding/server.go",
+      "proxy/vmess/outbound/outbound.go",
+      "testing/scenarios/shadowsocks_test.go",
+      "testing/scenarios/vmess_test.go"
+    ]
+  },
+  {
+    "sha": "987290ba480d3bb4cf57454decee3b338b1c8deb",
+    "date": "2026-07-08T11:03:24Z",
+    "title": "Routing: `process` supports macOS as well (#6447)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "common/net/find_process_darwin.go",
+      "common/net/find_process_darwin.s",
+      "common/net/find_process_darwin_test.go",
+      "common/net/find_process_others.go"
+    ]
+  },
+  {
+    "sha": "e4e7614c627f0bf5548c21e468eef31de615672f",
+    "date": "2026-07-08T11:12:37Z",
+    "title": "TLS ECH: Update ECH configuration parsing logic to be more robust (#6441)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/tls/config.go",
+      "transport/internet/tls/ech.go",
+      "transport/internet/tls/ech_test.go"
+    ]
+  },
+  {
+    "sha": "1aabe7ea78eca88deedc234a3e668895fa9bc08c",
+    "date": "2026-07-08T17:59:19Z",
+    "title": "XHTTP transport: Do not force trailing path `/` when both sessionID and seq are placed elsewhere (#6307)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/splithttp/config.go",
+      "transport/internet/splithttp/config_test.go"
+    ]
+  },
+  {
+    "sha": "5c62d50d43a8ddafc4a607e39a536772ec07b7b8",
+    "date": "2026-07-09T14:11:38Z",
+    "title": "Bump golang.org/x/net from 0.56.0 to 0.57.0 (#6455)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "412898fed781e151a46dd25241c78fe014c8e35c",
+    "date": "2026-07-09T20:40:02Z",
+    "title": "WireGuard outbound: Fix a race condition (#6461)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/wireguard/client.go"
+    ]
+  },
+  {
+    "sha": "c320e89108c73b3d83ace6c2f32db1da7a48e5d4",
+    "date": "2026-07-09T20:55:40Z",
+    "title": "HTTPUpgrade server: Keep accepting after transient errors as RAW does; Add handshake read deadline as WS does (#6463)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/httpupgrade/hub.go"
+    ]
+  },
+  {
+    "sha": "e2ad0acf603a2eb8be9ec4724098b700f0db4cf1",
+    "date": "2026-07-10T01:56:16Z",
+    "title": "Bump github.com/pires/go-proxyproto from 0.14.0 to 0.15.0 (#6464)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "c18b39ed80eee07eecb20c4a0eeb3d6b3be2b724",
+    "date": "2026-07-10T02:02:31Z",
+    "title": "TLS client: Support more `cipherSuites` for \"unsafe\" (golang) `fingerprint` for anti-NIN (#6450)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/tls/config.go"
+    ]
+  },
+  {
+    "sha": "d5bc58dc6b7608e664515f970a9742e67e5f9623",
+    "date": "2026-07-10T02:56:49Z",
+    "title": "Root config: Add `env` config (#6400)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      ".github/docker/Dockerfile",
+      ".github/docker/Dockerfile.usa",
+      "common/buf/io.go",
+      "common/buf/readv_reader.go",
+      "common/buf/readv_reader_stub.go",
+      "common/platform/env_reload.go",
+      "common/xudp/xudp.go",
+      "core/xray.go",
+      "features/policy/policy.go",
+      "infra/conf/env_test.go",
+      "infra/conf/xray.go",
+      "main/run.go",
+      "proxy/freedom/freedom.go",
+      "proxy/vmess/outbound/outbound.go",
+      "transport/internet/browser_dialer/dialer.go"
+    ]
+  },
+  {
+    "sha": "0bafca94868a4ec38cd3dba0f2ba7ec6f44bbf18",
+    "date": "2026-07-10T20:34:27Z",
+    "title": "Stats: Fix GetOrRegister*() races (#6468)",
+    "priority": "P1",
+    "disposition": "missing-concurrency",
+    "reason": "Atomic stats registration; preserve DomainTraffic",
+    "paths": [
+      "app/dispatcher/default.go",
+      "app/proxyman/inbound/always.go",
+      "app/proxyman/outbound/handler.go",
+      "app/stats/stats.go",
+      "features/stats/stats.go",
+      "proxy/tun/handler.go",
+      "proxy/wireguard/client.go",
+      "proxy/wireguard/server.go"
+    ]
+  },
+  {
+    "sha": "64fada32b5b9e6ae064a038fa0e4e2b766499bd5",
+    "date": "2026-07-10T21:03:35Z",
+    "title": "TLS client: Pinning CA must have `serverName` (or higher-priority `verifyPeerCertByName` or outbound's `address`) for `pinnedPeerCertSha256` (#6472)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/grpc/dial.go",
+      "transport/internet/hysteria/dialer.go",
+      "transport/internet/tls/config.go"
+    ]
+  },
+  {
+    "sha": "8f15190c230fe6975c9b18e31316c6bc494f3863",
+    "date": "2026-07-10T21:40:50Z",
+    "title": "QUIC sniffer: Fix potential panic on malformed QUIC packets again (#6471)",
+    "priority": "P0",
+    "disposition": "missing-security",
+    "reason": "Malformed QUIC sniffer panic; narrow backport",
+    "paths": [
+      "common/protocol/quic/sniff.go"
+    ]
+  },
+  {
+    "sha": "35387572e0d30999b6213cd0d3924a54e82985d7",
+    "date": "2026-07-11T13:59:24Z",
+    "title": "Finalmask: Add XMC (TCP, Minecraft) (#6210)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_finalmask.go",
+      "transport/internet/finalmask/xmc/cfb8.go",
+      "transport/internet/finalmask/xmc/client.go",
+      "transport/internet/finalmask/xmc/config.go",
+      "transport/internet/finalmask/xmc/config.pb.go",
+      "transport/internet/finalmask/xmc/config.proto",
+      "transport/internet/finalmask/xmc/derivation.go",
+      "transport/internet/finalmask/xmc/derivation_test.go",
+      "transport/internet/finalmask/xmc/handshake_test.go",
+      "transport/internet/finalmask/xmc/protocol.go",
+      "transport/internet/finalmask/xmc/server.go",
+      "transport/internet/finalmask/xmc/stream.go"
+    ]
+  },
+  {
+    "sha": "af7eb68028732a8ee3c0e5d6ab2b8a657bb2e770",
+    "date": "2026-07-11T14:30:54Z",
+    "title": "REALITY server: Set default `\"minClientVer\": \"26.3.27\"` (change it at your own risk)",
+    "priority": "P2",
+    "disposition": "compatibility-review",
+    "reason": "REALITY minClientVer default; interoperability gate",
+    "paths": [
+      "infra/conf/transport_security.go"
+    ]
+  },
+  {
+    "sha": "1f74c480d6943c8becda16ce726c66a58052c2b8",
+    "date": "2026-07-11T15:45:59Z",
+    "title": "Docker: Add `pre-release` tag (#6470)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      ".github/workflows/docker.yml"
+    ]
+  },
+  {
+    "sha": "50231eaff98ccc31b5cbd247a721c16e97fe5ec1",
+    "date": "2026-07-11T15:51:51Z",
+    "title": "Xray-core v26.7.11",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "core/core.go"
+    ]
+  },
+  {
+    "sha": "035d43897925cde32639c77f84d64a79d5f4cde7",
+    "date": "2026-07-16T18:04:03Z",
+    "title": "Bump google.golang.org/grpc from 1.82.0 to 1.82.1 (#6502)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "6ce924ad5681000b54ac8b2c096fec49783da757",
+    "date": "2026-07-16T19:53:04Z",
+    "title": "TUN inbound: Change default `name` to \"utunN\" (10~1024) (#6485)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/tun.go"
+    ]
+  },
+  {
+    "sha": "e78d8ef184707ffe58cb9b0a89e17ef0018bd025",
+    "date": "2026-07-17T21:51:29Z",
+    "title": "REALITY server: Refine warnings in parsing configuration (#6508)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_security.go",
+      "infra/conf/xray.go"
+    ]
+  },
+  {
+    "sha": "1d8eb81d7007b8613eaf87b7b9577074447a2c89",
+    "date": "2026-07-17T22:21:33Z",
+    "title": "TUN inbound: Add `desc` config for Windows (\"Wintun\" by default) (#6486)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/tun.go",
+      "proxy/tun/README.md",
+      "proxy/tun/config.pb.go",
+      "proxy/tun/config.proto",
+      "proxy/tun/tun_windows.go"
+    ]
+  },
+  {
+    "sha": "6e3322d219140a025285ded1114fe17a5edb74d8",
+    "date": "2026-07-17T22:28:51Z",
+    "title": "Bump actions/setup-go from 6 to 7 (#6511)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      ".github/workflows/release-win7.yml",
+      ".github/workflows/release.yml",
+      ".github/workflows/test.yml"
+    ]
+  },
+  {
+    "sha": "5b1b41058e8d125feca3119ad6547292371cf370",
+    "date": "2026-07-27T12:40:18Z",
+    "title": "Routing: Exclude iOS from Darwin for `process` (#6524)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "common/net/find_process_darwin.go",
+      "common/net/find_process_darwin.s",
+      "common/net/find_process_darwin_test.go",
+      "common/net/find_process_ios.go"
+    ]
+  },
+  {
+    "sha": "4aba687dd3529f47506f40415d0d35da7033d946",
+    "date": "2026-07-27T13:11:25Z",
+    "title": "XHTTP & gRPC servers: Get accurate localAddr (#6526)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/grpc/encoding/hunkconn.go",
+      "transport/internet/grpc/encoding/multiconn.go",
+      "transport/internet/grpc/encoding/remoteaddr.go",
+      "transport/internet/splithttp/hub.go"
+    ]
+  },
+  {
+    "sha": "6ab123bf8fba29a1c9157fc38f421d65c0cbb281",
+    "date": "2026-07-28T06:45:36Z",
+    "title": "XMC finalmask: Add default directional padding/keep-alive packets, matching Minecraft 26.1.2 login/join/etc traffic shapes (#6487)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_finalmask.go",
+      "infra/conf/transport_finalmask_xmc_test.go",
+      "transport/internet/finalmask/xmc/client.go",
+      "transport/internet/finalmask/xmc/config.go",
+      "transport/internet/finalmask/xmc/config.pb.go",
+      "transport/internet/finalmask/xmc/config.proto",
+      "transport/internet/finalmask/xmc/deadline.go",
+      "transport/internet/finalmask/xmc/deadline_test.go",
+      "transport/internet/finalmask/xmc/handshake_test.go",
+      "transport/internet/finalmask/xmc/packet_stream.go",
+      "transport/internet/finalmask/xmc/packet_stream_test.go",
+      "transport/internet/finalmask/xmc/padding.go",
+      "transport/internet/finalmask/xmc/padding_preset.go",
+      "transport/internet/finalmask/xmc/padding_test.go",
+      "transport/internet/finalmask/xmc/profile.go",
+      "transport/internet/finalmask/xmc/profile_test.go",
+      "transport/internet/finalmask/xmc/protocol.go",
+      "transport/internet/finalmask/xmc/protocol_test.go",
+      "transport/internet/finalmask/xmc/server.go",
+      "transport/internet/finalmask/xmc/stream.go",
+      "transport/internet/finalmask/xmc/stream_test.go"
+    ]
+  },
+  {
+    "sha": "18e283909ca253d4220136eccca0a27006ea709f",
+    "date": "2026-07-28T07:57:55Z",
+    "title": "XHTTP client: Reduce default `maxConnections` from 6 to 3 for anti-TSPU",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_method.go"
+    ]
+  },
+  {
+    "sha": "5ca6f4b7d4dc20a881d4330e498892697627ec0c",
+    "date": "2026-07-28T07:59:48Z",
+    "title": "Xray-core v26.7.28",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "core/core.go"
+    ]
+  },
+  {
+    "sha": "2b329b3675538dafe38e67cc92f811e4bbdb1179",
+    "date": "2026-08-09T08:27:08Z",
+    "title": "Bump docker/login-action from 4 to 4.5.2 (#6556)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      ".github/workflows/docker.yml"
+    ]
+  },
+  {
+    "sha": "b02bdcf4ccfffdc911a212388ae1d03bbee00f30",
+    "date": "2026-08-09T08:27:32Z",
+    "title": "Bump google.golang.org/grpc from 1.82.1 to 1.83.0 (#6585)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "fc5620de986ea4598807a36dea787653127cf345",
+    "date": "2026-08-10T05:44:12Z",
+    "title": "Bump docker/login-action from 4.5.2 to 4.6.0 (#6610)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      ".github/workflows/docker.yml"
+    ]
+  },
+  {
+    "sha": "bc6e966af890d0ef481501ec171321ec802c6857",
+    "date": "2026-08-10T05:44:15Z",
+    "title": "Bump github.com/cloudflare/circl from 1.6.4 to 1.6.5 (#6609)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "a000371b2aba07140ed56a94bc2e5675fa55f356",
+    "date": "2026-08-12T04:51:38Z",
+    "title": "Tunnel inbound: Support TPROXY on OpenBSD as well (#6546)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/dokodemo/fakeudp_openbsd.go",
+      "proxy/dokodemo/fakeudp_other.go",
+      "transport/internet/sockopt_openbsd.go",
+      "transport/internet/sockopt_other.go",
+      "transport/internet/udp/hub_openbsd.go",
+      "transport/internet/udp/hub_openbsd_test.go",
+      "transport/internet/udp/hub_other.go"
+    ]
+  },
+  {
+    "sha": "a12801c13b0a72efd2058be6d97763921b1236e2",
+    "date": "2026-08-12T05:29:32Z",
+    "title": "Routing: Add `localOS` that directly matches `runtime.GOOS` (#6553)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "app/router/condition.go",
+      "app/router/condition_test.go",
+      "app/router/config.go",
+      "app/router/config.pb.go",
+      "app/router/config.proto",
+      "infra/conf/router.go"
+    ]
+  },
+  {
+    "sha": "8b419d833df0e25935667c2b510178137d3b18ad",
+    "date": "2026-08-12T05:40:07Z",
+    "title": "Routing: Fix `process` for macOS IPv4-mapped sockets (#6557)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "common/net/find_process_darwin.go",
+      "common/net/find_process_darwin_test.go"
+    ]
+  },
+  {
+    "sha": "7d214f8b094f75322fa3990f8aadad1c912f24f5",
+    "date": "2026-08-12T08:38:01Z",
+    "title": "WireGuard outbound: Fix `sendThrough` support (#6570)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "app/proxyman/outbound/handler.go",
+      "proxy/wireguard/client.go"
+    ]
+  },
+  {
+    "sha": "7021606ad39622255ace8a3ff976b4b2550b3f87",
+    "date": "2026-08-19T05:31:30Z",
+    "title": "Bump google.golang.org/protobuf from 1.36.11 to 1.36.12 (#6616)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "09107b71dc70a3a3c6259a06dde3b7e8605bbf96",
+    "date": "2026-08-19T05:31:41Z",
+    "title": "Bump golang.org/x/net from 0.57.0 to 0.58.0 (#6633)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "2323273e373f06b829b8c1cc0b4da149153e7358",
+    "date": "2026-08-19T05:31:44Z",
+    "title": "Bump github.com/stretchr/testify from 1.11.1 to 1.12.0 (#6641)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "d3f1a2428556b22ed542f1caf3026d899bc87dd7",
+    "date": "2026-08-24T02:28:35Z",
+    "title": "Bump github.com/pion/stun/v3 from 3.1.6 to 3.1.7 (#6674)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "0604ffa9577555cc69286ed317ea48cdca0dbc3d",
+    "date": "2026-08-24T02:29:12Z",
+    "title": "Bump github.com/miekg/dns from 1.1.72 to 1.1.73 (#6675)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "5fe6d6217a1dfd6efdaeb937aa84b3daee095371",
+    "date": "2026-08-24T02:29:35Z",
+    "title": "Bump google.golang.org/grpc from 1.83.0 to 1.83.1 (#6676)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "f02a35786124a6ad046727f2408e32317cc19a41",
+    "date": "2026-08-24T02:38:00Z",
+    "title": "Bump github.com/stretchr/testify from 1.12.0 to 1.12.1 (#6657)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "c7e569b0377724600af1ea2a05eb8f4c7c3e0609",
+    "date": "2026-08-25T14:28:36Z",
+    "title": "WireGuard outbound: Add `remoteDNS` & honor TTL (#6620)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/wireguard.go",
+      "proxy/wireguard/client.go",
+      "proxy/wireguard/config.pb.go",
+      "proxy/wireguard/config.proto",
+      "proxy/wireguard/netstack.go"
+    ]
+  },
+  {
+    "sha": "9b373e39ca1aeb2068a0618baed7dc54caa4e338",
+    "date": "2026-08-25T16:49:14Z",
+    "title": "Sniffer: Fix SniffUTP() (#6667)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "common/protocol/bittorrent/bittorrent.go",
+      "common/protocol/bittorrent/bittorrent_test.go"
+    ]
+  },
+  {
+    "sha": "598bde74122f5f0207c7c6a56ccb74fbbbe33fca",
+    "date": "2026-08-25T18:00:14Z",
+    "title": "Router: Refactor to fix API data race (#6678)",
+    "priority": "P1",
+    "disposition": "missing-concurrency",
+    "reason": "Route snapshot publication; adapt fork ListRule/weights",
+    "paths": [
+      "app/router/balancing.go",
+      "app/router/balancing_override.go",
+      "app/router/router.go",
+      "app/router/webhook.go"
+    ]
+  },
+  {
+    "sha": "f124daf5a37c3b968a618f92ca42396f3c001de5",
+    "date": "2026-08-25T18:30:33Z",
+    "title": "Observatory: Fix consuming 100% CPU when no outbound matches `subjectSelector` (#6669)",
+    "priority": "P2",
+    "disposition": "missing-conditional",
+    "reason": "Normal Observatory empty-selector CPU loop; not burst",
+    "paths": [
+      "app/observatory/observer.go"
+    ]
+  },
+  {
+    "sha": "77f98eba0978cbcb425e2f8ec3cec86bd5aa8444",
+    "date": "2026-08-26T19:19:41Z",
+    "title": "XHTTP client: Fix a race condition and a data race (#6665)",
+    "priority": "P2",
+    "disposition": "partial-overlap",
+    "reason": "WaitReadCloser covered; client.closed race still needs audit",
+    "paths": [
+      "transport/internet/splithttp/client.go",
+      "transport/internet/splithttp/dialer.go"
+    ]
+  },
+  {
+    "sha": "dffc7ada5eef8a8b3df7da8928536ce57135a119",
+    "date": "2026-08-26T20:41:43Z",
+    "title": "XHTTP client: Define Request.GetBody() for packet-up so h2 can replay after GOAWAY (#6632)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/splithttp/config.go",
+      "transport/internet/splithttp/config_test.go"
+    ]
+  },
+  {
+    "sha": "25c11e2d2b808ff62ec0766b4345f1966ff2fd96",
+    "date": "2026-08-26T21:05:05Z",
+    "title": "Tunnel inbound: SO_REUSEPORT fix and IPv6 support for the OpenBSD transparent proxy (#6624)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/dokodemo/fakeudp_openbsd.go",
+      "transport/internet/sockopt_openbsd.go",
+      "transport/internet/udp/hub_openbsd.go",
+      "transport/internet/udp/hub_openbsd_test.go"
+    ]
+  },
+  {
+    "sha": "aa3d6589da5e28fc3b0303572e4330dfeb7a383c",
+    "date": "2026-08-26T21:29:58Z",
+    "title": "TUN inbound: Wait() blocks via kqueue instead of busy-spinning on Darwin (#6580)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/tun/tun_darwin.go",
+      "proxy/tun/tun_darwin_test.go"
+    ]
+  },
+  {
+    "sha": "65458e919fcb3548d44481ea7929031a14bf117e",
+    "date": "2026-08-27T20:03:59+08:00",
+    "title": "Config: Fix some issues (#6640)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "common/reflect/marshal_test.go",
+      "infra/conf/common.go",
+      "infra/conf/xray.go",
+      "proxy/http/client.go",
+      "transport/internet/tcp/hub.go",
+      "transport/internet/tcp_hub.go"
+    ]
+  },
+  {
+    "sha": "ada99a4eb00f169b0e2d650990d77fb7930967bb",
+    "date": "2026-08-27T17:25:56Z",
+    "title": "Hysteria: Upgrade to official v2.12.2 (#6565)",
+    "priority": "BLOCK",
+    "disposition": "breaking-architecture",
+    "reason": "Hy2 v2.12.2 transport/auth lifecycle migration",
+    "paths": [
+      "go.mod",
+      "go.sum",
+      "infra/conf/transport_finalmask.go",
+      "infra/conf/transport_internet.go",
+      "infra/conf/transport_method.go",
+      "transport/internet/config.pb.go",
+      "transport/internet/config.proto",
+      "transport/internet/finalmask/realm/client.go",
+      "transport/internet/finalmask/realm/config.pb.go",
+      "transport/internet/finalmask/realm/config.proto",
+      "transport/internet/finalmask/realm/portmap.go",
+      "transport/internet/finalmask/realm/server.go",
+      "transport/internet/finalmask/realm/stun.go",
+      "transport/internet/hysteria/config.pb.go",
+      "transport/internet/hysteria/config.proto",
+      "transport/internet/hysteria/congestion/brutal/brutal.go",
+      "transport/internet/hysteria/congestion/brutal/brutal_test.go",
+      "transport/internet/hysteria/congestion/utils.go",
+      "transport/internet/hysteria/dialer.go",
+      "transport/internet/hysteria/hub.go",
+      "transport/internet/splithttp/dialer.go",
+      "transport/internet/splithttp/hub.go"
+    ]
+  },
+  {
+    "sha": "540b9070f5bc0e67a04341f11bde598153957b91",
+    "date": "2026-08-27T21:46:26Z",
+    "title": "Transport: Bind the UDP outbound socket in the destination family (#6688)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/system_dialer.go"
+    ]
+  },
+  {
+    "sha": "c1958dba04ba065cd82a05b65bfe877e2323f0cc",
+    "date": "2026-08-27T22:32:45Z",
+    "title": "TUN inbound: Support `autoSystemRoutingTable` and `autoOutboundsInterface` on FreeBSD as well (#6691)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/tun/tun_freebsd.go",
+      "proxy/tun/tun_freebsd_test.go"
+    ]
+  },
+  {
+    "sha": "d9c54026c5ff1652d8fc2e58ffd06706dd27a6a6",
+    "date": "2026-08-30T12:15:25Z",
+    "title": "Sniffing: Support QUICv2 (#6695)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "common/protocol/quic/qtls_go118.go",
+      "common/protocol/quic/sniff.go",
+      "common/protocol/quic/sniff_test.go"
+    ]
+  },
+  {
+    "sha": "5e245b082e6be8c8899c34410f488e8ab001aaba",
+    "date": "2026-08-30T12:19:54Z",
+    "title": "Routing: Export HealthCheckSettings (#6680)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/observatory.go",
+      "infra/conf/router_strategy.go"
+    ]
+  },
+  {
+    "sha": "2776ea6d7426e1d024924df02d749d7021b2747f",
+    "date": "2026-08-31T23:59:04Z",
+    "title": "SS2022 outbound: Close connection to server on early returns (#6698)",
+    "priority": "KEEP",
+    "disposition": "equivalent-in-fork",
+    "reason": "SS outbound defer Close already present and regression-covered",
+    "paths": [
+      "proxy/shadowsocks_2022/outbound.go"
+    ]
+  },
+  {
+    "sha": "8ee131cbbba4e9ed26e62fe3900cb9fdfb06ab89",
+    "date": "2026-09-01T02:59:56+03:00",
+    "title": "HTTP inbound: Fix a potential panic in readResponseAndHandle100Continue() (#6545)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/http/server.go",
+      "proxy/http/server_test.go"
+    ]
+  },
+  {
+    "sha": "fc7b9806365ff47b3f99eb19dca59eacabacac38",
+    "date": "2026-09-01T04:47:55Z",
+    "title": "Sockopt: Fix indentation of the CustomSockopt block for Linux (#6568)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_sockopt.go",
+      "transport/internet/sockopt_linux.go"
+    ]
+  },
+  {
+    "sha": "cd4ce973e9f6ef3a7acf9a7030927b4143f9ea47",
+    "date": "2026-09-01T04:57:10Z",
+    "title": "WebSocket client: Avoid panic before real dialing in delayDialConn (#6544)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "transport/internet/websocket/dialer.go"
+    ]
+  },
+  {
+    "sha": "cecc88f43cb12f7ba0517080f3d82daaa07f816a",
+    "date": "2026-09-07T20:42:22Z",
+    "title": "Bump google.golang.org/grpc from 1.83.1 to 1.83.2 (#6704)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "de2caf3cef7a350453ba9079543f09660b0d837c",
+    "date": "2026-09-07T21:01:45Z",
+    "title": "Hysteria server: Fix Unix masquerade socket path (#6705)",
+    "priority": "P2",
+    "disposition": "missing-conditional",
+    "reason": "Hy2 masquerade UDS, NOT Freedom sidecar UDS redirect",
+    "paths": [
+      "transport/internet/hysteria/hub.go"
+    ]
+  },
+  {
+    "sha": "01a034be5355d2273cddf272defb0dee4f784dbf",
+    "date": "2026-09-07T21:09:58Z",
+    "title": "Blackhole outbound: Add customizable response data support (#6713)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/blackhole.go",
+      "infra/conf/blackhole_test.go",
+      "proxy/blackhole/blackhole.go",
+      "proxy/blackhole/blackhole_test.go",
+      "proxy/blackhole/config.go",
+      "proxy/blackhole/config.pb.go",
+      "proxy/blackhole/config.proto",
+      "proxy/blackhole/config_test.go"
+    ]
+  },
+  {
+    "sha": "6ce8dc53e79842af71f0b4a360cb65d9eaa1e8f7",
+    "date": "2026-09-07T21:14:41Z",
+    "title": "common/buf/writer.go: Fix buffered writes failing when payload exceeds remaining capacity (#6723)",
+    "priority": "P1",
+    "disposition": "missing-correctness",
+    "reason": "Buffered writer partial-capacity handling",
+    "paths": [
+      "common/buf/writer.go"
+    ]
+  },
+  {
+    "sha": "eef6e63bc16d6e97fd98178556d49aad7978809a",
+    "date": "2026-09-07T22:38:16Z",
+    "title": "XHTTP client: Fix a data race in WaitReadCloser (#6694)",
+    "priority": "KEEP",
+    "disposition": "equivalent-in-fork",
+    "reason": "WaitReadCloser protected by mutex/Once in fork",
+    "paths": [
+      "transport/internet/splithttp/client.go"
+    ]
+  },
+  {
+    "sha": "c7245c0336d009ea3a04f8b851620915b843e7bd",
+    "date": "2026-09-08T02:51:35Z",
+    "title": "TUN inbound: Refine Windows support (#6478)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/tun/tun_windows.go"
+    ]
+  },
+  {
+    "sha": "3e2f040cd80b33197d358da6bf0d859fae58f180",
+    "date": "2026-09-08T03:31:25Z",
+    "title": "Direct/Freedom outbound: Better Compatibility (#6058)",
+    "priority": "BLOCK",
+    "disposition": "breaking-config",
+    "reason": "Freedom compatibility after finalRules introduction",
+    "paths": [
+      "app/proxyman/config.pb.go",
+      "app/proxyman/config.proto",
+      "app/proxyman/outbound/handler.go",
+      "common/session/session.go",
+      "infra/conf/transport_internet.go",
+      "infra/conf/xray.go",
+      "proxy/freedom/freedom.go",
+      "proxy/vless/outbound/outbound.go",
+      "testing/scenarios/dns_test.go",
+      "testing/scenarios/feature_test.go",
+      "transport/internet/config.go",
+      "transport/internet/config.pb.go",
+      "transport/internet/config.proto"
+    ]
+  },
+  {
+    "sha": "47cfe9994a6b39b1f673ba35e62b091bcce15a71",
+    "date": "2026-09-08T07:22:54Z",
+    "title": "Update github.com/xtls/reality to 20260908062103",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum",
+      "infra/conf/transport_security.go",
+      "testing/scenarios/vless_test.go"
+    ]
+  },
+  {
+    "sha": "fd2ca7482211cd0185763caa4961ab7d6780918f",
+    "date": "2026-09-08T08:44:33Z",
+    "title": "go.mod: Specify Go 1.27.x",
+    "priority": "BLOCK",
+    "disposition": "toolchain",
+    "reason": "Go 1.27 requirement; no automatic dependency bump",
+    "paths": [
+      "go.mod"
+    ]
+  },
+  {
+    "sha": "37ceb8b4b65ee919fb772a8034e572f76a6e87a2",
+    "date": "2026-09-08T09:47:24Z",
+    "title": "Xray-core v26.9.8",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "core/core.go"
+    ]
+  },
+  {
+    "sha": "c037ccd98d1a22e7248c8bf4ff617f2e861c4571",
+    "date": "2026-09-08T17:19:15Z",
+    "title": "infra/vformat/main.go: Refactor (#6739)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      ".github/workflows/test.yml",
+      "go.mod",
+      "go.sum",
+      "infra/vformat/main.go",
+      "transport/pipe/pipe.go"
+    ]
+  },
+  {
+    "sha": "a1bf968be975adefa9247d7b3093613cee82f028",
+    "date": "2026-09-08T18:18:12Z",
+    "title": "VLESS config: Fix validateOutboundTransportSecurity() (#6741)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/vless.go",
+      "infra/conf/xray.go"
+    ]
+  },
+  {
+    "sha": "c26d2eda240f521cd215ef9ff8ef17f323d29452",
+    "date": "2026-09-08T18:45:38Z",
+    "title": "Direct/Freedom outbound: Skip domain resolution and `finalRules` when using `sockopt.dialerProxy` (#6742)",
+    "priority": "BLOCK",
+    "disposition": "breaking-config",
+    "reason": "dialerProxy skips finalRules/resolution; validate intended policy",
+    "paths": [
+      "proxy/freedom/freedom.go"
+    ]
+  },
+  {
+    "sha": "18a1b5042ad47ed71f01ae58f95ded4884aaba5e",
+    "date": "2026-09-08T22:15:02Z",
+    "title": "Finalmask: Make \"udpHop\" a new UDP mask (#6327)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "common/crypto/crypto.go",
+      "infra/conf/transport_finalmask.go",
+      "infra/conf/transport_internet.go",
+      "infra/conf/transport_method.go",
+      "transport/internet/config.pb.go",
+      "transport/internet/config.proto",
+      "transport/internet/finalmask/finalmask.go",
+      "transport/internet/finalmask/fragment/config.go",
+      "transport/internet/finalmask/header/custom/config.go",
+      "transport/internet/finalmask/mkcp/aes128gcm/config.go",
+      "transport/internet/finalmask/mkcp/header/config.go",
+      "transport/internet/finalmask/mkcp/original/config.go",
+      "transport/internet/finalmask/noise/config.go",
+      "transport/internet/finalmask/realm/config.go",
+      "transport/internet/finalmask/salamander/config.go",
+      "transport/internet/finalmask/sudoku/config.go",
+      "transport/internet/finalmask/udphop/config.go",
+      "transport/internet/finalmask/udphop/config.pb.go",
+      "transport/internet/finalmask/udphop/config.proto",
+      "transport/internet/finalmask/udphop/conn.go",
+      "transport/internet/finalmask/xdns/config.go",
+      "transport/internet/finalmask/xicmp/client.go",
+      "transport/internet/finalmask/xicmp/config.go",
+      "transport/internet/finalmask/xicmp/server.go",
+      "transport/internet/finalmask/xicmp/server_oob.go",
+      "transport/internet/finalmask/xmc/config.go",
+      "transport/internet/hysteria/conn.go",
+      "transport/internet/hysteria/dialer.go",
+      "transport/internet/hysteria/hub.go",
+      "transport/internet/hysteria/udphop/conn.go",
+      "transport/internet/splithttp/dialer.go",
+      "transport/internet/splithttp/hub.go"
+    ]
+  },
+  {
+    "sha": "52a412d9e2f5c2a5142b1b4e2ab3771dacb8b120",
+    "date": "2026-09-08T22:25:43Z",
+    "title": "Xray-core v26.9.9",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "core/core.go"
+    ]
+  },
+  {
+    "sha": "ccb69ea5e289a918acf0546a9d0ddc3bdbe1fe90",
+    "date": "2026-09-12T19:51:59Z",
+    "title": "common/buf/readv_windows.go: Fix raw WSARecv blocking thread and preventing connection close (#6743)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "common/buf/readv_windows.go"
+    ]
+  },
+  {
+    "sha": "c412e77a9b712082ac9ebf27fa793951cb5a7d85",
+    "date": "2026-09-12T20:09:35Z",
+    "title": "TUN inbound: Preserve UDP packet destinations with traffic stats (#6747)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/tun/handler.go"
+    ]
+  },
+  {
+    "sha": "3461c511aaf50377824d962e04ade1cc656da4f6",
+    "date": "2026-09-19T08:23:38Z",
+    "title": "XDRIVE transport: The universal remote-storage/any-service-based proxy, ignoring IP whitelists (#5645)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_internet.go",
+      "infra/conf/transport_method.go",
+      "infra/conf/transport_test.go",
+      "main/distro/all/all.go",
+      "transport/internet/xdrive/config.pb.go",
+      "transport/internet/xdrive/config.proto",
+      "transport/internet/xdrive/conn.go",
+      "transport/internet/xdrive/local.go",
+      "transport/internet/xdrive/params.go",
+      "transport/internet/xdrive/storage.go",
+      "transport/internet/xdrive/wal.go",
+      "transport/internet/xdrive/xdrive.go",
+      "transport/internet/xdrive/xdrive_test.go"
+    ]
+  },
+  {
+    "sha": "dcdfc57ccdad496e192344788a7d14a8d4c88573",
+    "date": "2026-09-19T09:03:11Z",
+    "title": "XDRIVE transport: Add the Google Drive and \"template\" backend (#6748)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/transport_method.go",
+      "infra/conf/transport_test.go",
+      "transport/internet/xdrive/client.go",
+      "transport/internet/xdrive/client_test.go",
+      "transport/internet/xdrive/config.pb.go",
+      "transport/internet/xdrive/config.proto",
+      "transport/internet/xdrive/drive.go",
+      "transport/internet/xdrive/drive_live_test.go",
+      "transport/internet/xdrive/drive_test.go",
+      "transport/internet/xdrive/jsonpath.go",
+      "transport/internet/xdrive/storage.go",
+      "transport/internet/xdrive/template.go",
+      "transport/internet/xdrive/template_test.go",
+      "transport/internet/xdrive/yandex_live_test.go"
+    ]
+  },
+  {
+    "sha": "24e6f6d5513382d92256a80c5f2e7a6e16e5d6c7",
+    "date": "2026-09-20T17:46:51Z",
+    "title": "Bump golang.org/x/net from 0.58.0 to 0.59.0 (#6756)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "8267cf953ad67110bec87d106dc2f89d438fb338",
+    "date": "2026-09-20T18:12:50Z",
+    "title": "Transport: Refactor to be based on Finalmask's dialer & listener (#6754)",
+    "priority": "BLOCK",
+    "disposition": "breaking-architecture",
+    "reason": "Finalmask dialer/listener rework collides with fork UDS/listeners",
+    "paths": [
+      "infra/conf/transport_finalmask.go",
+      "proxy/wireguard/client.go",
+      "proxy/wireguard/server.go",
+      "testing/scenarios/wireguard_test.go",
+      "transport/internet/finalmask/finalmask.go",
+      "transport/internet/finalmask/fragment/config.go",
+      "transport/internet/finalmask/header/custom/config.go",
+      "transport/internet/finalmask/header/custom/metadata_test.go",
+      "transport/internet/finalmask/header/custom/state_test.go",
+      "transport/internet/finalmask/header/custom/tcp_runtime_test.go",
+      "transport/internet/finalmask/mkcp/aes128gcm/config.go",
+      "transport/internet/finalmask/mkcp/header/config.go",
+      "transport/internet/finalmask/mkcp/original/config.go",
+      "transport/internet/finalmask/noise/config.go",
+      "transport/internet/finalmask/realm/config.go",
+      "transport/internet/finalmask/salamander/config.go",
+      "transport/internet/finalmask/sudoku/config.go",
+      "transport/internet/finalmask/tcp_test.go",
+      "transport/internet/finalmask/udp_test.go",
+      "transport/internet/finalmask/udphop/config.go",
+      "transport/internet/finalmask/udphop/config.pb.go",
+      "transport/internet/finalmask/udphop/config.proto",
+      "transport/internet/finalmask/udphop/conn.go",
+      "transport/internet/finalmask/xdns/config.go",
+      "transport/internet/finalmask/xicmp/client.go",
+      "transport/internet/finalmask/xicmp/config.go",
+      "transport/internet/finalmask/xicmp/server.go",
+      "transport/internet/finalmask/xicmp/server_oob.go",
+      "transport/internet/finalmask/xmc/config.go",
+      "transport/internet/grpc/dial.go",
+      "transport/internet/grpc/hub.go",
+      "transport/internet/httpupgrade/dialer.go",
+      "transport/internet/httpupgrade/hub.go",
+      "transport/internet/hysteria/dialer.go",
+      "transport/internet/hysteria/hub.go",
+      "transport/internet/kcp/dialer.go",
+      "transport/internet/memory_settings.go",
+      "transport/internet/splithttp/dialer.go",
+      "transport/internet/splithttp/hub.go",
+      "transport/internet/system_dialer.go",
+      "transport/internet/tcp/dialer.go",
+      "transport/internet/tcp/hub.go",
+      "transport/internet/udp/dialer.go",
+      "transport/internet/udp/hub.go",
+      "transport/internet/websocket/dialer.go",
+      "transport/internet/websocket/hub.go",
+      "transport/internet/xdrive/client.go"
+    ]
+  },
+  {
+    "sha": "efc9e6da62f339b9315afe9f87c30f74a6257253",
+    "date": "2026-09-20T19:07:51Z",
+    "title": "WireGuard outbound: Remove `remoteDNS`' \"local\" mode and `domainStrategy` (#6771)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/wireguard.go",
+      "proxy/tun/handler.go",
+      "proxy/wireguard/client.go",
+      "proxy/wireguard/config.pb.go",
+      "proxy/wireguard/config.proto",
+      "proxy/wireguard/netstack.go"
+    ]
+  },
+  {
+    "sha": "dbb1ea30ba71a5789be74445a787e76feacfae38",
+    "date": "2026-09-20T20:07:54Z",
+    "title": "WireGuard proxy: Prevent panic when closing netTun with a write in flight (#6778)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/wireguard/netstack.go"
+    ]
+  },
+  {
+    "sha": "d562d8947d3175db86b4fa849742433a9876cb63",
+    "date": "2026-09-20T22:51:03Z",
+    "title": "Hysteria outbound: Fix UDP DATAGRAM truncation with ChromeParrot (#6788)",
+    "priority": "P2",
+    "disposition": "dependency-review",
+    "reason": "ChromeParrot UDP truncation depends on Hy2 upgrade",
+    "paths": [
+      "proxy/hysteria/client.go",
+      "transport/internet/hysteria/hysteria_test.go"
+    ]
+  },
+  {
+    "sha": "7741e9e77e64e8e46818714f7c4cd06075ba0b26",
+    "date": "2026-09-24T01:57:16Z",
+    "title": "Bump golang.zx2c4.com/wireguard/windows from 1.0.1 to 1.1.1 (#6809)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "a308ded2e692a38fa2d01c3009bf11ac37e4a62b",
+    "date": "2026-09-24T01:59:28Z",
+    "title": "WireGuard outbound: Fix endpoint IP address (#6804)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/wireguard/client.go"
+    ]
+  },
+  {
+    "sha": "9927942aaa23f08b8810456e21343f91ad110bcd",
+    "date": "2026-09-24T02:04:39Z",
+    "title": "Bump google.golang.org/grpc from 1.83.2 to 1.84.0 (#6793)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "go.mod",
+      "go.sum"
+    ]
+  },
+  {
+    "sha": "7d3e44fee26795011f45b6cbdf6d53022a3e507e",
+    "date": "2026-09-24T02:13:37Z",
+    "title": "Proxy: Add MASQUE outbound & transport (IETF CONNECT-IP, RFC 9484) (#6807)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "infra/conf/masque.go",
+      "infra/conf/masque_test.go",
+      "infra/conf/transport_internet.go",
+      "infra/conf/transport_method.go",
+      "infra/conf/xray.go",
+      "main/distro/all/all.go",
+      "proxy/masque/client.go",
+      "proxy/masque/config.pb.go",
+      "proxy/masque/config.proto",
+      "proxy/wireguard/client.go",
+      "testing/scenarios/masque_test.go",
+      "transport/internet/masque/config.go",
+      "transport/internet/masque/config.pb.go",
+      "transport/internet/masque/config.proto",
+      "transport/internet/masque/conn.go",
+      "transport/internet/masque/connectip/LICENSE",
+      "transport/internet/masque/connectip/address.go",
+      "transport/internet/masque/connectip/address_test.go",
+      "transport/internet/masque/connectip/capsule.go",
+      "transport/internet/masque/connectip/capsule_test.go",
+      "transport/internet/masque/connectip/cert_test.go",
+      "transport/internet/masque/connectip/checksum.go",
+      "transport/internet/masque/connectip/checksum_test.go",
+      "transport/internet/masque/connectip/client.go",
+      "transport/internet/masque/connectip/client_test.go",
+      "transport/internet/masque/connectip/conn.go",
+      "transport/internet/masque/connectip/conn_test.go",
+      "transport/internet/masque/connectip/icmp.go",
+      "transport/internet/masque/connectip/icmp_test.go",
+      "transport/internet/masque/connectip/iprange.go",
+      "transport/internet/masque/connectip/iprange_test.go",
+      "transport/internet/masque/connectip/proxy.go",
+      "transport/internet/masque/connectip/proxy_test.go",
+      "transport/internet/masque/connectip/request.go",
+      "transport/internet/masque/connectip/request_test.go",
+      "transport/internet/masque/dialer.go",
+      "transport/internet/masque/dialer_test.go"
+    ]
+  },
+  {
+    "sha": "60e2a0c502d3f5f191d71b4343efe09c32338399",
+    "date": "2026-09-24T05:46:26Z",
+    "title": "WireGuard proxy: Release packet views after use (#6801)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "proxy/wireguard/netstack.go"
+    ]
+  },
+  {
+    "sha": "a642a190ed57c9a65cbb256cd7155bee9c458bcd",
+    "date": "2026-09-25T17:25:52Z",
+    "title": "Geodata: Prefilter regexp rules by their required literals (#6818)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "common/geodata/strmatcher/benchmark_matchers_test.go",
+      "common/geodata/strmatcher/matchers.go",
+      "common/geodata/strmatcher/matchers_regex_test.go"
+    ]
+  },
+  {
+    "sha": "61cad5ec8b692692c08aee21cb8c756bdb7da13c",
+    "date": "2026-09-25T17:59:49Z",
+    "title": "Xray-core: Reduce error log usage for performance (#6796)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "app/dispatcher/fakednssniffer.go",
+      "app/dns/config.go",
+      "app/dns/dnscommon.go",
+      "app/dns/fakedns/fake.go",
+      "app/dns/nameserver.go",
+      "app/dns/nameserver_fakedns.go",
+      "app/log/log.go",
+      "app/proxyman/inbound/always.go",
+      "app/proxyman/inbound/inbound.go",
+      "app/proxyman/inbound/worker.go",
+      "app/proxyman/outbound/handler.go",
+      "app/reverse/portal.go",
+      "app/router/config.go",
+      "common/errors/errors.go",
+      "common/errors/errors_test.go",
+      "common/log/log.go",
+      "common/log/logger.go",
+      "common/mux/client.go",
+      "common/mux/frame.go",
+      "common/mux/server.go",
+      "common/protocol/user.go",
+      "common/type.go",
+      "core/config.go",
+      "infra/conf/http.go",
+      "infra/conf/lint.go",
+      "infra/conf/loader.go",
+      "infra/conf/serial/builder.go",
+      "infra/conf/socks.go",
+      "infra/conf/transport_method.go",
+      "proxy/http/server.go",
+      "proxy/hysteria/client.go",
+      "proxy/hysteria/server.go",
+      "proxy/loopback/loopback.go",
+      "proxy/shadowsocks/client.go",
+      "proxy/shadowsocks/protocol.go",
+      "proxy/shadowsocks/server.go",
+      "proxy/shadowsocks_2022/inbound_multi.go",
+      "proxy/socks/client.go",
+      "proxy/socks/protocol.go",
+      "proxy/trojan/client.go",
+      "proxy/trojan/server.go",
+      "proxy/vless/account.go",
+      "proxy/vless/inbound/inbound.go",
+      "proxy/vless/outbound/outbound.go",
+      "proxy/vmess/account.go",
+      "proxy/vmess/encoding/client.go",
+      "proxy/vmess/inbound/inbound.go",
+      "proxy/vmess/outbound/outbound.go",
+      "transport/internet/config.go",
+      "transport/internet/dialer.go",
+      "transport/internet/kcp/dialer.go",
+      "transport/internet/reality/reality.go",
+      "transport/internet/sockopt_darwin.go",
+      "transport/internet/sockopt_freebsd.go",
+      "transport/internet/sockopt_linux.go",
+      "transport/internet/tcp/dialer.go",
+      "transport/internet/tcp/hub.go",
+      "transport/internet/tcp_hub.go",
+      "transport/internet/tls/config.go",
+      "transport/internet/tls/config_other.go"
+    ]
+  },
+  {
+    "sha": "df261e447907233af19a20ed90c0cc41905e67dd",
+    "date": "2026-09-26T03:49:37Z",
+    "title": "MASQUE client: Support HTTP/2 (Extended CONNECT, RFC 8441) (#6810)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "testing/scenarios/masque_test.go",
+      "transport/internet/masque/conn.go",
+      "transport/internet/masque/connectip/conn.go",
+      "transport/internet/masque/connectip/http2.go",
+      "transport/internet/masque/connectip/http2_test.go",
+      "transport/internet/masque/connectip/proxy.go",
+      "transport/internet/masque/connectip/request.go",
+      "transport/internet/masque/connectip/request_test.go",
+      "transport/internet/masque/dialer.go",
+      "transport/internet/masque/dialer_test.go",
+      "transport/internet/masque/http2.go",
+      "transport/internet/masque/http2_test.go"
+    ]
+  },
+  {
+    "sha": "3519dfecbd65022ba71d9bc73e94063d0cbc8636",
+    "date": "2026-09-26T03:52:03Z",
+    "title": "FakeDNS: Change default FakeIPv6Pool to 2001:2::/48 (#6815)",
+    "priority": "REVIEW",
+    "disposition": "not-individually-audited",
+    "reason": "Inventory only; title is not acceptance evidence",
+    "paths": [
+      "features/dns/fakedns.go"
+    ]
+  }
+]
