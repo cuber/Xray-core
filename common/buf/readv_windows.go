@@ -2,6 +2,8 @@ package buf
 
 import (
 	"syscall"
+
+	"golang.org/x/sys/windows"
 )
 
 type windowsReader struct {
@@ -24,14 +26,14 @@ func (r *windowsReader) Clear() {
 	r.bufs = r.bufs[:0]
 }
 
-func (r *windowsReader) Read(fd uintptr) int32 {
+func (r *windowsReader) Read(fd uintptr) (int32, error) {
 	var nBytes uint32
 	var flags uint32
 	err := syscall.WSARecv(syscall.Handle(fd), &r.bufs[0], uint32(len(r.bufs)), &nBytes, &flags, nil, nil)
-	if err != nil {
-		return -1
+	if err == windows.WSAEWOULDBLOCK {
+		return -1, nil
 	}
-	return int32(nBytes)
+	return int32(nBytes), err
 }
 
 func newMultiReader() multiReader {

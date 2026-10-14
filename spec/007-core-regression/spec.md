@@ -51,4 +51,24 @@ V-033 的代理、fresh-clone 格式负例与真实禁网实验已实现并执�
 
 ## 导航
 
+## FR-002 - Shared readv errors and deterministic DoQ fixtures
+
+The 2026-10-14 history split extracts this existing behavior from original
+`2074c223`; it introduces no new runtime behavior. This spec owns terminal
+readv errors, while spec002 owns reader interruption and cancellation.
+
+- Only would-block returns control to the poller. Unix EINTR retries; terminal
+  errors propagate, releasing buffers rather than waiting indefinitely.
+- Preserve byte counts, EOF and reset behavior with readv enabled. Do not
+  disable readv or weaken assertions to make the tests pass.
+- The DoQ test fixture binds a concrete IPv4 loopback UDP socket, retaining
+  normal QUIC OOB handling and explicit socket/connection cleanup. Optional
+  `XRAY_DNS_QUIC_DIAGNOSTIC=wildcard64` is diagnostic, not a runtime DNS change.
+- Upstream comparison must review syscall error semantics across platforms;
+  AnyTLS-specific tests alone do not establish shared-reader correctness.
+
+Validation: `go test -race -count=1 -timeout=5m ./common/buf ./app/dns`;
+`readv_error_test.go` and `readv_reset_test.go` provide independent oracles.
+Final execution evidence is recorded in spec001's history-split report.
+
 [技术计划](plan.md) · [任务](tasks.md) · [测试](tests.md) · [检查清单](checklists/requirements.md)
