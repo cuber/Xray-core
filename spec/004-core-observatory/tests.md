@@ -1,5 +1,14 @@
 # Observatory 验证矩阵
 
+## Ownership split (2026-10-14)
+
+The shared `TestContractProbeConnectionOwnsDispatchContext` and implementation
+were extracted from original 2074c223 before AnyTLS outbound. The independent
+observer/router race suites passed at that intermediate revision after restoring
+the canonical DAT test resources. HTTP/2, retry and independent-transport changes
+retain their own increments and the tests below. Current whole-tree results and
+old/new commit mapping: [split report](../001-core-fork-contracts/history-split-20261014.md).
+
 2026-10-12 optional retry increment: V-016 is covered by
 [retry-acceptance.md](retry-acceptance.md), including helper/config validation,
 actual H1/H2 reuse, concurrent pool isolation, one final health sample,

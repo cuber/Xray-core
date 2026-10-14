@@ -28,7 +28,12 @@ reference sibling repositories as integration evidence, not implementation input
 | [008](008-anytls/spec.md) | AnyTLS inbound/outbound, routing, statistics and control API |
 | [009](009-direct-control-listener/spec.md) | Direct control-plane UDS listener without traffic inbounds/routes |
 
-Each implementation commit owns its corresponding numbered spec; AnyTLS remains
+Each implementation commit owns its corresponding numbered spec; a spec may have
+multiple cohesive increments. Shared prerequisites precede their consumers, and
+research-only draft commits remain separate from runtime implementation.
+The [2026-10-14 split](001-core-fork-contracts/history-split-20261014.md) records
+the recent six-to-ten increment mapping and unchanged runtime-tree proof.
+AnyTLS remains
 last in the original 001-008 reconstruction. Later features allocate new IDs.
 001 is the cross-feature index, not a separate runtime feature.
 On 2026-09-27 the user authorized repository-local renumbering: old global
@@ -70,7 +75,9 @@ were rerun against newly numbered commits. Shared 001 evidence is included with
 the final 008 commit; earlier commits intentionally contain forward references
 to that final series index and to later specs.
 
-The current seven-commit series is on local `develop`; the numbering backup is
+The original seven-commit reconstruction was adopted on local `develop`; later
+increments and their current ownership are recorded in the split report above.
+The numbering backup is
 `backup/develop-before-local-spec-ids-20260927` at `4a93cc18`.
 The earlier documentation-bearing series is `refactor/spec-owned-docs-20260927`.
 The untouched pre-migration series is preserved as

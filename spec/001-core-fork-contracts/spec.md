@@ -2,7 +2,8 @@
 
 - Feature ID: 001-core-fork-contracts
 - Created: 2026-09-27
-- Status: Implemented（每 spec 一笔 Core 提交、补测及隔离验收完成；未切换 develop 或部署）
+- Status: Implemented. The historical reconstruction was adopted on develop;
+  subsequent split/validation status is tracked in the dated report below.
 - Baseline: xray-core `b4f08981becb71eaa995fa98ed2098ade92566bb` (v26.4.25)
   → `e7a2197424614e47d3e728da1d9cdded3454f559` (develop)，21 个提交。
 - Implementation status: 分类重建与本轮授权补测完成；提交映射见
@@ -19,6 +20,10 @@
 V-001 至 V-033 的详细步骤在各类别 tests.md；追加场景不等于已实现。
 
 ## 问题与边界
+
+2026-10-14: [Recent increment split](history-split-20261014.md) is the current
+commit-ownership map. Historical reconstruction, authorization and acceptance
+paragraphs below describe their dated runs, not current branch/deployment status.
 
 提交标题不能充当功能清单：AnyTLS 的合并提交还包含 DNS、VLESS、XHTTP、
 管理器并发和测试基础设施改动。升级上游前必须有逐项可观察的契约。

@@ -1,5 +1,13 @@
 # 回归基础设施与通用修复实施计划
 
+## 2026-10-14 increment
+
+Extract only terminal readv handling and deterministic DNS fixture changes from
+2074c223. Split the Interrupt hunk out of readv_reader.go into spec002, preserving
+the final file byte-for-byte. Execute the independent matrix in tests.md at this
+intermediate revision, before AnyTLS outbound is introduced. The historical
+plan follows; current split evidence belongs to spec001/history-split-20261014.md.
+
 1. 保留 001 的稳定 V 编号，读取共享隔离 worktree 的父流程改动和当前 dirty 状态。
 2. 复核父流程 VMess/SS2022/VLESS/Router 四处修复；避免 Publish 异步上下文过早取消。
 3. 在各所属包补直接回归：缓冲释放、共享 proto/slice、信任与 FD、缓存 barrier、

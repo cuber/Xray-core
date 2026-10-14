@@ -1,5 +1,16 @@
 # Tasks: AnyTLS
 
+## Ownership split (2026-10-14)
+
+- [x] Move shared runtime changes and independent tests into prerequisite commits
+  owned by 002, 004 and 007; preserve the complete original outbound runtime tree.
+- [x] Keep protocol/pool/UoT/config and real-chain integration tests under 008.
+- [x] Separate the implemented address adapter from draft002 research/evidence.
+- [x] Re-run intermediate client/engine/config and address adapter race tests.
+
+Whole-tree/build/adoption evidence: [split report](../001-core-fork-contracts/history-split-20261014.md).
+The original outbound/inbound task lists below retain their historical scope.
+
 ## Outbound extension (2026-09-27)
 
 The following new work is not covered by the checked historical inbound tasks.

@@ -1,6 +1,8 @@
 # 连接生命周期
 
 - Feature ID: 002-core-connection-lifecycle
+- Current increment: FR-002 owns the shared changes extracted on 2026-10-14;
+  the dated status/source/SC-001 below describes the original reconstruction.
 - Status: Implemented（隔离分支补测、提交归并及本地构建完成；未部署）
 - Authorized: 2026-09-27，用户授权分类重建、缺口补测与文档同步；主流程统一提交，不部署。
 - Source: 原 Core e7a21974，相对 b4f08981；清单见 [001](../001-core-fork-contracts/inventory.md)。
@@ -71,8 +73,7 @@ implementation dependency in the manager or buffer packages.
   and do not use cancellation to mutate buffers/counters. Terminal readv syscall
   handling belongs to spec007, not this contract.
 
-Validation: `go test -race -count=1 -timeout=5m ./common/buf ./core
-./app/proxyman/outbound ./transport/internet ./transport` (one shell command).
+Validation commands and independent oracles are in [tests.md](tests.md).
 Independent fixtures: `retirement_test.go`, `outbound_cleanup_test.go`,
 `redirect_lifecycle_test.go` and the reader/timeout/readv interruption tests.
 AnyTLS's admission/retirement/chain matrix remains a consumer test in spec008.

@@ -1,6 +1,8 @@
 # 回归基础设施与通用修复
 
 - Feature ID: 007-core-regression
+- Current increment: FR-002 owns the readv/DoQ extraction on 2026-10-14;
+  original status and SC-001 below are dated reconstruction evidence.
 - Status: Implemented（定向、全库离线回归及隔离双平台构建完成；未部署）
 - Authorized: 2026-09-27，用户授权在共享隔离 worktree 补齐 V-028 至 V-033、窄范围运行时修复及格式 baseline 修复；主流程统一提交，不部署。
 - Source: 原 Core e7a21974，相对 b4f08981；历史清单见 [001](../001-core-fork-contracts/inventory.md)。

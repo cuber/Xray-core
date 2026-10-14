@@ -27,3 +27,10 @@ Extend the existing `api.listen` string without new protobuf fields:
 - No AnyTLS, traffic routing, statistics or health algorithm changes.
 
 See [plan](plan.md), [tests](tests.md), [tasks](tasks.md).
+
+Ownership: spec003 owns traffic listeners, multi-address binding and SOCKS UDS.
+This spec owns `api.listen` direct control sockets and the exclusive Unix helper
+it introduces. Keep it independent: rolling back traffic-listener changes is not
+the same operation as restoring routed API inbounds. Re-run spec003 listener
+tests when changing the shared listener/lock implementation; do not copy its
+contracts into this spec.

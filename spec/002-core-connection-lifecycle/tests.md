@@ -1,5 +1,27 @@
 # 连接生命周期验证矩阵
 
+## Shared ownership increment (2026-10-14)
+
+```sh
+go test -race -count=1 -timeout=5m ./common/buf ./core ./app/proxyman/outbound ./transport/internet ./transport
+```
+
+| Fixture | Required oracle |
+|---|---|
+| TestRemovedDrainingHandlerStillOwnedByShutdown | Removed tag absent, existing work drains; shutdown closes it without holding the registry lock |
+| TestFailedStartDoesNotPublishOutbound / TestShutdownRejectsReplacement | Failed/closed manager never publishes new default/tag |
+| TestRejectedOutboundClosesConstructedResources | Duplicate or shutdown rejection joins the new object's worker exactly once, leaves existing object intact |
+| TestRedirectCloseOwnsPendingContext | Close cancels blocked dispatch before admission finishes |
+| TestRedirectRemainsUsableAfterRequestCancel / TestRedirectRunnerReturnDoesNotCancelConnection | Request cancellation/runner return do not steal connection ownership |
+| TestSingleReaderInterrupt / TestPacketReaderInterrupt / TestReadVReaderInterrupt / TestTimeoutWrapperInterrupt | Explicit interrupt wakes real blocked read and joins worker, without relying on deadline expiration |
+
+Run the full listed packages, not only matching new names, to retain legacy
+dispatch/UDP/UDS/Hy2 regressions. Spec008 owns protocol-specific retirement,
+sender validation and chain integration. Commands passed in the extracted
+intermediate tree; combined acceptance is in the spec001 split report.
+
+## Historical reconstruction matrix
+
 继承 001 的 V-001 至 V-004。以下受支持契约已实现并验证，不再是待实现 harness。
 Core 路径相对隔离 worktree `/Volumes/Linux/opensource/cuber/xray-core-spec`。
 2026-09-27，Go 1.26.1 darwin/arm64；原始 checkout 未修改。

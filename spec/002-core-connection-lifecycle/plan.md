@@ -1,5 +1,14 @@
 # 连接生命周期实施计划
 
+## 2026-10-14 increment
+
+Extract shared code/tests from original 2074c223 before AnyTLS outbound. Keep
+optional interfaces protocol-neutral, and leave readv syscall handling in spec007
+and observer-owned cancellation in spec004. Run the independent tests in tests.md,
+then the AnyTLS consumer matrix and whole-tree gates recorded in
+[the split report](../001-core-fork-contracts/history-split-20261014.md).
+The steps below preserve the historical reconstruction plan, not active branches.
+
 1. 历史阶段按 [spec.md](spec.md) 与原提交逐文件对应，基线 tree 对比结果保留在
    [001 重建记录](../001-core-fork-contracts/reconstruction.md)。
 2. 后续授权补测在独立 `/Volumes/Linux/opensource/cuber/xray-core-spec` 完成；

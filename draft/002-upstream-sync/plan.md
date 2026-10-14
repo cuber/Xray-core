@@ -13,7 +13,7 @@ separate branch when a broad upstream migration is approved. This draft itself
 does not authorize implementation or deployment. The user separately approved the
 narrow spec008 address-adapter adoption on canonical develop on 2026-10-05;
 that does not authorize the proposed backports below. Promotion moves draft002
-to the next Core spec ID (currently 009).
+to the next free Core spec ID from spec/README.md (currently 010).
 
 ## Phase A: Evidence and Freshness
 

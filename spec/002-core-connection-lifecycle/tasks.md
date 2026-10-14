@@ -1,5 +1,15 @@
 # 连接生命周期任务
 
+## 2026-10-14 increment
+
+- [x] Extract optional retirement, sender validation and rejected-object cleanup.
+- [x] Extract redirect cancellation and all reader interruption forwarding.
+- [x] Preserve original code bytes; independently run affected-package race tests.
+- [x] Record ownership/dependencies without copying AnyTLS integration contracts.
+
+Whole-tree/build results: [split report](../001-core-fork-contracts/history-split-20261014.md).
+The remaining tasks and status statements are historical reconstruction evidence.
+
 - [x] T001 [US-001] 从 001 提取契约和 V-001 至 V-004 稳定编号。
 - [x] T002 [US-001] 对照历史重建提交检查内容与依赖，执行原有定向测试。
 - [x] T003 [US-001] 记录历史基线 tree 对比；区分基线与后来授权的测试增量。

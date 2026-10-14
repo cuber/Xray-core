@@ -211,6 +211,10 @@
 
 ## 现有文档覆盖
 
+The tables above inventory the original reconstruction baseline, not the complete
+current endpoint. Later shared lifecycle/readv/OB, AnyTLS and direct API increments
+are mapped in [history-split-20261014.md](history-split-20261014.md).
+
 - 008 已覆盖 AnyTLS，不再创建第二份同名协议 spec。
 - docs/domain-traffic*.md 已有设计/历史测试，但混有旧容量与粒度，001/K5 明确当前契约。
 - Core infra/conf/listen.md 只有监听说明，缺少规格/任务/统一验证，纳入 K2。

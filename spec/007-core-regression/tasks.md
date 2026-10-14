@@ -1,5 +1,15 @@
 # 回归基础设施与通用修复任务
 
+## 2026-10-14 increment
+
+- [x] Extract readv syscall errors and their mock/real-reset tests from 2074c223.
+- [x] Extract deterministic DoQ socket ownership without changing production DNS.
+- [x] Run common/buf and app/dns race suites before introducing new AnyTLS code.
+- [x] Compile all packages in the intermediate tree; separate compile-only from tests.
+
+Whole-tree/build results: [split report](../001-core-fork-contracts/history-split-20261014.md).
+The remaining task list describes the original reconstruction.
+
 - [x] T001 [US-001] 从 001 提取 FR-001 和 V-028 至 V-033，保留历史追溯。
 - [x] T002 [US-001] 对照重建提交检查内容与依赖，执行原有定向测试。
 - [x] T003 [US-001] 记录历史 tree 对比；新增授权修复与原无损重建阶段区分。

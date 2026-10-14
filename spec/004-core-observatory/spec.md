@@ -1,6 +1,9 @@
 # Observatory
 
 - Feature ID: 004-core-observatory
+- Current increments: connection-owned cancellation and FR-002 through FR-004
+  are implemented. The original status/authorization/SC-001 paragraphs below
+  are historical reconstruction evidence, not today's branch or rollout state.
 - Status: Implemented（核心补测、窄修复、提交归并及本地构建完成；未部署）
 - Authorized: 2026-09-27，用户授权历史重建、隔离 worktree 补齐 V-010 至 V-014、窄修复及本目录文档同步；未授权部署。
 - Source: 历史基线为原 Core e7a21974，相对 b4f08981；见 [001 清单](../001-core-fork-contracts/inventory.md)。
@@ -160,7 +163,8 @@ The existing tagged dispatcher still owns dialing, so an unknown transport fails
 closed rather than using the default outbound. This is explicit trust in another
 outbound's health response, not independent proof that the subject carried traffic.
 
-Shlii reads `http://127.0.0.1:8080/generate_204?ob=hkt` through `sidecar-uds`,
+Historical first integration (not the current node configuration): Shlii read
+`http://127.0.0.1:8080/generate_204?ob=hkt` through `sidecar-uds`,
 which redirects to the local Sidecar HTTP UDS. Sidecar independently checks QoS
 through Core's authenticated `egress-in` and the fixed HKT SOCKS outbound. It
 does not read backend passwords or use the business balancer. Local OB reads
@@ -170,3 +174,10 @@ recovery gates remain separate and can add recovery delay. Existing randomized
 batch scheduling is unchanged; interval is not a strict maximum reaction time.
 
 Verification: [V-017](tests.md#v-017-independent-probe-transport).
+
+Current contract boundary: Core measures the whole selected HTTP request. If
+Sidecar serves cached guard health this is local response time; if Sidecar
+performs guarded live passthrough it includes that upstream HTTP request. Core
+does not interpret `ob`, ASN or passthrough configuration. Current consumer
+semantics belong to Sidecar spec005, node choices to xray-config. This feature
+does not hardcode Shlii, cached-only responses or any upstream URL.

@@ -1,6 +1,9 @@
 # Feature Specification: AnyTLS 入站与出站
 
 - Feature ID: 008-anytls
+- Status note: deployment/authorization statements below are dated historical
+  milestones. The 2026-10-14 work only splits ownership/history; it does not
+  change protocol behavior, licensing or live deployment status.
 - Renumbered: 2026-09-27，按用户要求由 003 迁至最后编号 008；需求、测试编号及历史部署事实不变。
 - Created: 2026-09-25
 - Status: Implemented and locally verified outbound; inbound implemented (internal pilot only)

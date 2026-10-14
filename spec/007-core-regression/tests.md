@@ -1,5 +1,26 @@
 # 回归基础设施与通用修复验证矩阵
 
+## Readv and DoQ increment (2026-10-14)
+
+```sh
+go test -race -count=1 -timeout=5m ./common/buf ./app/dns
+go test ./... -run '^$' -timeout=3m
+```
+
+The first command runs real tests; the second compiles all test packages but is
+not functional acceptance. Both passed at the extracted intermediate revision.
+
+- `TestReadvErrorContract`: reset/EOF/data/would-block-then-data/reset; exact
+  payload length, poller wait count and buffer cleanup, not merely no panic.
+- `TestReadvReturnsConnectionReset`: a real TCP RST must return ECONNRESET with
+  the adaptive reader explicitly on the readv path, not deadline timeout.
+- Full app/dns suite keeps resolver trust/error tests and the concrete UDPConn
+  DoQ fixture. No production resolver or public-network fallback is changed.
+- Windows/illumos syscall branches remain in the unchanged source. Darwin test
+  success does not claim runtime coverage of those platforms.
+
+## Historical reconstruction matrix
+
 继承 001 稳定 V 编号。2026-09-27 在 `../xray-core-spec` 共享隔离 worktree
 完成本轮补测；[执行证据](../001-core-fork-contracts/evidence-011.md) 为准确命令、
 JSON 路径、文件归属和失败边界的权威记录。不是只存在文档或零测试命中。
