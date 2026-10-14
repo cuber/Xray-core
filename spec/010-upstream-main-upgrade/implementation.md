@@ -79,3 +79,15 @@ These are package regressions, not the full acceptance or interop matrix.
 Config wrapper now accepts a Git worktree root without weakening its dirty-tree
 or develop tracking guards; four build wrapper tests pass. Candidate build
 output is isolated in `xray-config/build/rebase-20261014`.
+
+Dual-platform wrapper build passed at candidate `7dfa0637`; Darwin `version`
+executed successfully (26.10.10, Go 1.27.0). Artifacts are not deployed:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| darwin/arm64 | `45d145538de651fbaff073f9f22223cf1254d696caba3f7f7caf365f67027354` |
+| linux/amd64 | `779768d06d7e037df93d6b3139f7250cd3a150293cac2b074674bd96e4a80829` |
+
+Next: complete P02/P03 Hy2/readv adaptations before moving to multi-listener
+and Unix transport contracts. The candidate lacks later specs and must not be
+used with production configs or published as a replacement for develop.
