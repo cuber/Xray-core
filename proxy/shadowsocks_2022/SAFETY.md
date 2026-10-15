@@ -380,3 +380,76 @@ The same three cases passed count=20 on translated Linux/amd64 as well:
 `/tmp/core-halfclose-linux-amd64.log`. Full SS2022 and inbound packages then
 passed Darwin race count=3 (158.823s / 14.371s), including these new cases:
 `/tmp/core-ss-inbound-resume-race.log`.
+
+### Independent Client First-Read Contract (Pending Execution)
+
+`safety_external_fragment_test.go` adds
+`TestNativeSSExternalFirstReadContract`, an opt-in, eight-case matrix:
+real sing-box/Mihomo clients, distinct admin/user credentials retained together
+on the native AES-128 multi-user inbound, and whole-header/fragmented controls.
+The client configurations follow the existing `safety_interop.py` independent
+client shapes. This Go test invokes the candidate native `processTCP` handler
+over real TCP with a controlled dispatcher, not a separately built Core binary.
+The dispatcher checks the requested destination and authenticated identity and
+echoes the exact bytes through a Core transport link. This is not a production
+user-stats or full-config routing assertion.
+
+The relay buffers only the encrypted fixed handshake prefix, writes one byte,
+and waits for an observer to record Core's actual TCP read of that byte. It then
+writes the rest in chunks of at most three bytes. The observer does not split
+or fabricate reads: it delays returning the observed first read until the relay
+has published the remaining fragments. This permits a complete write receipt
+even when the current native handler immediately rejects the first short read.
+Every case logs actual write sizes, actual first-read length and elapsed prefix
+delivery time. The fragmented assertion requires multiple writes AND a real
+one-byte first read; TCP coalescing cannot silently satisfy the test. The
+whole-header positive control requires exact response bytes and the selected
+admin/user identity. The short-first-read negative control requires rejection,
+zero plaintext/wire response bytes, zero dispatches and no published identity.
+It observes the raw Core-to-relay socket reset (ECONNRESET or ECONNABORTED),
+not merely an EOF translated by the independent SOCKS client. Client-side EOF,
+reset/abort or EPIPE are acceptable translations; a timeout is not acceptance.
+The observer uses Core's recognized CounterConnection wrapper so ResetTCPConn
+can unwrap to the actual TCP socket and apply SO_LINGER(0). A custom opaque
+net.Conn wrapper would suppress that production reset path and is not used.
+No business retry or authentication-budget extension is added. The existing
+`safetyMulti` one-second absolute handshake policy is retained; relay/observer
+publication is bounded and workers/client processes are joined on cleanup.
+Mihomo readiness uses its post-up receipt, not merely listener bind.
+
+[SIP022 section 3.1.4, Detection Prevention](https://shadowsocks.org/doc/sip022.html#_3-1-4-detection-prevention)
+requires exactly one read for salt and fixed header. Insufficient data,
+decryption failure and invalid headers must not expose how many bytes were
+consumed. Its permitted strategies include consistent RST via zero linger or
+consistent FIN with draining. Native Core chooses the RST strategy. Reading
+until the header fills would violate this contract. The earlier draft's
+fragmented-success requirement was incorrect: rejection is anti-probing
+behavior, not a compatibility gap or a fragmentation bug to repair.
+
+Only compile-only validation has been performed. No external process or socket
+test was started while the main agent's AnyTLS soak was running. Runtime code
+is unchanged. Execution of all eight positive/negative cases remains pending;
+no runtime fix or passing network gate is claimed.
+
+Run serially only after the main agent allocates the test window:
+
+```sh
+XRAY_SS2022_FRAGMENT_INTEROP=1 \
+XRAY_SS2022_SINGBOX=/Volumes/Linux/opensource/cuber/xray-config/.cache/anytls/tools/sing-box-1.14.2-darwin-arm64/sing-box \
+XRAY_SS2022_MIHOMO=/Volumes/Linux/opensource/cuber/xray-config/.cache/anytls/tools/mihomo \
+go test -v -race -count=1 -timeout=2m ./proxy/shadowsocks_2022 \
+  -run '^TestNativeSSExternalFirstReadContract$' \
+  > /tmp/core-ss-independent-first-read-20261015.log 2>&1
+```
+
+Missing explicit client binaries fail the opted-in gate. Without the opt-in
+variable it skips explicitly; that skip is not first-read contract acceptance.
+No RemoveUser/old-stream test is duplicated here; Sidecar owns that evidence.
+## Coordinated First-Read Acceptance, 2026-10-15
+
+The main agent executed the documented external-client command after the
+AnyTLS normal soak finished. All eight sing-box/Mihomo, admin/user,
+complete/short-first-read cases PASS under race in 2.238s. The complete header
+controls deliver exact payloads under the intended identity; the forced one-byte
+first reads produce a TCP reset with no dispatch or response bytes.
+Log: `/tmp/core-ss2022-final-firstread-contract.log`. No runtime change was needed.
