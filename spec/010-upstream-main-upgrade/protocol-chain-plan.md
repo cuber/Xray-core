@@ -19,11 +19,18 @@ Owned files:
   explicit VLESS Mux and TLS trust controls.
 - `testing/scenarios/protocol_chain_lifecycle_test.go`: outages, cancellation,
   active Core close and warmed resource rounds.
+- `testing/scenarios/protocol_chain_listener_test.go`: physical listener capture,
+  original RawConn retirement and live/missing/foreign ownership controls.
+- `testing/scenarios/protocol_chain_domain_test.go`: independent domain-preservation
+  matrix and deny-route controls; no DNS configuration or resolver replacement.
 - This document and [verification handoff](protocol-chain-verification-20261015.md).
 
 Execution updates and retained failures are in
 [the Darwin network ledger](protocol-chain-network-20261015.md) and
-[the isolated Linux ledger](protocol-chain-linux-20261015.md). Platform/revision
+[the isolated Linux ledger](protocol-chain-linux-20261015.md). Current Core76
+Darwin results, retained original reds and additive domain coverage are in
+[the final Darwin ledger](protocol-chain-darwin-20261016.md), with
+[filtered persistent events](evidence/protocol-20261016/README.md). Platform/revision
 and instrumentation are separate gates, not interchangeable PASS evidence.
 
 ## Topology And Protocol Boundaries
@@ -45,17 +52,25 @@ user, independently of destination receipts.
 | Hy2 | Hysteria version 2 over QUIC/TLS, `h3`, distinct auth per user/hop | No SS replacement, outer TCP Mux, changed ChromeParrot/QUIC idle/pool budgets or protocol retries |
 | AnyTLS | RAW/TCP + verified TLS, distinct passwords per user/hop, native Core-owned pool with default idle/admission parameters | No outer Xray Mux, engine replacement, mocked pool or shorter idle parameters |
 
-The 80 healthy combinations use **literal IP application targets only**. They
-do not establish domain preservation or final-hop DNS resolution for SS2/VLESS
-three-hop chains. Related but non-equivalent DNS-site coverage is
+The original 80 healthy combinations use **literal IP application targets only**.
+An independent test now repeats all 16 pairs and 64 triples with two business
+domains, both users and TCP/UDP. Its final hop has domain-only `AsIs` routes to
+network-specific freedom redirects at owned literal loopback endpoints; the
+first/default outbound is blackhole. Four representative triples separately
+reject wrong-domain and literal-IP business targets with zero denied-backend
+receipts. This proves domain preservation and remote routing, **not DNS resolution
+or query ownership**. It does not change the original 292-event test selection.
+
+Related but non-equivalent DNS-site coverage is
 [`TestAnyTLSOutboundAddressDNSLocality`](../../proxy/anytls/outbound_address_test.go)
 and Sidecar's
 [`TestCandidateDialerProxyActualSocksChain`](../../../xray-sidecar-rebase-20261014/probe_chain_runtime_candidate_test.go).
-The requested limited domain extension is deferred: empty DNS server config
+The earlier DNS-resolution extension remains deferred: empty DNS server config
 implicitly creates a localhost resolver, and freedom's final-rule domain
 precheck has system/global lookup paths. The coordinator excluded expanding
-that runtime/DNS design in this increment. No system resolver mutation, domain
-fixture, or DNS PASS is inferred from the IP matrix.
+that runtime/DNS design in this increment. The additive route fixture redirects
+to IP before that precheck and neither changes global/system DNS nor claims a
+DNS PASS or an instrumented zero-query count.
 
 TLS uses a generated ECDSA CA and signed `protocol-chain.test` leaf, explicit
 fixture roots, SNI verification and `disableSystemRoot: true`. No `allowInsecure`
@@ -74,21 +89,32 @@ SKIP with a window-reservation reason, never network PASS. With
 They do not call
 `t.Parallel`. Tests run real traffic once per request, without application retries.
 
+`Core76 x3` below means ordinary, race and strict checkptr2 on clean
+`76b17aa2`, all PASS with zero skips in the dedicated selection. `76+domain x3`
+is the separately compiled additive file snapshot recorded in the final ledger.
+Historical Linux evidence retains its own revision and earlier listener oracle;
+it is not promoted to Core76 acceptance by these Darwin runs.
+
 | Test | Cases | Work Per Case | Recorded Execution |
 |---|---:|---|---|
-| `TestProtocolChainConfigMatrix` | 16 double + 64 triple | Build JSON configs for every hop, both users and complete client chain; no Core.Start/listener | Parser-only PASS |
-| `TestProtocolChainTwoHop` | All 16 ordered pairs including homogeneous pairs | Both users, TCP/UDP, two destinations per network; sizes 1/31/512/1200, plus TCP 8192/65536; 40 business requests | See network ledger |
-| `TestProtocolChainThreeHop` | All 64 ordered triples, including repetitions | Both users, TCP/UDP, two destinations per network; sizes 31/1200; 16 business requests | Darwin r6 normal/race; Linux ledger |
-| `TestProtocolChainVLESSMux` | VLESS first hop x all four exit protocols | Explicit Xray TCP Mux concurrency 8 and XUDP concurrency 8 on VLESS only; same traffic as double-hop | Darwin r6 normal/race; Linux ledger |
-| `TestProtocolChainTLSVerification` | 3 TLS protocols x 3 trust controls | Trusted root succeeds; wrong CA/SNI fail before local timeout and deliver zero business requests | Darwin r6 normal/race; Linux ledger |
-| `TestProtocolChainUDPEncodingBoundary` | SS2/bare VLESS/VLESS XUDP/Hy2, max and max+1 | Native mode-specific encoder result and output bytes, no sockets | See Linux ledger |
-| `TestProtocolChainUDPBoundary` | All 4 protocols, independently single-hop | Actual destination-specific max and max+1, exact payload or zero receipts | Linux ledger; Darwin pending |
-| `TestProtocolChainInvalidIdentity` | 4 protocols x 3 positions | Valid TCP/UDP control on destination1, wrong wire identity at first/middle/last position, zero receipts on destination0 | Linux ledger; Darwin pending |
-| `TestProtocolChainSS2UDPDiagnostic` | Up to 50 repetitions of SS2/SS2 | Native dialer delegation with tuple/read/write hashes; per-destination receipts and per-hop counters; stop on first failure | See network ledger |
-| `TestProtocolChainOutage` | All 16 pairs x each failed hop (32 cases) | Cold stop, failed TCP/UDP, restart and first fresh requests; then delivered/response-held TCP stop, failed TCP/UDP, restart and first fresh requests | Linux ledger; Darwin pending |
-| `TestProtocolChainCancellation` | All 16 pairs | Cancel response-held TCP and UDP after backend receipt; join request, then fresh same-user and other-user requests without replacing handlers | Linux ledger; Darwin pending |
-| `TestProtocolChainActiveClose` | All 16 pairs | Real doko entry, accepted TCP EOF/local listener retirement after client Close; explicit caller cleanup for UDP; natural backend EOF/join only after closing all service owners | See Linux ledger |
-| `TestProtocolChainResourceRounds` | Warmup + 3 rounds of 4 triples | Real traffic and shutdown each round; final warmed process FD/goroutine bounds | Linux ledger; Darwin pending |
+| `TestProtocolChainConfigMatrix` | 16 double + 64 triple | Build JSON configs for every hop, both users and complete client chain; no Core.Start/listener | Core76 x3 |
+| `TestProtocolChainTwoHop` | All 16 ordered pairs including homogeneous pairs | Both users, TCP/UDP, two destinations per network; sizes 1/31/512/1200, plus TCP 8192/65536; 40 business requests | Core76 x3 |
+| `TestProtocolChainThreeHop` | All 64 ordered triples, including repetitions | Both users, TCP/UDP, two destinations per network; sizes 31/1200; 16 business requests | Core76 x3 |
+| `TestProtocolChainVLESSMux` | VLESS first hop x all four exit protocols | Explicit Xray TCP Mux concurrency 8 and XUDP concurrency 8 on VLESS only; same traffic as double-hop | Core76 x3 |
+| `TestProtocolChainTLSVerification` | 3 TLS protocols x 3 trust controls | Trusted root succeeds; wrong CA/SNI fail before local timeout and deliver zero business requests | Core76 x3 |
+| `TestProtocolChainUDPEncodingBoundary` | SS2/bare VLESS/VLESS XUDP/Hy2, max and max+1 | Native mode-specific encoder result and output bytes, no sockets | Core76 x3 |
+| `TestProtocolChainUDPBoundary` | All 4 protocols, independently single-hop | Actual destination-specific max and max+1, exact payload or zero receipts | Core76 x3 |
+| `TestProtocolChainInvalidIdentity` | 4 protocols x 3 positions | Valid TCP/UDP control on destination1, wrong wire identity at first/middle/last position, zero receipts on destination0 | Core76 x3 |
+| `TestProtocolChainListenerCapture` | 4 protocols + doko TCP/UDP | Exactly one original RawConn per expected physical listener; live before and closed after Core.Close | Core76 x3 |
+| `TestProtocolChainListenerOwnershipOracle` | TCP + UDP | Live original rejected; closed original accepted despite foreign same-port rebind; foreign stays live | Core76 x3 |
+| `TestProtocolChainListenerMissingCapture` | Pure negative control | Zero capture and invalid fixture inbound list rejected | Core76 x3 |
+| `TestProtocolChainSS2UDPDiagnostic` | Up to 50 repetitions of SS2/SS2 | Native dialer delegation with tuple/read/write hashes; stop on first failure | Historical only; excluded from final 292 |
+| `TestProtocolChainOutage` | All 16 pairs x each failed hop (32 cases) | Cold stop, failed TCP/UDP, restart and first fresh requests; then delivered/response-held TCP stop, failed TCP/UDP, restart and first fresh requests | Core76 x3 |
+| `TestProtocolChainCancellation` | All 16 pairs | Cancel response-held TCP and UDP after backend receipt; join request, then fresh same-user and other-user requests without replacing handlers | Core76 x3 |
+| `TestProtocolChainActiveClose` | All 16 pairs | Real doko entry, accepted TCP EOF/local listener retirement after client Close; explicit caller cleanup for UDP; backend worker join only after closing all service owners | Core76 x3 |
+| `TestProtocolChainResourceRounds` | Warmup + 3 rounds of 4 triples | Real traffic and shutdown each round; final warmed process FD/goroutine bounds | Core76 x3 |
+| `TestProtocolChainDomainPreservation` | All 16 pairs + 64 triples | Both users, TCP/UDP, two domains mapped to distinct owned destinations, sizes 31/1200, exact receipts and per-hop/exit stats | 76+domain x3 |
+| `TestProtocolChainDomainRouteControls` | SS2/VLESS/each final protocol | Both users and TCP/UDP: valid domain control, wrong domain and literal-IP negatives, denied destination0 total receipts zero | 76+domain x3 |
 
 TCP uses a four-byte length prefix plus exact payload; UDP preserves datagram
 boundaries. Each destination owns a receipt ledger. Wrong destinations, damaged
@@ -113,7 +139,15 @@ and backend workers are stopped/joined before final receipt assertions.
   loops and accepted TCP workers must join. On the success path, backends never
   forcibly close accepted connections: real Core/client closure must produce
   EOF. A five-second drain failure remains a test failure even if forced cleanup
-  subsequently succeeds. TCP and UDP ports must be bindable after shutdown.
+  subsequently succeeds. Core listener retirement uses the original captured
+  `syscall.RawConn`, not an FD integer or subsequent port availability: exactly
+  one nonnil capture must be live at Start; after Close, `Control` must return
+  `errors.Is(err, net.ErrClosed)` without invoking its callback. Missing captures,
+  live originals and unexpected physical listeners fail. Physical ownership is
+  SS2 TCP+UDP, VLESS/AnyTLS raw TCP, Hy2 UDP, and the actual doko network; a
+  never-owned protocol/port pair is not tested. Negative controls also prove that
+  a foreign same-port socket neither causes a leak verdict nor gets closed.
+  `Core.Close` completion is not an exact all-Core-worker retirement gauge.
 - Canceled request workers must join within five seconds; other/same-user new
   requests must still succeed. Active-close accepted TCP must return `io.EOF`
   within five seconds after Close and before its fifteen-second safety context

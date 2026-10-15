@@ -1,0 +1,1326 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-10-15T17:34:35.009558+00:00",
+  "format": "Filtered structured Go Test/Package events, NOT complete original logs or stdout.",
+  "field_allowlist": [
+    "Time",
+    "Action",
+    "Package",
+    "Test",
+    "Elapsed"
+  ],
+  "action_allowlist": [
+    "start",
+    "run",
+    "pass",
+    "skip",
+    "fail"
+  ],
+  "compression": "gzip level 9, empty original filename, mtime=0",
+  "omitted": [
+    "all Output and OutputType fields",
+    "all output actions",
+    "certificates",
+    "configuration bodies",
+    "production credentials"
+  ],
+  "platform": "native Darwin/arm64; no Linux race, Linux/amd64, or Windows execution inferred",
+  "go_version": "go1.27.0 darwin/arm64",
+  "working_directory": "/Volumes/Linux/opensource/cuber/xray-core-rebase-20261014",
+  "source_snapshots": {
+    "clean-core76": {
+      "commit": "76b17aa254ee85e8c2a32b42331cc50d6dae173e",
+      "tree": "248568b501343456e7d03d06f82306c9b8075316",
+      "tracked_source_sha256": {
+        "testing/scenarios/protocol_chain_fixture_test.go": "90209d908de37baa542f1cf1db571e692b519a04f61ffd275491c03e1d77458e",
+        "testing/scenarios/protocol_chain_lifecycle_test.go": "7f4ba1ee181bbd882757c47a6a24084a6a93bad6e31ee43ef2f3fd46850fbcf0",
+        "testing/scenarios/protocol_chain_listener_test.go": "b41c9e2cd3e16069f630a55b396f73e1f24f950b67b77bc1b1e3f4191bce2a9d",
+        "testing/scenarios/protocol_chain_matrix_test.go": "0ccc0e5c8b1ea9b7cde10338fc578f87ba47af94e14149951da625d87cb50cda",
+        "go.mod": "afa9134305f5e56b39b20dc0f2b87e9964989b30fa5306cd17a09d8b3d2c3525",
+        "go.sum": "1bc496d4a3dadbcc51e4c07b9a9c767879cb7de9c1b9020c5d978b42bedafafa",
+        "transport/internet/system_dialer.go": "ce7164f96bb0e1d75c260616776bc52e1367731f623d7ccf70cfb21c5507b07c",
+        "common/mux/client.go": "6bf15f9b353972bf5e3b0afd8343e8d94584d6b5f77fa85fa4b03840d96c005c",
+        "app/proxyman/outbound/handler.go": "488e995438487fd56227e681c0f7ae5ac2d0b6da8cf567ff2478b99cbd127dc5",
+        "common/xudp/xudp.go": "b34735e9297496e671f957b609b04008f4314b30661a2439d8aae505bcd39a73",
+        "testing/scenarios/common_regular.go": "c528d0978e96bc48c8ad9e90998c2a03d827343a51ef4118f9534e7b35422945"
+      },
+      "source_dirty": false
+    },
+    "core76-plus-domain": {
+      "base_commit": "76b17aa254ee85e8c2a32b42331cc50d6dae173e",
+      "tracked_source_identical_to_base": true,
+      "additive_test_file": "testing/scenarios/protocol_chain_domain_test.go",
+      "additive_test_sha256": "e0fdf544c02abddfa7c4ab2d57f467080a4c3bcf80c8cb25a9b7e0b0261c3431",
+      "source_dirty": true
+    }
+  },
+  "runs": [
+    {
+      "id": "matrix-normal",
+      "source_snapshot": "clean-core76",
+      "instrumentation": "normal",
+      "raw_jsonl": {
+        "path": "/tmp/core76-protocol-chain-darwin-normal-r1-20261016.jsonl",
+        "sha256": "a283d53ceaf139ff388aad4d5d374e66058601afb3320c9d5c8618f3499f9928",
+        "bytes": 1384179
+      },
+      "raw_stderr": {
+        "path": "/tmp/core76-protocol-chain-darwin-normal-r1-20261016.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go tool test2json -t -p github.com/xtls/xray-core/testing/scenarios env XRAY_PROTOCOL_CHAIN_NETWORK=1 XRAY_PROTOCOL_CHAIN_STRICT=1 /tmp/core76-protocol-chain-darwin-normal-r1-20261016.test -test.run '^TestProtocolChain(ConfigMatrix|UDPEncodingBoundary|TwoHop|ThreeHop|VLESSMux|TLSVerification|UDPBoundary|InvalidIdentity|Cancellation|ActiveClose|Outage|ResourceRounds|Listener(MissingCapture|OwnershipOracle|Capture))$' -test.count=1 -test.parallel=1 -test.timeout=20m -test.failfast -test.v=test2json > /tmp/core76-protocol-chain-darwin-normal-r1-20261016.jsonl 2> /tmp/core76-protocol-chain-darwin-normal-r1-20261016.stderr"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792079860400,
+        "completed_at_ms": 1792080141852
+      },
+      "filtered_events": {
+        "file": "matrix-normal.events.jsonl.gz",
+        "sha256": "22f67ac528a4636f155f19f30e1664b1e0be8628272e306e02ffa2a4a91f101d",
+        "bytes": 5427
+      },
+      "event_counts": {
+        "package_pass": 1,
+        "package_start": 1,
+        "test_pass": 292,
+        "test_run": 292
+      },
+      "first_event_time": "2026-10-15T23:57:40.396758+08:00",
+      "last_event_time": "2026-10-16T00:02:21.849281+08:00",
+      "top_level_results": [
+        {
+          "Time": "2026-10-16T00:01:31.8232+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainOutage",
+          "Elapsed": 230.77
+        },
+        {
+          "Time": "2026-10-16T00:01:32.021247+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainCancellation",
+          "Elapsed": 0.2
+        },
+        {
+          "Time": "2026-10-16T00:01:32.264136+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainActiveClose",
+          "Elapsed": 0.24
+        },
+        {
+          "Time": "2026-10-16T00:02:03.750536+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainInvalidIdentity",
+          "Elapsed": 31.49
+        },
+        {
+          "Time": "2026-10-16T00:02:04.939168+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainResourceRounds",
+          "Elapsed": 1.19
+        },
+        {
+          "Time": "2026-10-16T00:02:04.939194+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainListenerMissingCapture",
+          "Elapsed": 0
+        },
+        {
+          "Time": "2026-10-16T00:02:04.939582+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainListenerOwnershipOracle",
+          "Elapsed": 0
+        },
+        {
+          "Time": "2026-10-16T00:02:04.958009+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainListenerCapture",
+          "Elapsed": 0.02
+        },
+        {
+          "Time": "2026-10-16T00:02:05.009445+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainConfigMatrix",
+          "Elapsed": 0.05
+        },
+        {
+          "Time": "2026-10-16T00:02:05.569344+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainTwoHop",
+          "Elapsed": 0.56
+        },
+        {
+          "Time": "2026-10-16T00:02:07.516051+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainThreeHop",
+          "Elapsed": 1.95
+        },
+        {
+          "Time": "2026-10-16T00:02:07.694587+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainVLESSMux",
+          "Elapsed": 0.18
+        },
+        {
+          "Time": "2026-10-16T00:02:11.810698+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainTLSVerification",
+          "Elapsed": 4.12
+        },
+        {
+          "Time": "2026-10-16T00:02:11.810786+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainUDPEncodingBoundary",
+          "Elapsed": 0
+        },
+        {
+          "Time": "2026-10-16T00:02:21.843971+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainUDPBoundary",
+          "Elapsed": 10.03
+        }
+      ],
+      "package_results": [
+        {
+          "Time": "2026-10-16T00:02:21.849281+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Elapsed": 281.566
+        }
+      ],
+      "result_details": "All top-level and package results; leaf events are in the filtered gzip."
+    },
+    {
+      "id": "matrix-race",
+      "source_snapshot": "clean-core76",
+      "instrumentation": "race",
+      "raw_jsonl": {
+        "path": "/tmp/core76-protocol-chain-darwin-race-r1-20261016.jsonl",
+        "sha256": "526f0d0ce6102cf4c85175098d4704f53b945403e1e3018ba960959d06282bce",
+        "bytes": 1388250
+      },
+      "raw_stderr": {
+        "path": "/tmp/core76-protocol-chain-darwin-race-r1-20261016.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go tool test2json -t -p github.com/xtls/xray-core/testing/scenarios env XRAY_PROTOCOL_CHAIN_NETWORK=1 XRAY_PROTOCOL_CHAIN_STRICT=1 /tmp/core76-protocol-chain-darwin-race-r1-20261016.test -test.run '^TestProtocolChain(ConfigMatrix|UDPEncodingBoundary|TwoHop|ThreeHop|VLESSMux|TLSVerification|UDPBoundary|InvalidIdentity|Cancellation|ActiveClose|Outage|ResourceRounds|Listener(MissingCapture|OwnershipOracle|Capture))$' -test.count=1 -test.parallel=1 -test.timeout=20m -test.failfast -test.v=test2json > /tmp/core76-protocol-chain-darwin-race-r1-20261016.jsonl 2> /tmp/core76-protocol-chain-darwin-race-r1-20261016.stderr"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792080169642,
+        "completed_at_ms": 1792080469318
+      },
+      "filtered_events": {
+        "file": "matrix-race.events.jsonl.gz",
+        "sha256": "dbe4d39a702f9cc8793a786caf461195f60a2a6ae90e0f4f50bf3c0275e70ed1",
+        "bytes": 5689
+      },
+      "event_counts": {
+        "package_pass": 1,
+        "package_start": 1,
+        "test_pass": 292,
+        "test_run": 292
+      },
+      "first_event_time": "2026-10-16T00:02:49.67059+08:00",
+      "last_event_time": "2026-10-16T00:07:49.312208+08:00",
+      "top_level_results": [
+        {
+          "Time": "2026-10-16T00:06:49.359777+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainOutage",
+          "Elapsed": 238.52
+        },
+        {
+          "Time": "2026-10-16T00:06:49.956464+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainCancellation",
+          "Elapsed": 0.6
+        },
+        {
+          "Time": "2026-10-16T00:06:50.61732+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainActiveClose",
+          "Elapsed": 0.66
+        },
+        {
+          "Time": "2026-10-16T00:07:22.952383+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainInvalidIdentity",
+          "Elapsed": 32.34
+        },
+        {
+          "Time": "2026-10-16T00:07:24.553303+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainResourceRounds",
+          "Elapsed": 1.6
+        },
+        {
+          "Time": "2026-10-16T00:07:24.553439+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainListenerMissingCapture",
+          "Elapsed": 0
+        },
+        {
+          "Time": "2026-10-16T00:07:24.554018+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainListenerOwnershipOracle",
+          "Elapsed": 0
+        },
+        {
+          "Time": "2026-10-16T00:07:24.581467+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainListenerCapture",
+          "Elapsed": 0.03
+        },
+        {
+          "Time": "2026-10-16T00:07:25.28362+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainConfigMatrix",
+          "Elapsed": 0.7
+        },
+        {
+          "Time": "2026-10-16T00:07:27.52387+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainTwoHop",
+          "Elapsed": 2.24
+        },
+        {
+          "Time": "2026-10-16T00:07:33.389603+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainThreeHop",
+          "Elapsed": 5.87
+        },
+        {
+          "Time": "2026-10-16T00:07:33.89619+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainVLESSMux",
+          "Elapsed": 0.51
+        },
+        {
+          "Time": "2026-10-16T00:07:38.199215+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainTLSVerification",
+          "Elapsed": 4.3
+        },
+        {
+          "Time": "2026-10-16T00:07:38.199579+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainUDPEncodingBoundary",
+          "Elapsed": 0
+        },
+        {
+          "Time": "2026-10-16T00:07:48.269799+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainUDPBoundary",
+          "Elapsed": 10.07
+        }
+      ],
+      "package_results": [
+        {
+          "Time": "2026-10-16T00:07:49.312208+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Elapsed": 299.645
+        }
+      ],
+      "result_details": "All top-level and package results; leaf events are in the filtered gzip."
+    },
+    {
+      "id": "matrix-checkptr",
+      "source_snapshot": "clean-core76",
+      "instrumentation": "checkptr",
+      "raw_jsonl": {
+        "path": "/tmp/core76-protocol-chain-darwin-checkptr-r1-20261016.jsonl",
+        "sha256": "ec346513b986aaa6563b3b18fe00d82536334e034fb33f862d73ac2d6e632058",
+        "bytes": 1384442
+      },
+      "raw_stderr": {
+        "path": "/tmp/core76-protocol-chain-darwin-checkptr-r1-20261016.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go tool test2json -t -p github.com/xtls/xray-core/testing/scenarios env XRAY_PROTOCOL_CHAIN_NETWORK=1 XRAY_PROTOCOL_CHAIN_STRICT=1 /tmp/core76-protocol-chain-darwin-checkptr-r1-20261016.test -test.run '^TestProtocolChain(ConfigMatrix|UDPEncodingBoundary|TwoHop|ThreeHop|VLESSMux|TLSVerification|UDPBoundary|InvalidIdentity|Cancellation|ActiveClose|Outage|ResourceRounds|Listener(MissingCapture|OwnershipOracle|Capture))$' -test.count=1 -test.parallel=1 -test.timeout=20m -test.failfast -test.v=test2json > /tmp/core76-protocol-chain-darwin-checkptr-r1-20261016.jsonl 2> /tmp/core76-protocol-chain-darwin-checkptr-r1-20261016.stderr"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792080506946,
+        "completed_at_ms": 1792080796077
+      },
+      "filtered_events": {
+        "file": "matrix-checkptr.events.jsonl.gz",
+        "sha256": "0b8470009039530309fe1b168c2235d307460f09d4b6873aaa3f90ce448bada7",
+        "bytes": 5458
+      },
+      "event_counts": {
+        "package_pass": 1,
+        "package_start": 1,
+        "test_pass": 292,
+        "test_run": 292
+      },
+      "first_event_time": "2026-10-16T00:08:27.038368+08:00",
+      "last_event_time": "2026-10-16T00:13:16.070688+08:00",
+      "top_level_results": [
+        {
+          "Time": "2026-10-16T00:12:26.055527+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainOutage",
+          "Elapsed": 237.96
+        },
+        {
+          "Time": "2026-10-16T00:12:26.244285+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainCancellation",
+          "Elapsed": 0.19
+        },
+        {
+          "Time": "2026-10-16T00:12:26.446167+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainActiveClose",
+          "Elapsed": 0.2
+        },
+        {
+          "Time": "2026-10-16T00:12:57.910059+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainInvalidIdentity",
+          "Elapsed": 31.46
+        },
+        {
+          "Time": "2026-10-16T00:12:59.102719+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainResourceRounds",
+          "Elapsed": 1.19
+        },
+        {
+          "Time": "2026-10-16T00:12:59.102749+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainListenerMissingCapture",
+          "Elapsed": 0
+        },
+        {
+          "Time": "2026-10-16T00:12:59.103023+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainListenerOwnershipOracle",
+          "Elapsed": 0
+        },
+        {
+          "Time": "2026-10-16T00:12:59.120803+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainListenerCapture",
+          "Elapsed": 0.02
+        },
+        {
+          "Time": "2026-10-16T00:12:59.191121+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainConfigMatrix",
+          "Elapsed": 0.07
+        },
+        {
+          "Time": "2026-10-16T00:12:59.753659+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainTwoHop",
+          "Elapsed": 0.56
+        },
+        {
+          "Time": "2026-10-16T00:13:01.739458+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainThreeHop",
+          "Elapsed": 1.99
+        },
+        {
+          "Time": "2026-10-16T00:13:01.899104+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainVLESSMux",
+          "Elapsed": 0.16
+        },
+        {
+          "Time": "2026-10-16T00:13:06.012467+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainTLSVerification",
+          "Elapsed": 4.11
+        },
+        {
+          "Time": "2026-10-16T00:13:06.012555+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainUDPEncodingBoundary",
+          "Elapsed": 0
+        },
+        {
+          "Time": "2026-10-16T00:13:16.06392+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainUDPBoundary",
+          "Elapsed": 10.05
+        }
+      ],
+      "package_results": [
+        {
+          "Time": "2026-10-16T00:13:16.070688+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Elapsed": 289.036
+        }
+      ],
+      "result_details": "All top-level and package results; leaf events are in the filtered gzip."
+    },
+    {
+      "id": "default-normal",
+      "source_snapshot": "clean-core76",
+      "instrumentation": "normal",
+      "raw_jsonl": {
+        "path": "/tmp/core76-default-darwin-normal-r1-20261016.jsonl",
+        "sha256": "16fdd2c5ad22e5ed0c93bca4fb58188147fc31ece4d64b09833b69efe07014f3",
+        "bytes": 8331465
+      },
+      "raw_stderr": {
+        "path": "/tmp/core76-default-darwin-normal-r1-20261016.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env -u XRAY_PROTOCOL_CHAIN_NETWORK -u XRAY_PROTOCOL_CHAIN_STRICT -u XRAY_PROTOCOL_CHAIN_DIAGNOSTIC -u XRAY_TEST_NETWORK -u XRAY_TEST_PROXY -u XRAY_TEST_UDP_PROXY -u ANYTLS_SINGBOX -u ANYTLS_MIHOMO -u ANYTLS_STRICT -u ANYTLS_SOAK_DURATION -u ANYTLS_SOAK_STRICT -u ANYTLS_CHAIN_FAULT_DIAGNOSTICS -u ANYTLS_REUSE_DIAGNOSTIC -u ANYTLS_UDP_ITERATIONS -u ANYTLS_LOOPBACK_TRAP -u ANYTLS_PROCESS_CONFIG -u XRAY_SS2022_SOAK -u XRAY_SS2022_FRAGMENT_INTEROP -u XRAY_SCENARIO_RACE_FIXTURE GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOWORK=off GOFLAGS= PATH=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin:/opt/homebrew/bin:/usr/bin:/bin /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go test -mod=readonly -count=1 -p=1 -parallel=1 -timeout=15m -failfast -json ./... > /tmp/core76-default-darwin-normal-r1-20261016.jsonl 2> /tmp/core76-default-darwin-normal-r1-20261016.stderr"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792080833099,
+        "completed_at_ms": 1792081771147
+      },
+      "filtered_events": {
+        "file": "default-normal.events.jsonl.gz",
+        "sha256": "80d42f74e0171c909fe6c0eb10f3fff8e3a913aa1d71324ce3d1e70a8c5592e2",
+        "bytes": 81648
+      },
+      "event_counts": {
+        "package_pass": 102,
+        "package_skip": 77,
+        "package_start": 179,
+        "test_pass": 3481,
+        "test_run": 3552,
+        "test_skip": 71
+      },
+      "first_event_time": "2026-10-16T00:13:53.513401+08:00",
+      "last_event_time": "2026-10-16T00:29:30.991807+08:00",
+      "top_level_results": [],
+      "package_results": [
+        {
+          "Time": "2026-10-16T00:14:20.185704+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/app/dns",
+          "Elapsed": 22.136
+        },
+        {
+          "Time": "2026-10-16T00:14:42.488177+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/app/proxyman/outbound",
+          "Elapsed": 10.48
+        },
+        {
+          "Time": "2026-10-16T00:15:23.647148+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/common/retry",
+          "Elapsed": 13.006
+        },
+        {
+          "Time": "2026-10-16T00:15:37.139311+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/common/signal",
+          "Elapsed": 12.423
+        },
+        {
+          "Time": "2026-10-16T00:15:50.43176+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/common/task",
+          "Elapsed": 12.636
+        },
+        {
+          "Time": "2026-10-16T00:21:47.627668+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/proxy/anytls",
+          "Elapsed": 337.853
+        },
+        {
+          "Time": "2026-10-16T00:22:01.673013+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/proxy/anytls/internal/engine",
+          "Elapsed": 13.398
+        },
+        {
+          "Time": "2026-10-16T00:23:11.296395+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/proxy/shadowsocks_2022",
+          "Elapsed": 52.689
+        },
+        {
+          "Time": "2026-10-16T00:28:15.433801+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Elapsed": 281.417
+        },
+        {
+          "Time": "2026-10-16T00:28:38.925352+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/transport/internet/finalmask/sudoku",
+          "Elapsed": 15.92
+        },
+        {
+          "Time": "2026-10-16T00:28:57.798134+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/transport/internet/hysteria",
+          "Elapsed": 11.226
+        },
+        {
+          "Time": "2026-10-16T00:29:11.114791+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/transport/internet/kcp",
+          "Elapsed": 11.934
+        }
+      ],
+      "result_details": "Default lists only slow packages (>10s); every Test/Package result is in the filtered gzip."
+    },
+    {
+      "id": "default-race",
+      "source_snapshot": "clean-core76",
+      "instrumentation": "race",
+      "raw_jsonl": {
+        "path": "/tmp/core76-default-darwin-race-r1-20261016.jsonl",
+        "sha256": "c13ed2196b9075e30b4f0837d634dea319ffd2e478bcfe808ca3e1b57557ac25",
+        "bytes": 8351996
+      },
+      "raw_stderr": {
+        "path": "/tmp/core76-default-darwin-race-r1-20261016.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env -u XRAY_PROTOCOL_CHAIN_NETWORK -u XRAY_PROTOCOL_CHAIN_STRICT -u XRAY_PROTOCOL_CHAIN_DIAGNOSTIC -u XRAY_TEST_NETWORK -u XRAY_TEST_PROXY -u XRAY_TEST_UDP_PROXY -u ANYTLS_SINGBOX -u ANYTLS_MIHOMO -u ANYTLS_STRICT -u ANYTLS_SOAK_DURATION -u ANYTLS_SOAK_STRICT -u ANYTLS_CHAIN_FAULT_DIAGNOSTICS -u ANYTLS_REUSE_DIAGNOSTIC -u ANYTLS_UDP_ITERATIONS -u ANYTLS_LOOPBACK_TRAP -u ANYTLS_PROCESS_CONFIG -u XRAY_SS2022_SOAK -u XRAY_SS2022_FRAGMENT_INTEROP -u XRAY_SCENARIO_RACE_FIXTURE GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOWORK=off GOFLAGS= PATH=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin:/opt/homebrew/bin:/usr/bin:/bin /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go test -mod=readonly -race -count=1 -p=1 -parallel=1 -timeout=45m -failfast -json ./... > /tmp/core76-default-darwin-race-r1-20261016.jsonl 2> /tmp/core76-default-darwin-race-r1-20261016.stderr"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792081808813,
+        "completed_at_ms": 1792083917198
+      },
+      "filtered_events": {
+        "file": "default-race.events.jsonl.gz",
+        "sha256": "1bfb02678c7ebe327170059615a5a720435f503cc2c89f8baa266e767e53a0c4",
+        "bytes": 84219
+      },
+      "event_counts": {
+        "package_pass": 102,
+        "package_skip": 77,
+        "package_start": 179,
+        "test_pass": 3482,
+        "test_run": 3552,
+        "test_skip": 70
+      },
+      "first_event_time": "2026-10-16T00:30:09.253486+08:00",
+      "last_event_time": "2026-10-16T01:05:17.039321+08:00",
+      "top_level_results": [],
+      "package_results": [
+        {
+          "Time": "2026-10-16T00:30:40.496806+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/app/dns",
+          "Elapsed": 24.087
+        },
+        {
+          "Time": "2026-10-16T00:31:15.353625+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/app/proxyman/outbound",
+          "Elapsed": 11.539
+        },
+        {
+          "Time": "2026-10-16T00:32:36.308386+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/common/retry",
+          "Elapsed": 14.042
+        },
+        {
+          "Time": "2026-10-16T00:32:51.854012+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/common/signal",
+          "Elapsed": 13.518
+        },
+        {
+          "Time": "2026-10-16T00:33:07.564588+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/common/task",
+          "Elapsed": 13.681000000000001
+        },
+        {
+          "Time": "2026-10-16T00:34:05.942953+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/core",
+          "Elapsed": 44.884
+        },
+        {
+          "Time": "2026-10-16T00:40:52.89745+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/proxy/anytls",
+          "Elapsed": 388.491
+        },
+        {
+          "Time": "2026-10-16T00:41:08.166233+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/proxy/anytls/internal/engine",
+          "Elapsed": 14.51
+        },
+        {
+          "Time": "2026-10-16T00:42:25.434371+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/proxy/shadowsocks_2022",
+          "Elapsed": 54.07
+        },
+        {
+          "Time": "2026-10-16T00:44:39.716543+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/proxy/tun",
+          "Elapsed": 126.921
+        },
+        {
+          "Time": "2026-10-16T00:45:19.781219+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/proxy/vmess/aead",
+          "Elapsed": 33.925
+        },
+        {
+          "Time": "2026-10-16T01:03:02.563874+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Elapsed": 1055.154
+        },
+        {
+          "Time": "2026-10-16T01:03:52.297197+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/transport/internet/finalmask/sudoku",
+          "Elapsed": 36.511
+        },
+        {
+          "Time": "2026-10-16T01:04:22.58094+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/transport/internet/hysteria",
+          "Elapsed": 13.179
+        },
+        {
+          "Time": "2026-10-16T01:04:49.453518+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/transport/internet/kcp",
+          "Elapsed": 23.142
+        }
+      ],
+      "result_details": "Default lists only slow packages (>10s); every Test/Package result is in the filtered gzip."
+    },
+    {
+      "id": "default-checkptr",
+      "source_snapshot": "clean-core76",
+      "instrumentation": "checkptr",
+      "raw_jsonl": {
+        "path": "/tmp/core76-default-darwin-checkptr-r1-20261016.jsonl",
+        "sha256": "fc5e442d8563880dea8e6996695afdb9bebec478c5be16f2fc31e2bc9dd5fb97",
+        "bytes": 8334805
+      },
+      "raw_stderr": {
+        "path": "/tmp/core76-default-darwin-checkptr-r1-20261016.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env -u XRAY_PROTOCOL_CHAIN_NETWORK -u XRAY_PROTOCOL_CHAIN_STRICT -u XRAY_PROTOCOL_CHAIN_DIAGNOSTIC -u XRAY_TEST_NETWORK -u XRAY_TEST_PROXY -u XRAY_TEST_UDP_PROXY -u ANYTLS_SINGBOX -u ANYTLS_MIHOMO -u ANYTLS_STRICT -u ANYTLS_SOAK_DURATION -u ANYTLS_SOAK_STRICT -u ANYTLS_CHAIN_FAULT_DIAGNOSTICS -u ANYTLS_REUSE_DIAGNOSTIC -u ANYTLS_UDP_ITERATIONS -u ANYTLS_LOOPBACK_TRAP -u ANYTLS_PROCESS_CONFIG -u XRAY_SS2022_SOAK -u XRAY_SS2022_FRAGMENT_INTEROP -u XRAY_SCENARIO_RACE_FIXTURE GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOWORK=off GOFLAGS=-gcflags=all=-d=checkptr=2 PATH=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin:/opt/homebrew/bin:/usr/bin:/bin /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go test -mod=readonly -gcflags=all=-d=checkptr=2 -count=1 -p=1 -parallel=1 -timeout=15m -failfast -json ./... > /tmp/core76-default-darwin-checkptr-r1-20261016.jsonl 2> /tmp/core76-default-darwin-checkptr-r1-20261016.stderr"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792083929598,
+        "completed_at_ms": 1792084886483
+      },
+      "filtered_events": {
+        "file": "default-checkptr.events.jsonl.gz",
+        "sha256": "3919fb9be30f33db5541e7dadfeb48aa604be4b39a32afc6a814f23d038340df",
+        "bytes": 82000
+      },
+      "event_counts": {
+        "package_pass": 102,
+        "package_skip": 77,
+        "package_start": 179,
+        "test_pass": 3481,
+        "test_run": 3552,
+        "test_skip": 71
+      },
+      "first_event_time": "2026-10-16T01:05:30.027412+08:00",
+      "last_event_time": "2026-10-16T01:21:26.327082+08:00",
+      "top_level_results": [],
+      "package_results": [
+        {
+          "Time": "2026-10-16T01:05:57.339188+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/app/dns",
+          "Elapsed": 22.137
+        },
+        {
+          "Time": "2026-10-16T01:06:19.275257+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/app/proxyman/outbound",
+          "Elapsed": 10.497
+        },
+        {
+          "Time": "2026-10-16T01:07:02.471344+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/common/retry",
+          "Elapsed": 13.016
+        },
+        {
+          "Time": "2026-10-16T01:07:16.0433+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/common/signal",
+          "Elapsed": 12.411
+        },
+        {
+          "Time": "2026-10-16T01:07:30.059377+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/common/task",
+          "Elapsed": 12.662
+        },
+        {
+          "Time": "2026-10-16T01:07:51.026606+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/core",
+          "Elapsed": 13.048
+        },
+        {
+          "Time": "2026-10-16T01:13:36.591241+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/proxy/anytls",
+          "Elapsed": 338.006
+        },
+        {
+          "Time": "2026-10-16T01:13:50.929525+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/proxy/anytls/internal/engine",
+          "Elapsed": 13.289
+        },
+        {
+          "Time": "2026-10-16T01:15:00.073961+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/proxy/shadowsocks_2022",
+          "Elapsed": 53.049
+        },
+        {
+          "Time": "2026-10-16T01:20:00.23288+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Elapsed": 275.987
+        },
+        {
+          "Time": "2026-10-16T01:20:23.990677+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/transport/internet/finalmask/sudoku",
+          "Elapsed": 16.096
+        },
+        {
+          "Time": "2026-10-16T01:20:44.578055+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/transport/internet/hysteria",
+          "Elapsed": 11.271
+        },
+        {
+          "Time": "2026-10-16T01:21:08.741613+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/transport/internet/kcp",
+          "Elapsed": 21.901
+        }
+      ],
+      "result_details": "Default lists only slow packages (>10s); every Test/Package result is in the filtered gzip."
+    },
+    {
+      "id": "domain-normal",
+      "source_snapshot": "core76-plus-domain",
+      "instrumentation": "normal",
+      "raw_jsonl": {
+        "path": "/tmp/core76-domain-darwin-normal-r1-20261016.jsonl",
+        "sha256": "44a5a71b4d3061b628c753b5c8cfad1433cc05ef8799432a4c7226c302237d09",
+        "bytes": 766331
+      },
+      "raw_stderr": {
+        "path": "/tmp/core76-domain-darwin-normal-r1-20261016.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go tool test2json -t -p github.com/xtls/xray-core/testing/scenarios env XRAY_PROTOCOL_CHAIN_NETWORK=1 XRAY_PROTOCOL_CHAIN_STRICT=1 /tmp/core76-domain-darwin-normal-r1-20261016.test -test.run '^TestProtocolChainDomain(Preservation|RouteControls)$' -test.count=1 -test.parallel=1 -test.timeout=10m -test.failfast -test.v=test2json > /tmp/core76-domain-darwin-normal-r1-20261016.jsonl 2> /tmp/core76-domain-darwin-normal-r1-20261016.stderr"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792085149865,
+        "completed_at_ms": 1792085191066
+      },
+      "filtered_events": {
+        "file": "domain-normal.events.jsonl.gz",
+        "sha256": "405de99094564c36519d2380bd2f65990aa00986c9eaa3f3a97049435a62b091",
+        "bytes": 1764
+      },
+      "event_counts": {
+        "package_pass": 1,
+        "package_start": 1,
+        "test_pass": 86,
+        "test_run": 86
+      },
+      "first_event_time": "2026-10-16T01:25:49.932193+08:00",
+      "last_event_time": "2026-10-16T01:26:31.061119+08:00",
+      "top_level_results": [
+        {
+          "Time": "2026-10-16T01:25:54.800413+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainDomainPreservation",
+          "Elapsed": 3.78
+        },
+        {
+          "Time": "2026-10-16T01:26:31.05636+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainDomainRouteControls",
+          "Elapsed": 36.26
+        }
+      ],
+      "package_results": [
+        {
+          "Time": "2026-10-16T01:26:31.061119+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Elapsed": 41.129
+        }
+      ],
+      "result_details": "All top-level and package results; leaf events are in the filtered gzip."
+    },
+    {
+      "id": "domain-race",
+      "source_snapshot": "core76-plus-domain",
+      "instrumentation": "race",
+      "raw_jsonl": {
+        "path": "/tmp/core76-domain-darwin-race-r1-20261016.jsonl",
+        "sha256": "dfda2a5c48fb9f6460cfcd372a8374e714273e0f05e00610a02e839f526a444c",
+        "bytes": 770201
+      },
+      "raw_stderr": {
+        "path": "/tmp/core76-domain-darwin-race-r1-20261016.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go tool test2json -t -p github.com/xtls/xray-core/testing/scenarios env XRAY_PROTOCOL_CHAIN_NETWORK=1 XRAY_PROTOCOL_CHAIN_STRICT=1 /tmp/core76-domain-darwin-race-r1-20261016.test -test.run '^TestProtocolChainDomain(Preservation|RouteControls)$' -test.count=1 -test.parallel=1 -test.timeout=10m -test.failfast -test.v=test2json > /tmp/core76-domain-darwin-race-r1-20261016.jsonl 2> /tmp/core76-domain-darwin-race-r1-20261016.stderr"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792085207804,
+        "completed_at_ms": 1792085257046
+      },
+      "filtered_events": {
+        "file": "domain-race.events.jsonl.gz",
+        "sha256": "47d2cf946eb3010cbdaf859b08621043d120359ee9fa0fae1ac0df2b2eabbd7d",
+        "bytes": 1796
+      },
+      "event_counts": {
+        "package_pass": 1,
+        "package_start": 1,
+        "test_pass": 86,
+        "test_run": 86
+      },
+      "first_event_time": "2026-10-16T01:26:47.952716+08:00",
+      "last_event_time": "2026-10-16T01:27:37.036824+08:00",
+      "top_level_results": [
+        {
+          "Time": "2026-10-16T01:26:59.42137+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainDomainPreservation",
+          "Elapsed": 9.9
+        },
+        {
+          "Time": "2026-10-16T01:27:36.012829+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainDomainRouteControls",
+          "Elapsed": 36.59
+        }
+      ],
+      "package_results": [
+        {
+          "Time": "2026-10-16T01:27:37.036824+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Elapsed": 49.085
+        }
+      ],
+      "result_details": "All top-level and package results; leaf events are in the filtered gzip."
+    },
+    {
+      "id": "domain-checkptr",
+      "source_snapshot": "core76-plus-domain",
+      "instrumentation": "checkptr",
+      "raw_jsonl": {
+        "path": "/tmp/core76-domain-darwin-checkptr-r1-20261016.jsonl",
+        "sha256": "ed328d421302271565bc0edf7dab3c48019c3c33e1df40839f0f99fdc7a6eed7",
+        "bytes": 766028
+      },
+      "raw_stderr": {
+        "path": "/tmp/core76-domain-darwin-checkptr-r1-20261016.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go tool test2json -t -p github.com/xtls/xray-core/testing/scenarios env XRAY_PROTOCOL_CHAIN_NETWORK=1 XRAY_PROTOCOL_CHAIN_STRICT=1 /tmp/core76-domain-darwin-checkptr-r1-20261016.test -test.run '^TestProtocolChainDomain(Preservation|RouteControls)$' -test.count=1 -test.parallel=1 -test.timeout=10m -test.failfast -test.v=test2json > /tmp/core76-domain-darwin-checkptr-r1-20261016.jsonl 2> /tmp/core76-domain-darwin-checkptr-r1-20261016.stderr"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792085265221,
+        "completed_at_ms": 1792085306401
+      },
+      "filtered_events": {
+        "file": "domain-checkptr.events.jsonl.gz",
+        "sha256": "abf9e4ad142576f6ee034de3e9831a3f788c94d8572ae717d40e5fa86b0090b4",
+        "bytes": 1742
+      },
+      "event_counts": {
+        "package_pass": 1,
+        "package_start": 1,
+        "test_pass": 86,
+        "test_run": 86
+      },
+      "first_event_time": "2026-10-16T01:27:45.246915+08:00",
+      "last_event_time": "2026-10-16T01:28:26.391889+08:00",
+      "top_level_results": [
+        {
+          "Time": "2026-10-16T01:27:50.145239+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainDomainPreservation",
+          "Elapsed": 3.82
+        },
+        {
+          "Time": "2026-10-16T01:28:26.38546+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Test": "TestProtocolChainDomainRouteControls",
+          "Elapsed": 36.24
+        }
+      ],
+      "package_results": [
+        {
+          "Time": "2026-10-16T01:28:26.391889+08:00",
+          "Action": "pass",
+          "Package": "github.com/xtls/xray-core/testing/scenarios",
+          "Elapsed": 41.146
+        }
+      ],
+      "result_details": "All top-level and package results; leaf events are in the filtered gzip."
+    }
+  ],
+  "compilations": [
+    {
+      "binary": {
+        "path": "/tmp/core76-protocol-chain-darwin-normal-r1-20261016.test",
+        "sha256": "5ad7617596dcf69a048d2d55f2b77cfa64b8044f511933f2bd40ec942341c255",
+        "bytes": 51964930
+      },
+      "compile_log": {
+        "path": "/tmp/core76-protocol-chain-compile-normal-r1-20261016.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOWORK=off GOMAXPROCS=2 /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go test -mod=readonly -p=2 -c ./testing/scenarios -o /tmp/core76-protocol-chain-darwin-normal-r1-20261016.test > /tmp/core76-protocol-chain-compile-normal-r1-20261016.log 2>&1"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792079825752,
+        "completed_at_ms": 1792079829632
+      }
+    },
+    {
+      "binary": {
+        "path": "/tmp/core76-protocol-chain-darwin-race-r1-20261016.test",
+        "sha256": "b7aac54a389eedb740d697245d690d884607588db52e74077057dd5ae10aa66c",
+        "bytes": 63555906
+      },
+      "compile_log": {
+        "path": "/tmp/core76-protocol-chain-compile-race-r1-20261016.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOWORK=off GOMAXPROCS=2 CGO_ENABLED=1 /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go test -mod=readonly -p=2 -race -c ./testing/scenarios -o /tmp/core76-protocol-chain-darwin-race-r1-20261016.test > /tmp/core76-protocol-chain-compile-race-r1-20261016.log 2>&1"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792079827029,
+        "completed_at_ms": 1792079830480
+      }
+    },
+    {
+      "binary": {
+        "path": "/tmp/core76-protocol-chain-darwin-checkptr-r1-20261016.test",
+        "sha256": "380fb0fcbe9cb8695df1d4d09e8a7f25a9ed83f8e9d20f2a274c60d321bf65e1",
+        "bytes": 53025842
+      },
+      "compile_log": {
+        "path": "/tmp/core76-protocol-chain-compile-checkptr-r1-20261016.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOWORK=off GOMAXPROCS=2 /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go test -mod=readonly -p=2 -gcflags=all=-d=checkptr=2 -c ./testing/scenarios -o /tmp/core76-protocol-chain-darwin-checkptr-r1-20261016.test > /tmp/core76-protocol-chain-compile-checkptr-r1-20261016.log 2>&1"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792079828294,
+        "completed_at_ms": 1792079831100
+      }
+    },
+    {
+      "binary": {
+        "path": "/tmp/core76-domain-darwin-normal-r1-20261016.test",
+        "sha256": "a106093ad035778e816f812d106719acc98541d666b1eaf017001629926a53dc",
+        "bytes": 51998978
+      },
+      "compile_log": {
+        "path": "/tmp/core76-domain-compile-normal-r1-20261016.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOWORK=off GOFLAGS= GOMAXPROCS=2 CGO_ENABLED=1 /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go test -mod=readonly -p=2 -c ./testing/scenarios -o /tmp/core76-domain-darwin-normal-r1-20261016.test > /tmp/core76-domain-compile-normal-r1-20261016.log 2>&1"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792084958016,
+        "completed_at_ms": 1792084961644
+      }
+    },
+    {
+      "binary": {
+        "path": "/tmp/core76-domain-darwin-race-r1-20261016.test",
+        "sha256": "8480cf757e08eb5575b4669b90181edae2451240d7545b7a9937c1d7736f6138",
+        "bytes": 63589954
+      },
+      "compile_log": {
+        "path": "/tmp/core76-domain-compile-race-r1-20261016.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOWORK=off GOFLAGS= GOMAXPROCS=2 CGO_ENABLED=1 /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go test -mod=readonly -p=2 -race -c ./testing/scenarios -o /tmp/core76-domain-darwin-race-r1-20261016.test > /tmp/core76-domain-compile-race-r1-20261016.log 2>&1"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792084981234,
+        "completed_at_ms": 1792084985009
+      }
+    },
+    {
+      "binary": {
+        "path": "/tmp/core76-domain-darwin-checkptr-r1-20261016.test",
+        "sha256": "8f5a20faa9c9f525182b283b4316ad3d46bb6dd427de7e53de8dc255d289868c",
+        "bytes": 53043378
+      },
+      "compile_log": {
+        "path": "/tmp/core76-domain-compile-checkptr-r1-20261016.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOWORK=off GOFLAGS= GOMAXPROCS=2 CGO_ENABLED=1 /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go test -mod=readonly -p=2 -gcflags=all=-d=checkptr=2 -c ./testing/scenarios -o /tmp/core76-domain-darwin-checkptr-r1-20261016.test > /tmp/core76-domain-compile-checkptr-r1-20261016.log 2>&1"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792084995652,
+        "completed_at_ms": 1792084998906
+      }
+    }
+  ],
+  "static_validation": [
+    {
+      "kind": "format",
+      "log": {
+        "path": "/tmp/core76-domain-format-r1-20261016.log",
+        "sha256": "18421449e0c22aa8e5b769a115a2bfa6072abb765cb97717974c1eff16697986",
+        "bytes": 99
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOWORK=off GOFLAGS= GOMAXPROCS=2 PATH=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin:/opt/homebrew/bin:/usr/bin:/bin bash .github/check-gofmt.sh > /tmp/core76-domain-format-r1-20261016.log 2>&1"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792085013017,
+        "completed_at_ms": 1792085015026
+      }
+    },
+    {
+      "kind": "vet",
+      "log": {
+        "path": "/tmp/core76-domain-vet-r1-20261016.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "execution": {
+        "argv": [
+          "/bin/zsh",
+          "-lc",
+          "env GOROOT=/Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOWORK=off GOFLAGS= GOMAXPROCS=2 /Users/cube/Dev/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.0.darwin-arm64/bin/go vet -mod=readonly -p=2 ./... > /tmp/core76-domain-vet-r1-20261016.log 2>&1"
+        ],
+        "exit_code": 0,
+        "started_at_ms": 1792085025363,
+        "completed_at_ms": 1792085028468
+      }
+    }
+  ],
+  "default_scenario_child_provenance": [
+    {
+      "mode": "normal",
+      "binary_sha256": "572ebb0b5a6094159aae0e25b6d1d06f699dc1d963c617340346dd65e0e70995",
+      "buildinfo": {
+        "path": "/tmp/core76-default-darwin-child-normal-buildinfo-r1-20261016.log",
+        "sha256": "059797e14429988a4fe1757467997d90e74500d99e9cc11253b796f7f644fe79",
+        "bytes": 4780
+      },
+      "vcs_revision": "76b17aa254ee85e8c2a32b42331cc50d6dae173e",
+      "vcs_modified": false
+    },
+    {
+      "mode": "race",
+      "binary_sha256": "bbed2da39ac6e3902b8caedc8469f7db4a85ffd67f345043a5d7038d7e1aa0f4",
+      "buildinfo": {
+        "path": "/tmp/core76-default-darwin-child-race-buildinfo-r1-20261016.log",
+        "sha256": "c9e283997de5397f3651a90460616794e8cf9360444d87bfe4b18a427ed36751",
+        "bytes": 4798
+      },
+      "vcs_revision": "76b17aa254ee85e8c2a32b42331cc50d6dae173e",
+      "vcs_modified": false
+    },
+    {
+      "mode": "checkptr",
+      "binary_sha256": "b759d2701641d5de9a64074913f9b5d76a3d5ce3b0dc44453b225f0491afa752",
+      "buildinfo": {
+        "path": "/tmp/core76-default-darwin-child-checkptr-buildinfo-r1-20261016.log",
+        "sha256": "d73b906b39f9930afc2c1afa4dc0ef23b234f9f8e39ebb02664bcb2658106587",
+        "bytes": 4814
+      },
+      "vcs_revision": "76b17aa254ee85e8c2a32b42331cc50d6dae173e",
+      "vcs_modified": false
+    }
+  ],
+  "retained_historical_raw_evidence": [
+    {
+      "path": "/tmp/core44-protocol-chain-darwin-normal-r1-20261015.jsonl",
+      "sha256": "ba306e59bf0b52a51ab059dd5f6083b33778c52874ebd543b279d4161ce57723",
+      "bytes": 246919,
+      "note": "Original FAIL at InvalidIdentity/ss2/position2, UDP rebind 52242; historical owner unknown.",
+      "source_commit": "44d93de6d13b37b3c0fac194370f32a792f91ae4"
+    },
+    {
+      "path": "/tmp/core44-darwin-negative-portowner-ss2position2-count50-lldb-r1-20261015.log",
+      "sha256": "a241a14eaa393bf08e7fdc8ff185c076113df7d59f2ad0312195c09682d92d8a",
+      "bytes": 39906,
+      "note": "Stopped on fourth iteration at Fatalf; only three iterations passed, not 50; failed port argument not decoded.",
+      "source_commit": "44d93de6d13b37b3c0fac194370f32a792f91ae4"
+    },
+    {
+      "path": "/tmp/core44-darwin-portowner-global-count50-r1-20261015.lsof",
+      "sha256": "fb5c76709b51624bd8074eaa8e86abe9313600770f71ef8e3b07e289ca2e99e2",
+      "bytes": 180941,
+      "note": "55590 socket coexistence corroboration only; no retrospective attribution of 52242.",
+      "source_commit": "44d93de6d13b37b3c0fac194370f32a792f91ae4"
+    },
+    {
+      "path": "/tmp/core-upgrade-scenarios-full-45m.json",
+      "sha256": "ff571dc455532f5b73513e797445678e638d6995be52c7296c2cee832ce9bd53",
+      "bytes": 2593811,
+      "note": "Historical race MASQUE duration baseline; not current-source acceptance."
+    }
+  ],
+  "default_pass_set_difference": [
+    "Race additionally executes TestSudokuChildRaceZeroExitRejected; ordinary/checkptr skip that race-only negative control."
+  ],
+  "limitations": [
+    "Raw files remain temporary; SHA256 anchors their exact bytes but is not a persistent copy.",
+    "This archive intentionally cannot recover output text, skip reasons, stacks, or wire payloads.",
+    "The 292 matrix/default runs precede the additive domain file; no post-addition full-default run is claimed."
+  ]
+}

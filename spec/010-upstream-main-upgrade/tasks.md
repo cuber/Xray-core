@@ -84,7 +84,27 @@ They do not mark unrelated release adoption or historical alternatives complete.
 - [x] T023 Reproduce observed Darwin UDP return-path misdelivery, add a real-wire
   baseline-failing regression and a narrowly scoped literal-loopback source fix;
   see [spec002](../002-core-connection-lifecycle/system-udp-loopback-source-20261015.md).
-- [ ] T024 Execute invalid identities, packet boundaries, cancellation, active
+- [x] T024 Execute invalid identities, packet boundaries, cancellation, active
   shutdown, cold/established relay outage, fresh recovery and resource rounds.
+  Core76's full 292-event selection passes ordinary/race/checkptr2 with zero
+  skips/failures, including strict original-RawConn ownership controls. Whole
+  defaults and the separate 86-event domain-preservation group also completed;
+  exact revisions, skips and persistent events are in
+  [the final Darwin ledger](protocol-chain-darwin-20261016.md).
 - [ ] T025 Reconcile independent client/server interop, native Linux and
   three-Akile sustained/public-chain acceptance with a frozen paired build.
+  This is partially executed, not wholly untested or accepted: independent
+  sing-box/Mihomo interop passed all 20 directions plus 60 negatives in Darwin
+  ordinary/race and Linux/arm64 ordinary (source-specific
+  [Sidecar ledger](../../../xray-sidecar-rebase-20261014/spec/006-upstream-main-upgrade/vless-matrix-interop-20261015.md)).
+  Core44 native Linux/amd64 matrix passed 281 events on each Akile host, and all
+  three hosts' standalone SS2/VLESS 600s gates plus two default-TTL retirement
+  rounds passed. These are not Core76/domain Linux reruns or public-chain RSS
+  acceptance. Public same-protocol functional checks have results; captured
+  `vless-ss2-vless` 600s/idle/fresh wire checks passed for both clients with zero
+  failures, but TK temporary RSS growth 67444KiB exceeded the unchanged 65536KiB
+  cap, so overall acceptance remains FAIL, not diagnosed as a leak. Other mixed
+  and aggregate public resource gates remain open; earlier failures stay
+  retained. Exact paired revisions and independent gate boundaries belong to
+  [Config's execution ledger](../../../xray-config-rebase-20261014/spec/003-paired-upgrade-restore/protocol-acceptance-20261015.md)
+  and [the measured RSS finding](../../../xray-config-rebase-20261014/spec/003-paired-upgrade-restore/protocol-public-memory-20261016.md).
