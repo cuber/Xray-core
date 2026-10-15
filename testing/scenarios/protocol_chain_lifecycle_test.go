@@ -154,7 +154,6 @@ func TestProtocolChainActiveClose(t *testing.T) {
 				network string
 			}
 			var requests []request
-			var entryPorts []int
 			for user := range 2 {
 				f.clients[user].close(t)
 				ports := map[string]int{"tcp": protocolChainPort(t), "udp": protocolChainPort(t)}
@@ -165,7 +164,6 @@ func TestProtocolChainActiveClose(t *testing.T) {
 						"tag": network, "listen": "127.0.0.1", "port": ports[network], "protocol": "dokodemo-door",
 						"settings": map[string]any{"address": "127.0.0.1", "port": int(dest.Port), "network": network},
 					})
-					entryPorts = append(entryPorts, ports[network])
 				}
 				config := f.clientConfigs[user]
 				config["inbounds"] = ins
@@ -204,19 +202,6 @@ func TestProtocolChainActiveClose(t *testing.T) {
 					t.Fatalf("Core.Close did not cause accepted TCP EOF: err=%v ctx=%v", err, r.ctx.Err())
 				}
 				r.cancel()
-			}
-			for _, port := range entryPorts {
-				address := fmt.Sprintf("127.0.0.1:%d", port)
-				ln, err := net.Listen("tcp4", address)
-				if err != nil {
-					t.Fatal("client TCP listener survived Core.Close", err)
-				}
-				ln.Close()
-				pc, err := net.ListenPacket("udp4", address)
-				if err != nil {
-					t.Fatal("client UDP listener survived Core.Close", err)
-				}
-				pc.Close()
 			}
 			for _, r := range requests {
 				if r.network == "udp" {

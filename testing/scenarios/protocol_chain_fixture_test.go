@@ -181,8 +181,9 @@ func protocolChainJSON(t *testing.T, config map[string]any) []byte {
 }
 
 type protocolChainCore struct {
-	x    *core.Instance
-	once sync.Once
+	x         *core.Instance
+	once      sync.Once
+	listeners *protocolChainListenerOwner
 }
 
 func protocolChainStart(t *testing.T, config map[string]any) *protocolChainCore {
@@ -191,13 +192,22 @@ func protocolChainStart(t *testing.T, config map[string]any) *protocolChainCore 
 	if err != nil {
 		t.Fatal(err)
 	}
+	expected, err := protocolChainExpectedListeners(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	listeners := protocolChainWatchListeners(t, expected)
+	defer listeners.release()
 	x, err := core.New(parsed)
 	if err != nil {
 		t.Fatal(err)
 	}
-	c := &protocolChainCore{x: x}
+	c := &protocolChainCore{x: x, listeners: listeners}
 	t.Cleanup(func() { c.close(t) })
 	if err := x.Start(); err != nil {
+		t.Fatal(err)
+	}
+	if err := listeners.check(false); err != nil {
 		t.Fatal(err)
 	}
 	return c
@@ -225,6 +235,9 @@ func (c *protocolChainCore) close(t *testing.T) {
 			}
 		}()
 		protocolChainWait(t, done, 5*time.Second, "Core.Close")
+		if err := c.listeners.check(true); err != nil {
+			t.Fatal(err)
+		}
 	})
 }
 
@@ -510,6 +523,7 @@ func protocolChainFixtureStart(t *testing.T, protocols []string, mux bool) *prot
 
 func (f *protocolChainFixture) close(t *testing.T) {
 	t.Helper()
+	// Each owner checks its original RawConn, not a port a foreign socket may reuse.
 	for _, c := range f.clients {
 		c.close(t)
 	}
@@ -520,19 +534,6 @@ func (f *protocolChainFixture) close(t *testing.T) {
 		// No forced backend connection close on the success path. EOF must be
 		// caused by the real client/Core shutdown, not by fixture cleanup.
 		b.stop(t, false)
-	}
-	for _, port := range f.ports {
-		address := fmt.Sprintf("127.0.0.1:%d", port)
-		ln, err := net.Listen("tcp4", address)
-		if err != nil {
-			t.Fatalf("TCP listener did not retire: %v", err)
-		}
-		ln.Close()
-		pc, err := net.ListenPacket("udp4", address)
-		if err != nil {
-			t.Fatalf("UDP listener did not retire: %v", err)
-		}
-		pc.Close()
 	}
 }
 
