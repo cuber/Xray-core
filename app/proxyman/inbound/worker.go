@@ -34,6 +34,142 @@ type worker interface {
 	Proxy() proxy.Inbound
 }
 
+type acceptedConnection struct {
+	conn   stat.Connection
+	cancel context.CancelFunc
+}
+
+// streamOwnership serializes publication, not socket I/O or callback execution.
+// Entries use pointer identity: a Connection implementation need not be comparable.
+type streamOwnership struct {
+	mu        sync.Mutex
+	closed    bool
+	started   bool
+	startDone chan struct{}
+	closeDone chan struct{}
+	hub       internet.Listener
+	active    map[*acceptedConnection]struct{}
+	starting  sync.WaitGroup
+	running   sync.WaitGroup
+}
+
+func (s *streamOwnership) beginStart() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed || s.started {
+		return false
+	}
+	s.started = true
+	s.startDone = make(chan struct{})
+	s.starting.Add(1)
+	return true
+}
+
+func (s *streamOwnership) finishStart() {
+	close(s.startDone)
+	s.starting.Done()
+}
+
+func (s *streamOwnership) listenerAddr(ctx context.Context) net.Addr {
+	s.mu.Lock()
+	ready := s.startDone
+	s.mu.Unlock()
+	if ready != nil {
+		select {
+		case <-ready:
+		case <-ctx.Done():
+			return nil
+		}
+	}
+	s.mu.Lock()
+	hub := s.hub
+	s.mu.Unlock()
+	if hub == nil {
+		return nil
+	}
+	return hub.Addr()
+}
+
+func (s *streamOwnership) publish(hub internet.Listener) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return false
+	}
+	s.hub = hub
+	return true
+}
+
+func (s *streamOwnership) accept(parent context.Context, conn stat.Connection) (context.Context, *acceptedConnection) {
+	ctx, cancel := context.WithCancel(parent)
+	entry := &acceptedConnection{conn: conn, cancel: cancel}
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		cancel()
+		conn.Close()
+		return nil, nil
+	}
+	if s.active == nil {
+		s.active = make(map[*acceptedConnection]struct{})
+	}
+	s.active[entry] = struct{}{}
+	s.running.Add(1)
+	s.mu.Unlock()
+	return ctx, entry
+}
+
+func (s *streamOwnership) retire(entry *acceptedConnection) {
+	entry.cancel()
+	entry.conn.Close()
+	s.mu.Lock()
+	delete(s.active, entry)
+	s.mu.Unlock()
+	s.running.Done()
+}
+
+func (s *streamOwnership) stop() error {
+	s.mu.Lock()
+	if s.closed {
+		done := s.closeDone
+		s.mu.Unlock()
+		<-done
+		return nil
+	}
+	s.closed = true
+	s.closeDone = make(chan struct{})
+	connections, hub := s.active, s.hub
+	s.active = nil
+	s.mu.Unlock()
+	defer close(s.closeDone)
+
+	// Cancel every request before closing any potentially blocking resource.
+	for entry := range connections {
+		entry.cancel()
+	}
+	for entry := range connections {
+		entry.conn.Close()
+	}
+	var errs []interface{}
+	if hub != nil {
+		if err := hub.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	// A Listen already in progress must close its rejected hub before Done.
+	s.starting.Wait()
+	if len(errs) > 0 {
+		return errors.New("failed to close all resources").Base(errors.New(serial.Concat(errs...)))
+	}
+	return nil
+}
+
+func (s *streamOwnership) close() error {
+	err := s.stop()
+	s.running.Wait()
+	return err
+}
+
 type tcpWorker struct {
 	address         net.Address
 	port            net.Port
@@ -46,7 +182,7 @@ type tcpWorker struct {
 	uplinkCounter   stats.Counter
 	downlinkCounter stats.Counter
 
-	hub internet.Listener
+	ownership streamOwnership
 
 	ctx context.Context
 }
@@ -58,8 +194,28 @@ func getTProxyType(s *internet.MemoryStreamConfig) internet.SocketConfig_TProxyM
 	return s.SocketSettings.Tproxy
 }
 
+func (w *tcpWorker) isLoopback(ctx context.Context, dest net.Destination) bool {
+	if w.address == net.AnyIP || w.address == net.AnyIPv6 {
+		return dest.Port.Value() == w.port.Value() && IsLocal(dest.Address.IP())
+	}
+	// Accepted TPROXY sockets can report the original destination as LocalAddr.
+	// Only the listening socket identifies this inbound's own endpoint.
+	addr := w.ownership.listenerAddr(ctx)
+	return addr != nil && addr.String() == dest.NetAddr()
+}
+
 func (w *tcpWorker) callback(conn stat.Connection) {
-	ctx, cancel := context.WithCancel(w.ctx)
+	ctx, entry := w.ownership.accept(w.ctx, conn)
+	if entry == nil {
+		return
+	}
+	go func() {
+		defer w.ownership.retire(entry)
+		w.process(ctx, conn)
+	}()
+}
+
+func (w *tcpWorker) process(ctx context.Context, conn stat.Connection) {
 	sid := session.NewID()
 	ctx = c.ContextWithID(ctx, sid)
 
@@ -80,19 +236,7 @@ func (w *tcpWorker) callback(conn stat.Connection) {
 
 		if dest.IsValid() {
 			// Check if try to connect to this inbound itself (can cause loopback)
-			var isLoopBack bool
-			if w.address == net.AnyIP || w.address == net.AnyIPv6 {
-				if dest.Port.Value() == w.port.Value() && IsLocal(dest.Address.IP()) {
-					isLoopBack = true
-				}
-			} else {
-				if w.hub.Addr().String() == dest.NetAddr() {
-					isLoopBack = true
-				}
-			}
-			if isLoopBack {
-				cancel()
-				conn.Close()
+			if w.isLoopback(ctx, dest) {
 				errors.LogError(ctx, errors.New("loopback connection detected"))
 				return
 			}
@@ -123,8 +267,6 @@ func (w *tcpWorker) callback(conn stat.Connection) {
 	if err := w.proxy.Process(ctx, net.Network_TCP, conn, w.dispatcher); err != nil {
 		errors.LogInfoInner(ctx, err, "connection ends")
 	}
-	cancel()
-	conn.Close()
 }
 
 func (w *tcpWorker) Proxy() proxy.Inbound {
@@ -132,6 +274,10 @@ func (w *tcpWorker) Proxy() proxy.Inbound {
 }
 
 func (w *tcpWorker) Start() error {
+	if !w.ownership.beginStart() {
+		return errors.New("TCP worker is closed")
+	}
+	defer w.ownership.finishStart()
 	ctx := context.Background()
 
 	if v, ok := w.proxy.(*hysteria_proxy.Server); ok {
@@ -139,31 +285,24 @@ func (w *tcpWorker) Start() error {
 	}
 
 	hub, err := internet.ListenTCP(ctx, w.address, w.port, w.stream, func(conn stat.Connection) {
-		go w.callback(conn)
+		w.callback(conn)
 	})
 	if err != nil {
 		return errors.New("failed to listen TCP on ", w.port).Base(err)
 	}
-	w.hub = hub
+	if !w.ownership.publish(hub) {
+		hub.Close()
+		return errors.New("TCP worker closed during listen")
+	}
 	return nil
 }
 
 func (w *tcpWorker) Close() error {
-	var errs []interface{}
-	if w.hub != nil {
-		if err := common.Close(w.hub); err != nil {
-			errs = append(errs, err)
-		}
-		if err := common.Close(w.proxy); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	if len(errs) > 0 {
-		return errors.New("failed to close all resources").Base(errors.New(serial.Concat(errs...)))
-	}
-
-	return nil
+	return w.ownership.close()
 }
+
+func (w *tcpWorker) stop() error { return w.ownership.stop() }
+func (w *tcpWorker) wait()       { w.ownership.running.Wait() }
 
 func (w *tcpWorker) Port() net.Port {
 	return w.port
@@ -478,10 +617,6 @@ func (w *udpWorker) Close() error {
 		}
 	}
 
-	if err := common.Close(w.proxy); err != nil {
-		errs = append(errs, err)
-	}
-
 	if len(errs) > 0 {
 		return errors.New("failed to close all resources").Base(errors.New(serial.Concat(errs...)))
 	}
@@ -506,13 +641,23 @@ type dsWorker struct {
 	uplinkCounter   stats.Counter
 	downlinkCounter stats.Counter
 
-	hub internet.Listener
+	ownership streamOwnership
 
 	ctx context.Context
 }
 
 func (w *dsWorker) callback(conn stat.Connection) {
-	ctx, cancel := context.WithCancel(w.ctx)
+	ctx, entry := w.ownership.accept(w.ctx, conn)
+	if entry == nil {
+		return
+	}
+	go func() {
+		defer w.ownership.retire(entry)
+		w.process(ctx, conn)
+	}()
+}
+
+func (w *dsWorker) process(ctx context.Context, conn stat.Connection) {
 	sid := session.NewID()
 	ctx = c.ContextWithID(ctx, sid)
 
@@ -538,10 +683,6 @@ func (w *dsWorker) callback(conn stat.Connection) {
 	if err := w.proxy.Process(ctx, net.Network_UNIX, conn, w.dispatcher); err != nil {
 		errors.LogInfoInner(ctx, err, "connection ends")
 	}
-	cancel()
-	if err := conn.Close(); err != nil {
-		errors.LogInfoInner(ctx, err, "failed to close connection")
-	}
 }
 
 func (w *dsWorker) Proxy() proxy.Inbound {
@@ -553,33 +694,30 @@ func (w *dsWorker) Port() net.Port {
 }
 
 func (w *dsWorker) Start() error {
+	if !w.ownership.beginStart() {
+		return errors.New("Unix worker is closed")
+	}
+	defer w.ownership.finishStart()
 	ctx := context.Background()
 	hub, err := internet.ListenUnix(ctx, w.address, w.stream, func(conn stat.Connection) {
-		go w.callback(conn)
+		w.callback(conn)
 	})
 	if err != nil {
 		return errors.New("failed to listen Unix Domain Socket on ", w.address).Base(err)
 	}
-	w.hub = hub
+	if !w.ownership.publish(hub) {
+		hub.Close()
+		return errors.New("Unix worker closed during listen")
+	}
 	return nil
 }
 
 func (w *dsWorker) Close() error {
-	var errs []interface{}
-	if w.hub != nil {
-		if err := common.Close(w.hub); err != nil {
-			errs = append(errs, err)
-		}
-		if err := common.Close(w.proxy); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	if len(errs) > 0 {
-		return errors.New("failed to close all resources").Base(errors.New(serial.Concat(errs...)))
-	}
-
-	return nil
+	return w.ownership.close()
 }
+
+func (w *dsWorker) stop() error { return w.ownership.stop() }
+func (w *dsWorker) wait()       { w.ownership.running.Wait() }
 
 func IsLocal(ip net.IP) bool {
 	addrs, err := net.InterfaceAddrs()

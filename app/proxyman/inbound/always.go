@@ -2,6 +2,7 @@ package inbound
 
 import (
 	"context"
+	"sync"
 
 	"github.com/xtls/xray-core/app/proxyman"
 	"github.com/xtls/xray-core/common"
@@ -50,6 +51,8 @@ type AlwaysOnInboundHandler struct {
 	workers        []worker
 	mux            *mux.Server
 	tag            string
+	closeOnce      sync.Once
+	closeErr       error
 }
 
 func NewAlwaysOnInboundHandler(ctx context.Context, tag string, receiverConfig *proxyman.ReceiverConfig, proxyConfig interface{}) (*AlwaysOnInboundHandler, error) {
@@ -196,12 +199,10 @@ func (h *AlwaysOnInboundHandler) Start() error {
 			return errors.New("failed to start proxy").Base(err)
 		}
 	}
-	for i, worker := range h.workers {
+	for _, worker := range h.workers {
 		if err := worker.Start(); err != nil {
-			// Roll back every attempted listener, including the failing worker.
-			for j := i; j >= 0; j-- {
-				_ = h.workers[j].Close()
-			}
+			// The handler owns the shared proxy, including partial-start rollback.
+			_ = h.Close()
 			return err
 		}
 	}
@@ -210,16 +211,31 @@ func (h *AlwaysOnInboundHandler) Start() error {
 
 // Close implements common.Closable.
 func (h *AlwaysOnInboundHandler) Close() error {
-	var errs []error
-	for _, worker := range h.workers {
-		errs = append(errs, worker.Close())
-	}
-	errs = append(errs, h.mux.Close())
-	errs = append(errs, common.Close(h.proxy))
-	if err := errors.Combine(errs...); err != nil {
-		return errors.New("failed to close all resources").Base(err)
-	}
-	return nil
+	h.closeOnce.Do(func() {
+		var errs []error
+		// Stop admission and accepted I/O on every worker before closing their
+		// shared protocol. Some Process implementations need protocol Close to exit.
+		for _, worker := range h.workers {
+			if stream, ok := worker.(interface{ stop() error }); ok {
+				errs = append(errs, stream.stop())
+			} else {
+				errs = append(errs, worker.Close())
+			}
+		}
+		errs = append(errs, common.Close(h.proxy))
+		if h.mux != nil {
+			errs = append(errs, h.mux.Close())
+		}
+		for _, worker := range h.workers {
+			if stream, ok := worker.(interface{ wait() }); ok {
+				stream.wait()
+			}
+		}
+		if err := errors.Combine(errs...); err != nil {
+			h.closeErr = errors.New("failed to close all resources").Base(err)
+		}
+	})
+	return h.closeErr
 }
 
 func (h *AlwaysOnInboundHandler) Tag() string {

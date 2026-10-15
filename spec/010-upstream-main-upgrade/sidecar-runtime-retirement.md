@@ -68,7 +68,7 @@ overall stability acceptance despite the passing HY2/dialer/UDS fixes.
 Main subsequently repaired worker admission and active-pipe retirement. The
 focused real Sidecar reproduction plus 100-chain churn passed three race rounds
 (20.067s); worker ownership unit tests passed 20 rounds (1.854s). See
-[spec002 follow-up](../002-connection-lifecycle/upgrade-20261014.md). These close
+[spec002 follow-up](../002-core-connection-lifecycle/upgrade-20261014.md). These close
 the observed reader retention reproducer, not the remaining full acceptance gates.
 
 Sidecar spec006 contains full-suite and actual 25-pair/UDS/resource evidence.

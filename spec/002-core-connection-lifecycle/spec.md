@@ -49,6 +49,10 @@ app/proxyman/outbound/handler.go、transport/internet/hysteria/dialer.go。
 
 ## 导航
 
+2026-10-15 candidate increment: [accepted TCP/Unix ownership and retirement](accepted-stream-retirement-20261015.md)
+records the deterministic after-Close forwarding defect, per-worker admission
+gate, handler-owned protocol shutdown, tests and remaining release gates.
+
 ## FR-002 - Shared outbound ownership increment
 
 Extracted from `2074c223` on 2026-10-14 without behavior changes. These are
