@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -168,10 +169,18 @@ func startExternalControl(t *testing.T, binary, kind, dir string, config map[str
 		t.Fatal(err)
 	}
 	args := []string{"run", "-c", path}
+	readyPath := filepath.Join(dir, "running")
 	if kind == "MIHOMO" {
 		// Certificates live beside the client/server config directories. Keep
 		// Mihomo's file-access sandbox enabled with that private fixture root.
-		args = []string{"-d", filepath.Dir(dir), "-f", path}
+		// Mihomo binds listeners before its tunnel enters Running; those
+		// listeners accept and then discard streams during provider loading.
+		// post-up runs after ApplyConfig/OnRunning, without warming our pool.
+		if err := os.Remove(readyPath); err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		quoted := "'" + strings.ReplaceAll(readyPath, "'", "'\"'\"'") + "'"
+		args = []string{"-d", filepath.Dir(dir), "-f", path, "-post-up", "touch " + quoted}
 	}
 	logPath := filepath.Join(dir, "process.log")
 	log, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY, 0600)
@@ -199,6 +208,18 @@ func startExternalControl(t *testing.T, binary, kind, dir string, config map[str
 	})
 	deadline := time.Now().Add(10 * time.Second)
 	for {
+		if kind == "MIHOMO" {
+			if _, err := os.Stat(readyPath); err != nil {
+				if !os.IsNotExist(err) {
+					t.Fatal(err)
+				}
+				if time.Now().After(deadline) {
+					t.Fatal("external process post-up readiness timed out")
+				}
+				time.Sleep(20 * time.Millisecond)
+				continue
+			}
+		}
 		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), 100*time.Millisecond)
 		if err == nil {
 			conn.Close()

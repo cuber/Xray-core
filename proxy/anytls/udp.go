@@ -2,7 +2,9 @@ package anytls
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -57,7 +59,17 @@ func (s *Server) serveUDP(parent context.Context, conn net.Conn) error {
 	defer idle.SetTimeout(0)
 	targets := map[net.Destination]*udpTarget{}
 	var workers sync.WaitGroup
+	var peerEOF bool
 	defer func() {
+		if peerEOF && ctx.Err() == nil && stop() {
+			// A peer can consume the last response and FIN before its physical
+			// write returns. Join that write under the existing half-close budget
+			// while still interrupting reads and honoring parent cancellation.
+			deadline := time.AfterFunc(p.Timeouts.DownlinkOnly, func() { conn.Close() })
+			defer deadline.Stop()
+			stopParent := context.AfterFunc(parent, func() { conn.Close() })
+			defer stopParent()
+		}
 		cancel()
 		for _, t := range targets {
 			t.timer.SetTimeout(0)
@@ -70,6 +82,7 @@ func (s *Server) serveUDP(parent context.Context, conn net.Conn) error {
 		input.Reset()
 		dest, e := packets.ReadPacket(input)
 		if e != nil {
+			peerEOF = errors.Is(e, io.EOF)
 			return e
 		}
 		idle.Update()
@@ -126,6 +139,9 @@ func (s *Server) serveUDP(parent context.Context, conn net.Conn) error {
 						t.timer.Update()
 					}
 					for _, b := range mb {
+						if b == nil {
+							continue
+						}
 						from := target
 						if b.UDP != nil {
 							from = *b.UDP

@@ -38,7 +38,7 @@ func TestCanceledWriteAbortsSession(t *testing.T) {
 		if deadline {
 			stream.writeDeadline.Set(time.Now().Add(-time.Second))
 		} else {
-			close(stream.done)
+			stream.Close()
 		}
 		select {
 		case <-s.done:

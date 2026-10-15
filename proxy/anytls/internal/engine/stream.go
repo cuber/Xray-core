@@ -38,19 +38,22 @@ type stream struct {
 	handshakeAccess sync.Mutex
 	handshakeDone   atomic.Bool
 
-	reportOnce sync.Once
-	closeOnce  sync.Once
-	closeErr   error
-	done       chan struct{}
+	reportOnce      sync.Once
+	closeOnce       sync.Once
+	closeErr        error
+	done            chan struct{}
+	writeCancel     chan struct{}
+	writeCancelOnce sync.Once
 }
 
 func newStream(id uint32, parent *session) *stream {
 	created := &stream{
-		id:         id,
-		session:    parent,
-		readSignal: make(chan struct{}, 1),
-		readSpace:  make(chan struct{}, 1),
-		done:       make(chan struct{}),
+		id:          id,
+		session:     parent,
+		readSignal:  make(chan struct{}, 1),
+		readSpace:   make(chan struct{}, 1),
+		done:        make(chan struct{}),
+		writeCancel: make(chan struct{}),
 	}
 	created.readDeadline = pipe.MakeDeadline()
 	created.writeDeadline = pipe.MakeDeadline()
@@ -154,7 +157,10 @@ func (s *stream) handshake(limit *pipe.Deadline) error {
 		return nil
 	}
 	s.handshakeAccess.Lock()
-	defer s.handshakeAccess.Unlock()
+	defer func() {
+		s.handshakeAccess.Unlock()
+		s.clearIdleDeadlines()
+	}()
 	return s.writeRequestLocked(limit)
 }
 
@@ -291,7 +297,10 @@ func (s *stream) Write(p []byte) (int, error) {
 		return 0, err
 	}
 	s.writeAccess.Lock()
-	defer s.writeAccess.Unlock()
+	defer func() {
+		s.writeAccess.Unlock()
+		s.clearIdleDeadlines()
+	}()
 	return s.session.writeData(s, p)
 }
 
@@ -307,7 +316,10 @@ func (s *stream) WriteBuffer(buffer *buf.Buffer) error {
 		return err
 	}
 	s.writeAccess.Lock()
-	defer s.writeAccess.Unlock()
+	defer func() {
+		s.writeAccess.Unlock()
+		s.clearIdleDeadlines()
+	}()
 	return s.writeBufferLocked(buffer)
 }
 
@@ -326,6 +338,7 @@ func (s *stream) writeBufferLocked(buffer *buf.Buffer) error {
 }
 
 func (s *stream) Close() error {
+	s.cancelWrites()
 	closing := s.closeLocally(net.ErrClosed)
 	s.discardRead(net.ErrClosed)
 	if !closing {
@@ -348,15 +361,51 @@ func (s *stream) closeByPeer() {
 		s.session.finishStream(s.id, false)
 	}
 	s.endRead(io.EOF)
+	s.clearIdleDeadlines()
+}
+
+// A handshake may write using either deadline. Retain both until the current
+// handshake/data writer releases ownership, then stop timers without requiring
+// the caller to Close again. Lock order is handshake, write, deadline.
+func (s *stream) clearIdleDeadlines() {
+	select {
+	case <-s.done:
+	default:
+		return
+	}
+	if !s.handshakeAccess.TryLock() {
+		return
+	}
+	defer s.handshakeAccess.Unlock()
+	if !s.writeAccess.TryLock() {
+		return
+	}
+	defer s.writeAccess.Unlock()
+	s.deadlineAccess.Lock()
+	s.readDeadline.Set(time.Time{})
+	s.writeDeadline.Set(time.Time{})
+	s.deadlineAccess.Unlock()
 }
 
 // sing-anytls 0.0.13 Stream.closeWithError routes through Session.streamClosed, which
 // writes cmdFIN; only a peer-sent FIN and a session teardown skip the notification.
 func (s *stream) closeWithError(err error) {
+	s.cancelWrites()
 	if s.closeLocally(err) {
 		s.session.finishStream(s.id, s.handshakeDone.Load())
 	}
 	s.endRead(err)
+}
+
+// A peer FIN may arrive after it consumed a complete response but before the
+// transport Write returns. It must not abort unrelated streams on that session.
+// An explicit local Close still cancels writes even after a peer FIN.
+func (s *stream) cancelWrites() {
+	s.writeCancelOnce.Do(func() { close(s.writeCancel) })
+	s.deadlineAccess.Lock()
+	s.readDeadline.Set(time.Time{})
+	s.writeDeadline.Set(time.Time{})
+	s.deadlineAccess.Unlock()
 }
 
 func (s *stream) closeLocally(err error) bool {
@@ -365,10 +414,14 @@ func (s *stream) closeLocally(err error) bool {
 		s.closeErr = err
 		close(s.done)
 		// Deadline callbacks retain the entire stream/session until they fire.
-		// Stop them on every close path, including peer FIN and session teardown.
+		// Peer FIN retains deadlines until handshake/data write ownership ends.
 		s.deadlineAccess.Lock()
-		s.readDeadline.Set(time.Time{})
-		s.writeDeadline.Set(time.Time{})
+		select {
+		case <-s.writeCancel:
+			s.readDeadline.Set(time.Time{})
+			s.writeDeadline.Set(time.Time{})
+		default:
+		}
 		s.deadlineAccess.Unlock()
 		closing = true
 	})

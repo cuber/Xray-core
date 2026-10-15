@@ -503,7 +503,9 @@ func (s *session) watchWrite(target *stream, limit *pipe.Deadline) func() {
 		select {
 		case <-finished:
 			return
-		case <-target.done:
+		case <-s.done:
+			return
+		case <-target.writeCancel:
 		case <-limit.Wait():
 		}
 		// Completion and cancellation need one winner: select alone may choose

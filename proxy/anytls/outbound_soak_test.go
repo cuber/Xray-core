@@ -46,6 +46,7 @@ func TestAnyTLSOutboundSoak(t *testing.T) {
 		t.Fatal("go test timeout must leave >=30s for teardown")
 	}
 	f, good := outboundFixture(t, "", func(config map[string]any) {
+		config["log"].(map[string]any)["loglevel"] = "warning"
 		// The original 600s wildcard run failed 3 UDP exchanges (1339/8192,
 		// 0/8192, 0/8192), with all ownership cleanup passing. The independent
 		// TestAnyTLSSoakUDPWildcardCollision reproduces Darwin selecting an
@@ -64,7 +65,7 @@ func TestAnyTLSOutboundSoak(t *testing.T) {
 	})
 	echo := newSoakEcho(t)
 	defer echo.close(t)
-	var httpRequests, httpActive atomic.Int64
+	var httpRequests, httpActive, cycles, probeAttempts atomic.Int64
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -102,6 +103,8 @@ func TestAnyTLSOutboundSoak(t *testing.T) {
 	var packetID atomic.Uint64
 	exchange := func(dest xnet.Destination, payload []byte) error {
 		started := time.Now()
+		generation := cycles.Load()
+		var id uint64
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		conn, err := dial(ctx, dest)
@@ -112,7 +115,8 @@ func TestAnyTLSOutboundSoak(t *testing.T) {
 		stop := context.AfterFunc(ctx, func() { conn.Close() })
 		defer stop()
 		if dest.Network == xnet.Network_UDP && len(payload) >= 8 {
-			binary.BigEndian.PutUint64(payload, packetID.Add(1))
+			id = packetID.Add(1)
+			binary.BigEndian.PutUint64(payload, id)
 		}
 		if _, err := conn.Write(payload); err != nil {
 			return fmt.Errorf("write after %s: %w (ctx=%v)", time.Since(started), err, ctx.Err())
@@ -127,7 +131,7 @@ func TestAnyTLSOutboundSoak(t *testing.T) {
 		}
 		n, err := read()
 		if err != nil {
-			return fmt.Errorf("read %d/%d after %s: %w (ctx=%v echoUDP=%d/%d)", n, len(payload), time.Since(started), err, ctx.Err(), echo.udpReceived.Load(), echo.udpSent.Load())
+			return fmt.Errorf("read %d/%d after %s: %w (ctx=%v echoUDP=%d/%d packet=%d generation=%d/%d started=%s)", n, len(payload), time.Since(started), err, ctx.Err(), echo.udpReceived.Load(), echo.udpSent.Load(), id, generation, cycles.Load(), started.Format(time.RFC3339Nano))
 		}
 		if !bytes.Equal(got[:n], payload) {
 			return fmt.Errorf("payload mismatch network=%s got=%d want=%d", dest.Network, n, len(payload))
@@ -141,11 +145,21 @@ func TestAnyTLSOutboundSoak(t *testing.T) {
 		Timeout: int64(time.Second), SamplingCount: 3, Interval: int64(time.Second),
 	})
 	check := func() error {
+		attempt := probeAttempts.Add(1)
+		started, requests := time.Now(), httpRequests.Load()
+		var before *burst.HealthPingStats
+		if result := probe.Results["client"]; result != nil {
+			before = result.Get()
+		}
 		if err := probe.Check([]string{"client"}); err != nil {
 			return err
 		}
-		if result := probe.Results["client"]; result == nil || !result.Get().Alive {
-			return fmt.Errorf("healthy OB became dead")
+		var after *burst.HealthPingStats
+		if result := probe.Results["client"]; result != nil {
+			after = result.Get()
+		}
+		if after == nil || !after.Alive {
+			return fmt.Errorf("healthy OB became dead: attempt=%d started=%s elapsed=%s generation=%d HTTP=%d->%d active=%d before=%+v after=%+v", attempt, started.Format(time.RFC3339Nano), time.Since(started), cycles.Load(), requests, httpRequests.Load(), httpActive.Load(), before, after)
 		}
 		return nil
 	}
@@ -164,7 +178,7 @@ func TestAnyTLSOutboundSoak(t *testing.T) {
 	soakResources(t, "warmed")
 	var gate sync.RWMutex
 	var workers sync.WaitGroup
-	var activeWorkers, tcpOK, udpOK, obOK, cycles atomic.Int64
+	var activeWorkers, tcpOK, udpOK, obOK atomic.Int64
 	ctx, cancel := context.WithTimeout(context.Background(), duration)
 	defer cancel()
 	errors := make(chan error, 64)
@@ -240,6 +254,7 @@ func TestAnyTLSOutboundSoak(t *testing.T) {
 	launch(5*time.Second, true, func() error {
 		gate.Lock()
 		defer gate.Unlock()
+		cycleStarted := time.Now()
 		controlCtx, controlCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer controlCancel()
 		held, err := dial(controlCtx, destination)
@@ -285,7 +300,7 @@ func TestAnyTLSOutboundSoak(t *testing.T) {
 		if err := exchange(destination, []byte("after-reset")); err != nil {
 			return fmt.Errorf("reset recovery: %w", err)
 		}
-		cycles.Add(1)
+		t.Logf("retirement generation=%d started=%s completed=%s elapsed=%s", cycles.Add(1), cycleStarted.Format(time.RFC3339Nano), time.Now().Format(time.RFC3339Nano), time.Since(cycleStarted))
 		return nil
 	})
 	joined := make(chan struct{})
