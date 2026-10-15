@@ -23,17 +23,22 @@ canonical develop checkout and approved build/pin/runtime remain untouched.
   promote spec010; Go 1.27.0 is available on Darwin/arm64.
 - [x] P02 Establish targeted upstream baseline; port spec002 dispatch lifecycle
   and independent tests without restoring removed SS bridge/legacy proxy path.
-- [ ] P03 Port shared spec007 readv/regression changes and later spec002
-  retirement/validation capabilities; adapt Windows readiness behavior.
+- [x] P03 Port shared spec007 readv/regression changes and later spec002
+  retirement/validation capabilities. Windows runtime validation is a separately
+  deferred TODO, not a passed test; see the platform boundary below.
 - [x] P04 Port spec003 multi-listener, SOCKS/Unix redirect contracts and tests.
 - [x] P05 Port spec004 OB and prerequisites, preserving 3s and full cancellation.
 - [x] P06 Port spec005 routing metadata/weighted selection and spec006 domain
   traffic against atomic upstream APIs; regenerate reviewed protobuf.
 - [x] P07 Port spec009 API UDS ownership beyond upstream's basic UDS support.
-- [ ] P08 Port spec008 AnyTLS, required Sing dependencies and new chain matrix.
-- [ ] P09 Resolve native SS gates U-001/002/003 and shared U-004..012;
+- [x] P08 Port spec008 AnyTLS, required Sing dependencies and new chain matrix;
+  serial normal/race suites and strict ten-minute soaks pass, with platform and
+  diagnostic skips recorded in the owning AnyTLS upgrade evidence.
+- [x] P09 Resolve native SS gates U-001/002/003 and shared U-004..012;
   no source-level concern is declared fixed without a regression reproducer.
-- [ ] P10 Integrate isolated Sidecar/config migrations; no production pin change.
+- [x] P10 Integrate isolated Sidecar/config migrations; normal/race source tests
+  and migration staging pass. Final exact artifact/pin checks belong to P11;
+  no production pin change or staged-config application is implied.
 - [ ] P11 Full uncached/race/interop/chain tests, format/vet, Darwin/Linux builds
   through an explicitly candidate-aware wrapper; do not weaken normal develop
   release protections. Record every failure and skip.
@@ -41,6 +46,10 @@ canonical develop checkout and approved build/pin/runtime remain untouched.
   production rollout is a separate operation.
 
 ## Verification
+
+Current partitioned results and explicit platform/network limits are summarized
+in [local verification](local-verification-20261015.md). Dated failures below
+remain historical evidence, not the latest result.
 
 Each phase runs its owning spec tests; the additional U-* matrix in tests.md
 applies throughout. Partial phase success is not full upgrade acceptance.
@@ -51,7 +60,12 @@ the resumed candidate package race log, not historical fork results. P05 has
 106 candidate burst test/subtest passes; P06 has dispatcher/stats/stats-command
 26/30/7 passes plus the router evidence directory. Final cross-component and
 platform gates remain P09-P11. P03's Windows readiness is cross-compiled only;
-no Windows execution is claimed.
+no Windows execution is claimed. On 2026-10-15 the user explicitly deferred
+Windows runtime acceptance because there is no Windows deployment scenario.
+The follow-up remains in [spec007 tasks](../007-core-regression/tasks.md#deferred-platform-todo);
+it does not block the current Linux/macOS candidate acceptance. Introducing
+Windows later requires actual readv readiness/EOF/reset/cancellation and socket
+retirement tests on Windows, not just cross-compilation.
 
 Go source changes require the official dual-platform build workflow before
 release; this branch is an incomplete integration candidate, not a release.
@@ -299,3 +313,27 @@ readiness barrier and old-helper negative control. The
 [Sudoku harness](../007-core-regression/sudoku-harness-upgrade-20261015.md)
 now observes child startup/exit and propagates child race failures. Final serial
 source verification and official artifacts are the next gates.
+
+The next serial complete scenario race run at `8e246952` failed after 800.457s:
+the reverse heartbeat writes its drain flag concurrently with worker selection.
+The child-race guard correctly rejected this run. A
+[narrow atomic publication repair](../007-core-regression/reverse-drain-upgrade-20261015.md)
+has an independent baseline-failing regression and package race x50 pass.
+Complete scenario acceptance must be rerun after this repair; the preceding
+normal scenario pass (90 events, 281.215s) is not substituted for it.
+
+The complete scenario race rerun now passes at aa6ca3ed: 90 events, no skips,
+1053.085s. Linux/arm64 ten-package runtime race also passes (283 events, three
+explicit skips). Sidecar normal/race each pass 1020 events, but its subsequent
+1000-chain resource gate fails a Hy2-to-SOCKS request at batch36. P10/P11 remain
+open while that independent failure is investigated. See the current local
+verification summary; do not infer stability from the shorter full-suite passes.
+
+The Hy2 follow-up now has an independent natural endpoint-collision trace and a
+deterministic wire baseline-red/fix-green regression. The scoped
+[loopback source repair](../002-core-connection-lifecycle/hy2-loopback-source-20261015.md)
+preserves explicit Gateway, proxy chains and cancellation; it changes neither
+ChromeParrot nor budgets/retries. Full Hy2 race, 1000 fresh handshakes and the
+unchanged 1000-chain race gate pass. The earlier failed run remains failed;
+original same-cause attribution is explicitly an inference. P11's last changed
+leaf and final artifact checks remain to be closed, not skipped by this repair.

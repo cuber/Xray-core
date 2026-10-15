@@ -1,3 +1,38 @@
+# Cuber Xray-core
+
+This fork's entry points are [spec/README.md](spec/README.md) and
+[spec001 fork contracts](spec/001-core-fork-contracts/spec.md). Deferred designs
+live in [draft/](draft/README.md). The fixed-main upgrade candidate and its
+verification status are recorded in
+[spec010](spec/010-upstream-main-upgrade/implementation.md).
+
+Our production build entry is `../xray-config/xray-core/build.sh`, also exposed
+by `../xray-config/scripts/xrayctl.py build core`. Normal builds use local
+`develop` tracking `cuber/develop`; they never fetch, rebase or reset. The wrapper
+requires committed source, checks formatting and emits Darwin and Linux/amd64
+artifacts with Go VCS metadata. Isolated candidates require an explicit source,
+branch and build directory as documented in spec010; they do not replace the
+approved artifacts or authorize deployment.
+
+Use the same formatter as upstream CI:
+
+```sh
+go run ./infra/vformat/main.go -mode format -pwd ./
+bash .github/check-gofmt.sh
+go vet ./...
+```
+
+The check is read-only and also runs the stricter gofumpt-based upstream gate.
+Regenerate protobuf from its sources with compiler/generator versions matching
+`core/config.pb.go`; never edit generated headers to satisfy CI. See the
+[generation evidence](spec/007-core-regression/ci-format-upgrade-20261015.md).
+Deployment and local macOS service operations belong to xray-config's xrayctl.
+
+The upstream README retained below is reference material; its standalone build
+examples are not our production build procedure.
+
+---
+
 # Project X
 
 [Project X](https://github.com/XTLS) originates from XTLS protocol, providing a set of network tools such as [Xray-core](https://github.com/XTLS/Xray-core) and [REALITY](https://github.com/XTLS/REALITY).
