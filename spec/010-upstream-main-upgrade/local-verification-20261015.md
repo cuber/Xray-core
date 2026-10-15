@@ -137,6 +137,20 @@ compiled on Linux.
 - U011: API symlink/socket ownership and Linux system-only CA subprocess tests
   pass in their owning spec009/spec007 reports, without disabling trust checks.
 
+## Paired Local Closure
+
+Final Sidecar source gates after the Hy2 repair pass normal/race: each 1020 test/
+subtest PASS events and two explicit skips. Logs:
+`/tmp/sidecar-final-d2cd-{normal,race}.jsonl`. Old Sidecar 501ed69's real native
+SS usersync mutation runs in both, not a mock-only or disabled-sync check.
+
+The official c0c0cbf7 Core binary passes the seven real old-Sidecar query checks
+(`/tmp/sidecar-u007-c0c0-final/`) and 45/45 real-certificate-backed staged runtime
+configs (`/tmp/core-candidate-final-c0c0-stage/manifest.json`). No migration is
+applied and no service is restarted. The final evidence-only commit is rebuilt;
+its exact four-artifact pair and final Config/TUI checks belong to Config's audit,
+not to a self-referential SHA inside this Core document.
+
 ## Explicit Boundaries
 
 Windows runtime validation is deferred by the user on 2026-10-15 because there

@@ -39,7 +39,8 @@ canonical develop checkout and approved build/pin/runtime remain untouched.
 - [x] P10 Integrate isolated Sidecar/config migrations; normal/race source tests
   and migration staging pass. Final exact artifact/pin checks belong to P11;
   no production pin change or staged-config application is implied.
-- [ ] P11 Full uncached/race/interop/chain tests, format/vet, Darwin/Linux builds
+- [x] P11 Partitioned uncached/race/interop/chain tests, final changed-leaf reruns,
+  format/vet and official Darwin/Linux Core builds
   through an explicitly candidate-aware wrapper; do not weaken normal develop
   release protections. Record every failure and skip.
 - [ ] P12 Review/adopt candidate and release pins only on explicit approval;
@@ -68,7 +69,7 @@ Windows later requires actual readv readiness/EOF/reset/cancellation and socket
 retirement tests on Windows, not just cross-compilation.
 
 Go source changes require the official dual-platform build workflow before
-release; this branch is an incomplete integration candidate, not a release.
+release; local verification does not make this branch an approved release.
 No candidate artifact may overwrite xray-config/build approved release artifacts
 or restart the local Xray service during integration.
 
@@ -337,3 +338,26 @@ ChromeParrot nor budgets/retries. Full Hy2 race, 1000 fresh handshakes and the
 unchanged 1000-chain race gate pass. The earlier failed run remains failed;
 original same-cause attribution is explicitly an inference. P11's last changed
 leaf and final artifact checks remain to be closed, not skipped by this repair.
+
+### Local Verification Closed
+
+Core runtime is frozen at d2cda3ef; subsequent changes are evidence only. The
+changed-leaf Hy2 race passes on Darwin and Linux, affected AnyTLS chain/process
+race passes (121 events), and Sidecar final normal/race each pass 1020 events.
+The unchanged 1000-chain resource gate passes after the independently reproduced
+Darwin source-binding repair. Full source vet and strict upstream formatting pass.
+
+The official clean-tree wrapper built c0c0cbf7 for Darwin/arm64 and Linux/amd64
+with VCS metadata, executing Darwin version. Its artifact passes 45/45 staged
+runtime configs, with one ready local declaration, 47 changes across 42 of 46
+documents, zero blockers and complete=true. No stage was applied. Old Sidecar
+501ed69 passes all seven real binary control/query assertions against it;
+enabled native SS usersync mutation separately passes in the final Sidecar race.
+
+The final evidence-only commit is rebuilt so its release metadata matches the
+committed source. Exact paired artifacts, consumer pins, TUI and Config checks
+are recorded by Config's candidate audit. Those operational records do not
+authorize adoption or deployment. P12 remains deliberately separate.
+Windows execution is a user-deferred TODO; public DoQ reachability remains a
+recorded external failure, not part of the passed offline gates. No universal
+cross-platform/public-network or production-soak green claim is made.

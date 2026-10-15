@@ -1,7 +1,9 @@
 # Spec010: Fixed Main Upgrade
 
-- Status: Implementing, authorized 2026-10-14 by the user's request to create a
-  rebase branch and implement the upgrade after publishing the draft audit.
+- Status: Implemented and locally verified on the isolated candidate. Authorized
+  2026-10-14 after publishing the draft audit. Production adoption remains P12,
+  not implicit approval. Platform/network limits and source-specific evidence
+  are in [local verification](local-verification-20261015.md).
 - Promoted from Core draft002; its ID remains reserved. This directory is the
   sole authoritative copy on the candidate branch.
 - Candidate: `rebase/main-20261014`, based on

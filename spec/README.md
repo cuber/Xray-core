@@ -27,7 +27,7 @@ reference sibling repositories as integration evidence, not implementation input
 | [007](007-core-regression/spec.md) | Regression infrastructure and shared fixes |
 | [008](008-anytls/spec.md) | AnyTLS inbound/outbound, routing, statistics and control API |
 | [009](009-direct-control-listener/spec.md) | Direct control-plane UDS listener without traffic inbounds/routes |
-| [010](010-upstream-main-upgrade/spec.md) | Implementing: fixed-main upgrade and per-contract replay |
+| [010](010-upstream-main-upgrade/spec.md) | Locally verified fixed-main candidate; production adoption remains separate |
 
 On `rebase/main-20261014`, imported specs001-009 describe the source fork's
 contracts and historical acceptance, NOT completed candidate implementations.
