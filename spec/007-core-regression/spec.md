@@ -73,4 +73,12 @@ Validation: `go test -race -count=1 -timeout=5m ./common/buf ./app/dns`;
 `readv_error_test.go` and `readv_reset_test.go` provide independent oracles.
 Final execution evidence is recorded in spec001's history-split report.
 
+## FR-003 - Reverse Portal Drain Publication
+
+The reverse heartbeat's drain state is shared with concurrent worker selectors.
+Publish it atomically without changing the 256-connection threshold, normal
+least-loaded preference or fallback when all remaining workers are draining.
+The baseline-failing concurrency regression and exact control-message/selection
+oracles are recorded in [upgrade evidence](reverse-drain-upgrade-20261015.md).
+
 [技术计划](plan.md) · [任务](tasks.md) · [测试](tests.md) · [检查清单](checklists/requirements.md)
