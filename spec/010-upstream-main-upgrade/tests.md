@@ -36,6 +36,11 @@ candidate, distinguishing an upstream defect from an integration regression.
 
 Retain all spec002-009 tests in addition to U-*; these additions do not narrow the
 existing external-client, Windows readv, mux, chain, snapshot and resource gates.
+Windows runtime acceptance is explicitly deferred by the user on 2026-10-15:
+there is no current Windows deployment scenario. Its successful cross-compile
+is compilation evidence only. Track the remaining execution requirements in
+[spec007's platform TODO](../007-core-regression/tasks.md#deferred-platform-todo),
+without blocking Linux/macOS verification or claiming Windows execution passed.
 No runtime tests were run for the new upstream in this audit; previous fork-green
 results cannot be transferred to a candidate that has not been implemented.
 

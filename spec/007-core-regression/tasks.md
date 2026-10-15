@@ -10,6 +10,17 @@
 Whole-tree/build results: [split report](../001-core-fork-contracts/history-split-20261014.md).
 The remaining task list describes the original reconstruction.
 
+## Deferred Platform TODO
+
+- [ ] Windows readv runtime acceptance: explicitly deferred by the user on
+  2026-10-15 because there is no Windows deployment scenario. Windows/amd64
+  `common/buf` cross-compilation passed; this does not establish runtime behavior.
+  Before adding Windows support, run the buf normal/race suites on a real Windows
+  runner, including TCP first-read readiness, EOF/reset, cancellation and socket
+  close while waiting for data. Record the runner/toolchain and actual results.
+  This TODO does not block the current Linux/macOS candidate validation and must
+  not be reported as a passing Windows execution test.
+
 - [x] T001 [US-001] 从 001 提取 FR-001 和 V-028 至 V-033，保留历史追溯。
 - [x] T002 [US-001] 对照重建提交检查内容与依赖，执行原有定向测试。
 - [x] T003 [US-001] 记录历史 tree 对比；新增授权修复与原无损重建阶段区分。
