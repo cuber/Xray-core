@@ -21,15 +21,15 @@ canonical develop checkout and approved build/pin/runtime remain untouched.
 
 - [x] P01 Publish draft audit; lock source/upstream, create isolated branch,
   promote spec010; Go 1.27.0 is available on Darwin/arm64.
-- [ ] P02 Establish targeted upstream baseline; port spec002 dispatch lifecycle
+- [x] P02 Establish targeted upstream baseline; port spec002 dispatch lifecycle
   and independent tests without restoring removed SS bridge/legacy proxy path.
 - [ ] P03 Port shared spec007 readv/regression changes and later spec002
   retirement/validation capabilities; adapt Windows readiness behavior.
-- [ ] P04 Port spec003 multi-listener, SOCKS/Unix redirect contracts and tests.
-- [ ] P05 Port spec004 OB and prerequisites, preserving 3s and full cancellation.
-- [ ] P06 Port spec005 routing metadata/weighted selection and spec006 domain
+- [x] P04 Port spec003 multi-listener, SOCKS/Unix redirect contracts and tests.
+- [x] P05 Port spec004 OB and prerequisites, preserving 3s and full cancellation.
+- [x] P06 Port spec005 routing metadata/weighted selection and spec006 domain
   traffic against atomic upstream APIs; regenerate reviewed protobuf.
-- [ ] P07 Port spec009 API UDS ownership beyond upstream's basic UDS support.
+- [x] P07 Port spec009 API UDS ownership beyond upstream's basic UDS support.
 - [ ] P08 Port spec008 AnyTLS, required Sing dependencies and new chain matrix.
 - [ ] P09 Resolve native SS gates U-001/002/003 and shared U-004..012;
   no source-level concern is declared fixed without a regression reproducer.
@@ -45,6 +45,13 @@ canonical develop checkout and approved build/pin/runtime remain untouched.
 Each phase runs its owning spec tests; the additional U-* matrix in tests.md
 applies throughout. Partial phase success is not full upgrade acceptance.
 Never copy a prior fork's green report into this ledger as candidate evidence.
+
+Completed port phases are backed by owning `upgrade-20261014.md` reports and
+the resumed candidate package race log, not historical fork results. P05 has
+106 candidate burst test/subtest passes; P06 has dispatcher/stats/stats-command
+26/30/7 passes plus the router evidence directory. Final cross-component and
+platform gates remain P09-P11. P03's Windows readiness is cross-compiled only;
+no Windows execution is claimed.
 
 Go source changes require the official dual-platform build workflow before
 release; this branch is an incomplete integration candidate, not a release.
@@ -201,3 +208,94 @@ arguments now use a `--` boundary, and coverage output defaults to an owned
 directory when XRAY_COV is absent. Its previous UDS scenario failed to start;
 race-enabled coverage UDS/diagnostic tests now pass in 9.984s. This changes only
 the coverage test executable and harness, not production command parsing.
+
+### Resumed Fixes, 2026-10-15
+
+The user explicitly requested continuing to fix the failed gates. This is not a
+request to deploy or adopt the candidate on canonical develop.
+
+- Candidate LA Akile admin credentials are separated from its node identity,
+  with ASZ's management caller updated together. Existing business/Hy2 keys
+  remain unchanged. Config's 45/45 parser migration and 519 tests pass against
+  the recorded checkpoint; a real SS2 test proves exact per-user counters and
+  that removing admin preserves node traffic. Final-pair rerun remains required.
+- The new SS transport half-close tests pass race count=10, Linux/amd64 count=20,
+  and fail under a deliberate timeout-selection mutation. Full SS/inbound race
+  count=3 passes. See SAFETY.md for commands and scope.
+- Stats concurrent manager Close now has an explicit 128-caller regression:
+  channel removal, stopped state and subscriber closure/cleanup are checked.
+  Atomic Stats tests pass race count=30 (1.880s). Channel.Start always returns nil
+  in this implementation; tests.md records the absence of a fallible production
+  path rather than claiming an injected failure was tested.
+- U-011 now has independent [symlink ownership evidence](../009-direct-control-listener/u011-symlink-20261015.md)
+  (file/live socket/stale socket/dangling target, Darwin race x10 and Linux
+  race x5) and [system-only CA evidence](../007-core-regression/u011-system-ca-20261015.md)
+  (five Linux subprocess trust controls, race x5). No host trust store or
+  production TLS settings changed; neither gate disables certificate checking.
+- Linux/amd64 executable tests exposed a listener-counter fixture publication
+  race: receiving bytes does not join CounterConnection.Write's later increment.
+  Exact assertions now wait for publication; repeated Darwin race and translated
+  Linux runs pass without changing runtime counters or their byte semantics.
+- Updated non-AnyTLS/non-scenario package partitions: normal and race each
+  **2653 test/subtest passes, 21 opt-in skips, exit 0**. Complete scenario race:
+  **90 passes, no skips, 1079.708s**, exit 0. Logs are
+  `/tmp/core-upgrade-resume-packages-{normal,race}.jsonl` and
+  `/tmp/core-upgrade-resume-scenarios-race.jsonl`. These do not establish AnyTLS
+  acceptance while its independent repair is underway.
+- AnyTLS diagnosis found peer FIN could cancel an already-delivered physical
+  response write and close unrelated streams. Engine and UoT business-path
+  regression controls reproduce the defect. Timer ownership during peer FIN,
+  read-triggered handshake and shutdown is under review; final frozen-source
+  normal/race/soak evidence is still required, not inferred from a short rerun.
+- Sidecar additionally fixes stale H1 cancellation state across Transport retry
+  acquisition. Deterministic virtual-time/network-pipe tests replace wall-clock
+  20ms scheduler assumptions without widening production timeouts. Independent
+  native-client and live usersync checks continue in its spec006.
+- Config's TUI module is now tested against the candidate dependency graph;
+  its race tests and vet pass. Exact final Core pin/build remains pending.
+
+Canonical Core/Sidecar/Config worktrees remain unchanged and clean. The old
+be9f5afd/d8381f0 formal artifacts do not include these new fixes. Do not deploy
+them as a completed upgrade or mistake pending tests for passed gates.
+
+### Further Shutdown Defects
+
+The v4 AnyTLS normal soak passed 601.09s, but race teardown exposed a shared
+[ActivityTimer self-deadlock](../007-core-regression/activity-timer-upgrade-20261015.md).
+Its correction and deterministic negative regression are now present; full
+integration reruns remain required. Independently, Sidecar's real TCP/UDS
+fixture proves accepted connections continued forwarding after Core.Close.
+[Worker-owned admission/cancellation/retirement](../002-core-connection-lifecycle/accepted-stream-retirement-20261015.md)
+now fixes this boundary; focused TCP/UDS race tests pass ten repetitions. The
+subsequent real Sidecar churn also found a separate
+[UDP dispatcher retirement race](../002-core-connection-lifecycle/udp-dispatch-retirement-20261015.md).
+Its plain-bool negative control fails under race detection, and the fixed package
+passes ten repetitions. Neither defect is waived by a later successful repeat
+or a larger timeout; final whole-integration reruns remain required.
+
+The next normal non-AnyTLS/non-scenario partition exits zero. Its race partition
+fails in Sudoku's first subprocess startup (TCP connection refused); a harness
+diagnostic/readiness correction is being verified separately. The next full
+scenario race exits nonzero at VLESS Vision/Reality because local loopback port
+allocation/dial returns `can't assign requested address`. This is recorded as a
+failed run, not evidence of protocol success or proof of a particular host cause.
+Logs: `/tmp/core-upgrade-final-shutdown-{normal,race,scenarios}.jsonl`.
+
+Follow-up attribution: the concurrently launched Mihomo diagnostic100 workload
+recorded 16,319 TIME_WAIT sockets and EADDRNOTAVAIL at the same 02:36 boundary.
+It has been stopped. Independent Vision/Reality race tests subsequently pass in
+9.500s, but the failed full run remains failed. Final socket-heavy acceptance
+must run serially, not alongside repeated external-client diagnostics. AnyTLS
+v5 normal/race also fail: earlier Hy2 relay recovery and intermittent Mihomo
+first-request failures precede exhaustion and remain actionable defects; later
+port-allocation failures cannot explain those earlier observations. Neither v5
+soak is accepted. Whole-tree go vet and the gofmt gate pass at this checkpoint.
+
+Both early integration failures now have independent reproducers and scoped
+repairs: [Hy2 listener retirement](../002-core-connection-lifecycle/hy2-listener-retirement-20261015.md)
+notifies the peer before destroying transport and passes the unchanged fresh-ID
+recovery fixture; AnyTLS's UPGRADE report records Mihomo's provider-loading
+readiness barrier and old-helper negative control. The
+[Sudoku harness](../007-core-regression/sudoku-harness-upgrade-20261015.md)
+now observes child startup/exit and propagates child race failures. Final serial
+source verification and official artifacts are the next gates.

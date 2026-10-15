@@ -149,8 +149,13 @@ Start 128 goroutines behind a barrier; each gets/creates the same counter and ad
 a known number of bytes. Assert pointer identity, no duplicate-registration errors
 and an exact total, then reset and increment again. Repeat with different names,
 unregister/recreate, OnlineMap and Channel. Channel must be started before callers
-observe it and stop exactly once on Close; injected Start errors must not publish
-an unusable channel. Include NoopManager and all test mocks after interface changes.
+observe it and terminate idempotently on concurrent manager Close; verify the
+worker closes its subscriber and removes it, rather than inferring cleanup from
+the manager map alone. The concrete Channel.Start currently always returns nil;
+there is no production factory/error path to inject. Start-error nonpublication
+becomes a required negative test if that implementation becomes fallible, not a
+reason to add a runtime factory solely for fault injection. Include NoopManager
+and all test mocks after interface changes.
 
 Run actual TCP/UDP user transfers for two authenticated users plus unknown/admin
 identity, compare ordinary RPC counters against received fixture bytes, and prove
@@ -227,6 +232,15 @@ Verify returned certificate/control fields and Sidecar/TUI generated proto consu
 for any API/schema change; do not renumber existing fields or remove optional APIs.
 
 ## V-013: Whole-Tree Gates and Official Builds (FR-005/006/010)
+
+Run socket-heavy gates serially: normal/race scenarios, AnyTLS full-suite/soak,
+external-client repetition, and Sidecar chain churn must not overlap on the same
+host. Record active test processes and TCP state counts before/after each run.
+The 2026-10-15 concurrent diagnostic workload exhausted Darwin's ephemeral port
+range (16,319 TIME_WAIT), invalidating that acceptance run. Do not change host
+TCP settings, restart user services, retry away protocol failures, or increase
+application deadlines to accommodate the test scheduler. Let owned connections
+retire before the next gate, and keep the failed evidence.
 
 Commands below are existing gates, to run only against the future candidate:
 
