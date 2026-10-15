@@ -70,3 +70,21 @@ The user subsequently authorized the isolated main-based upgrade. This document
 retains the historical backport checklist for provenance; current implementation
 and verification status belongs to [implementation.md](implementation.md), not
 the preceding draft conclusion. Production adoption remains a separate phase.
+
+## Authorized Protocol Coverage Extension, 2026-10-15
+
+These tasks follow the user's request to close the SS2/VLESS/mixed-chain gaps.
+They do not mark unrelated release adoption or historical alternatives complete.
+
+- [x] T021 Add the 16 two-hop/64 three-hop real TCP/UDP matrix, two identities,
+  multiple destinations, exact exit bytes and per-hop receipts. Complete normal/
+  race r6 passes are in [the protocol ledger](protocol-chain-network-20261015.md).
+- [x] T022 Execute TLS trust/SNI positive/negative and VLESS outer-Mux gates in
+  normal/race. Earlier oversized-packet and socket-collision failures stay recorded.
+- [x] T023 Reproduce observed Darwin UDP return-path misdelivery, add a real-wire
+  baseline-failing regression and a narrowly scoped literal-loopback source fix;
+  see [spec002](../002-core-connection-lifecycle/system-udp-loopback-source-20261015.md).
+- [ ] T024 Execute invalid identities, packet boundaries, cancellation, active
+  shutdown, cold/established relay outage, fresh recovery and resource rounds.
+- [ ] T025 Reconcile independent client/server interop, native Linux and
+  three-Akile sustained/public-chain acceptance with a frozen paired build.

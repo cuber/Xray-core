@@ -292,3 +292,40 @@ Soak for at least one hour locally, then 24-48h on an authorized canary under
 representative traffic. Separate source-fix success from operational mitigation.
 Counters/user routes/admin/usersync must remain correct; no full upgrade is accepted
 solely because process RSS fell immediately after restarting.
+
+## V-015: Protocol and Multi-Hop Acceptance Extension (2026-10-15)
+
+The user requested closing the SS2/VLESS and mixed-chain gaps after the first
+candidate acceptance. This extends verification, not release adoption. The
+canonical develop/master checkouts, active client profiles and installed Akile
+services are not test fixtures to rewrite in place.
+
+- Execute every ordered two-hop pair of SS-2022, VLESS, Hy2 and AnyTLS (16),
+  and their ordered three-hop compositions (64), with actual TCP and UDP
+  application payloads. A QUIC transport carrying HTTP does not prove UDP
+  application support. Use multiple destinations and exact bytes/packet bounds.
+- Authenticate users explicitly, retain distinct SS2 admin/user keys, verify
+  per-hop receipts and identity/counter attribution where exposed. Controlled
+  echo destinations and denied-hop controls must make direct escape observable.
+- Cover relay failure, new-flow rejection, fresh-flow recovery, cancellation,
+  orderly shutdown and resource ownership. Do not replay failed business writes.
+  Tag replacement is not proof that a still-live cached connection was cut.
+- Expand VLESS verification in the owning Core/Sidecar suites: basic RAW,
+  TLS/Reality/Vision, native/random encryption, TCP Mux enabled/disabled, UDS
+  SOCKS and SS2 prefixes. Assert incompatible Vision+Mux as rejection. External
+  client limitations are explicit; do not rename smux/yamux as Xray TCP Mux.
+- Run supported external SS2/VLESS configurations with pinned sing-box and
+  Mihomo on HK/TK/LA Akile for at least 600 seconds, plus idle resume, negative
+  credentials/trust, fresh reconnect, and process/hash/resource checks. These
+  are separately owned Config spec003 operations with private temporary files,
+  automatic owned-process cleanup, and unchanged installed services.
+- Execute socket-heavy partitions serially. Record normal/race/strict-checkptr
+  and native Linux results separately, with source and client hashes. Compile-only
+  checks and skipped opt-ins are never execution evidence. Public path failures
+  stay distinct from deterministic local acceptance, including the previously
+  observed macOS Hy2 return-path loss.
+
+Detailed new Core cases and actual outcomes belong in the adjacent
+`protocol-chain-*.md` report; Sidecar owns its VLESS matrix report, and Config
+owns remote orchestration/results. Until those reports record executions, the
+extension is implementing, not a retrospective all-combinations PASS claim.

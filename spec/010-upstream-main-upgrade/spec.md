@@ -1,6 +1,11 @@
 # Spec010: Fixed Main Upgrade
 
-- Status: Implemented and locally verified on the isolated candidate. Authorized
+- Status: Existing upgrade implemented and locally verified on the isolated
+  candidate; the subsequently authorized V015 protocol coverage extension is
+  Implementing. See [its plan](protocol-chain-plan.md) and
+  [execution ledger](protocol-chain-network-20261015.md), not the earlier frozen
+  release record, for those additional tests and the narrowly scoped UDP repair.
+  Authorized
   2026-10-14 after publishing the draft audit. Production adoption remains P12,
   not implicit approval. Platform/network limits and source-specific evidence
   are in [local verification](local-verification-20261015.md).
