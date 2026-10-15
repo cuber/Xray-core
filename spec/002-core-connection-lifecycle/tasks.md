@@ -1,5 +1,16 @@
 # 连接生命周期任务
 
+## 2026-10-15 Hy2 loopback source increment
+
+- [x] Reproduce real auth timeout and capture wildcard/specific-address same-port
+  endpoints; retain baseline source contract and deterministic wire failures.
+- [x] Preserve explicit IPv4/IPv6 Gateway, dialerProxy, request owner/cancellation
+  and shared outbound metadata; run complete Hy2 directory race/vet/format checks.
+- [x] Record exact results and inference boundary in
+  [owning evidence](hy2-loopback-source-20261015.md); freeze Go source for main.
+
+Final review, commit/pin/build and broader acceptance remain main-owned.
+
 ## 2026-10-14 increment
 
 - [x] Extract optional retirement, sender validation and rejected-object cleanup.

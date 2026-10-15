@@ -17,6 +17,7 @@ import (
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/net/cnc"
+	"github.com/xtls/xray-core/common/session"
 	"github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/transport/internet"
 	"github.com/xtls/xray-core/transport/internet/finalmask"
@@ -131,7 +132,7 @@ func (c *client) dial(ctx context.Context) error {
 		pktConn = conn.(*net.PacketConnWrapper).PacketConn
 		udpAddr = conn.RemoteAddr()
 	} else {
-		conn, err := internet.DialSystem(ctx, c.dest, c.socketConfig)
+		conn, err := internet.DialSystem(c.systemDialContext(ctx), c.dest, c.socketConfig)
 		if err != nil {
 			return errors.New("failed to dial to dest").Base(err)
 		}
@@ -232,6 +233,35 @@ func (c *client) dial(ctx context.Context) error {
 	go c.udpSM.run()
 
 	return nil
+}
+
+func (c *client) systemDialContext(ctx context.Context) context.Context {
+	if !c.dest.Address.Family().IsIP() || !c.dest.Address.IP().IsLoopback() ||
+		(c.socketConfig != nil && c.socketConfig.DialerProxy != "") {
+		return ctx
+	}
+	outbounds := session.OutboundsFromContext(ctx)
+	var ob session.Outbound
+	if len(outbounds) > 0 {
+		ob = *outbounds[len(outbounds)-1]
+		if ob.Gateway != nil {
+			return ctx
+		}
+	}
+	// Darwin can allocate a wildcard UDP ephemeral port already used by a
+	// specific loopback listener; replies then go to that listener. Bind the
+	// loopback source explicitly so the allocator checks the same address.
+	ob.Gateway = net.LocalHostIP
+	if c.dest.Address.Family().IsIPv6() {
+		ob.Gateway = net.LocalHostIPv6
+	}
+	owned := append([]*session.Outbound(nil), outbounds...)
+	if len(owned) == 0 {
+		owned = append(owned, &ob)
+	} else {
+		owned[len(owned)-1] = &ob
+	}
+	return session.ContextWithOutbounds(ctx, owned)
 }
 
 func (c *client) unlock() {

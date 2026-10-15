@@ -1,5 +1,13 @@
 # 连接生命周期验证矩阵
 
+## Hy2 loopback source increment (2026-10-15)
+
+[Loopback source evidence](hy2-loopback-source-20261015.md) records the natural
+repetition-148 auth timeout, deterministic source/wire baseline-red tests,
+strict-TLS ChromeParrot validation, unchanged 1000-chain pass and complete Hy2
+directory race/vet results. Original churn attribution is explicitly an
+inference because that failure did not record its client UDP local endpoint.
+
 ## Shared ownership increment (2026-10-14)
 
 ```sh
