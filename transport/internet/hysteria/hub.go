@@ -142,6 +142,13 @@ func (h *httpHandler) StreamDispatcher(ft http3.FrameType, stream *quic.Stream, 
 }
 
 type Listener struct {
+	mu          sync.Mutex
+	closed      bool
+	connections map[*quic.Conn]struct{}
+	serving     sync.WaitGroup
+	closeOnce   sync.Once
+	closeErr    error
+	acceptDone  chan struct{}
 	validator   *account.Validator
 	config      *Config
 	masqHandler http.Handler
@@ -154,6 +161,12 @@ type Listener struct {
 }
 
 func (l *Listener) handleClient(conn *quic.Conn) {
+	defer func() {
+		l.mu.Lock()
+		delete(l.connections, conn)
+		l.mu.Unlock()
+		l.serving.Done()
+	}()
 	handler := &httpHandler{
 		validator:   l.validator,
 		config:      l.config,
@@ -172,6 +185,9 @@ func (l *Listener) handleClient(conn *quic.Conn) {
 }
 
 func (l *Listener) keepAccepting() {
+	if l.acceptDone != nil {
+		defer close(l.acceptDone)
+	}
 	for {
 		conn, err := l.listener.Accept(context.Background())
 		if err != nil {
@@ -180,6 +196,18 @@ func (l *Listener) keepAccepting() {
 			}
 			break
 		}
+		l.mu.Lock()
+		if l.closed {
+			l.mu.Unlock()
+			conn.CloseWithError(closeErrCodeOK, "listener closed")
+			continue
+		}
+		if l.connections == nil {
+			l.connections = make(map[*quic.Conn]struct{})
+		}
+		l.connections[conn] = struct{}{}
+		l.serving.Add(1)
+		l.mu.Unlock()
 		go l.handleClient(conn)
 	}
 }
@@ -189,7 +217,27 @@ func (l *Listener) Addr() net.Addr {
 }
 
 func (l *Listener) Close() error {
-	return errors.Combine(l.listener.Close(), l.tr.Close(), l.pktConn.Close())
+	l.closeOnce.Do(func() {
+		l.mu.Lock()
+		l.closed = true
+		connections := make([]*quic.Conn, 0, len(l.connections))
+		for conn := range l.connections {
+			connections = append(connections, conn)
+		}
+		l.mu.Unlock()
+		listenErr := l.listener.Close()
+		if l.acceptDone != nil {
+			<-l.acceptDone
+		}
+		// Transport.Close aborts locally without notifying peers. Close each
+		// owned QUIC connection while the packet transport can still send.
+		for _, conn := range connections {
+			conn.CloseWithError(closeErrCodeOK, "listener closed")
+		}
+		l.serving.Wait()
+		l.closeErr = errors.Combine(listenErr, l.tr.Close(), l.pktConn.Close())
+	})
+	return l.closeErr
 }
 
 func Listen(ctx context.Context, address net.Address, port net.Port, streamSettings *internet.MemoryStreamConfig, handler internet.ConnHandler) (internet.Listener, error) {
@@ -343,6 +391,7 @@ func Listen(ctx context.Context, address net.Address, port net.Port, streamSetti
 	}
 
 	l := &Listener{
+		acceptDone:  make(chan struct{}),
 		validator:   validator,
 		config:      config,
 		masqHandler: masqHandler,

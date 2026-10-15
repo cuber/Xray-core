@@ -258,6 +258,10 @@ func (m *udpSessionManager) udp() (*InterConn, error) {
 
 func (m *udpSessionManager) feed(id uint32, d []byte) {
 	m.RLock()
+	if m.closed {
+		m.RUnlock()
+		return
+	}
 	udpConn, ok := m.m[id]
 	if ok {
 		select {
@@ -274,9 +278,13 @@ func (m *udpSessionManager) feed(id uint32, d []byte) {
 	}
 
 	m.Lock()
-	defer m.Unlock()
+	if m.closed {
+		m.Unlock()
+		return
+	}
 
 	udpConn, ok = m.m[id]
+	created := !ok
 	if !ok {
 		udpConn = &InterConn{
 			local:  m.conn.LocalAddr(),
@@ -294,11 +302,16 @@ func (m *udpSessionManager) feed(id uint32, d []byte) {
 		}
 		udpConn.user = m.user
 		m.m[id] = udpConn
-		m.addConn(udpConn)
 	}
 
 	select {
 	case udpConn.ch <- d:
 	default:
+	}
+	m.Unlock()
+	// The callback may synchronously reject and close this session, which
+	// reacquires the manager lock. Publish and enqueue before handing it off.
+	if created {
+		m.addConn(udpConn)
 	}
 }
