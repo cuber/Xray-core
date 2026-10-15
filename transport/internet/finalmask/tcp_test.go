@@ -55,7 +55,6 @@ func mustSendRecvTcp(
 	if !bytes.Equal(buf[:n], msg) {
 		t.Fatalf("unexpected data %q", buf[:n])
 	}
-
 }
 
 type layerMaskTcp struct {

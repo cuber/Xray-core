@@ -31,11 +31,11 @@ func TestSystemOnlyCATrustSelection(t *testing.T) {
 		leafPEM, keyPEM := leaf.ToPEM()
 		dir := t.TempDir()
 		emptyRoots := filepath.Join(dir, "empty-roots")
-		if err := os.Mkdir(emptyRoots, 0700); err != nil {
+		if err := os.Mkdir(emptyRoots, 0o700); err != nil {
 			t.Fatal(err)
 		}
 		for name, data := range map[string][]byte{"root.pem": rootPEM, "leaf.pem": leafPEM, "key.pem": keyPEM} {
-			if err := os.WriteFile(filepath.Join(dir, name), data, 0600); err != nil {
+			if err := os.WriteFile(filepath.Join(dir, name), data, 0o600); err != nil {
 				t.Fatal(err)
 			}
 		}

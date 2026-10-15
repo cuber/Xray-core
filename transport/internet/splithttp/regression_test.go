@@ -19,6 +19,7 @@ func (w *releasingWriter) WriteMultiBuffer(mb buf.MultiBuffer) error {
 	buf.ReleaseMulti(mb)
 	return nil
 }
+
 func TestUploadWriterReleasedLength(t *testing.T) {
 	downstream := new(releasingWriter)
 	w := uploadWriter{Writer: downstream}

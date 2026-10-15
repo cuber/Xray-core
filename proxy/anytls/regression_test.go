@@ -50,7 +50,7 @@ func TestVLESSAfterAnyTLSRemoval(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := filepath.Join(dir, "client.json")
-	if err := os.WriteFile(path, raw, 0600); err != nil {
+	if err := os.WriteFile(path, raw, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cmd := exec.CommandContext(ctx, binary, "run", "-c", path)

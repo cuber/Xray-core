@@ -69,7 +69,7 @@ func testAnyTLSExternalServers(t *testing.T, mode string) {
 			cert := f.inbound["streamSettings"].(map[string]any)["tlsSettings"].(map[string]any)["certificates"].([]any)[0].(map[string]any)
 			certPath, keyPath := filepath.Join(dir, "cert.pem"), filepath.Join(dir, "key.pem")
 			for path, data := range map[string]string{certPath: strings.Join(cert["certificate"].([]string), "\n"), keyPath: strings.Join(cert["key"].([]string), "\n")} {
-				if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+				if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -79,18 +79,22 @@ func testAnyTLSExternalServers(t *testing.T, mode string) {
 			if kind == "SINGBOX" {
 				config = map[string]any{
 					"log": map[string]any{"level": "error"},
-					"inbounds": []any{map[string]any{"type": "anytls", "listen": "127.0.0.1", "listen_port": port,
+					"inbounds": []any{map[string]any{
+						"type": "anytls", "listen": "127.0.0.1", "listen_port": port,
 						"padding_scheme": padding,
 						"users":          []any{map[string]any{"name": "test", "password": "remote-secret"}},
-						"tls":            map[string]any{"enabled": true, "certificate_path": certPath, "key_path": keyPath}}},
+						"tls":            map[string]any{"enabled": true, "certificate_path": certPath, "key_path": keyPath},
+					}},
 					"outbounds": []any{map[string]any{"type": "direct", "tag": "direct"}}, "route": map[string]any{"final": "direct"},
 				}
 			} else {
 				config = map[string]any{
 					"mode": "rule", "log-level": "error",
-					"listeners": []any{map[string]any{"name": "anytls", "type": "anytls", "listen": "127.0.0.1", "port": port,
+					"listeners": []any{map[string]any{
+						"name": "anytls", "type": "anytls", "listen": "127.0.0.1", "port": port,
 						"padding-scheme": strings.Join(padding, "\n"),
-						"users":          map[string]string{"test": "remote-secret"}, "certificate": certPath, "private-key": keyPath}},
+						"users":          map[string]string{"test": "remote-secret"}, "certificate": certPath, "private-key": keyPath,
+					}},
 					"rules": []string{"MATCH,DIRECT"},
 				}
 			}

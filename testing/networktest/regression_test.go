@@ -98,14 +98,14 @@ func TestFormatGateRejectsWithoutModification(t *testing.T) {
 	}
 	run("read-tree", "HEAD")
 	path := filepath.Join(dir, "common", "fmt_negative.go")
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	source := []byte("package common\nfunc regressionFmt( ) {println( \"fixture\" )}\n")
 	if _, err := parser.ParseFile(token.NewFileSet(), path, source, parser.AllErrors); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(path, source, 0600); err != nil {
+	if err := os.WriteFile(path, source, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	run("add", "common/fmt_negative.go")

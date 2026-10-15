@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/xtls/xray-core/app/proxyman/command"
-	"github.com/xtls/xray-core/common/serial"
 	"io"
 	"net"
 	"runtime"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/xtls/xray-core/app/proxyman/command"
+	"github.com/xtls/xray-core/common/serial"
 
 	xnet "github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/protocol"
@@ -30,6 +31,7 @@ type safetyDatagram struct {
 func newSafetyDatagram() *safetyDatagram {
 	return &safetyDatagram{in: make(chan []byte, 1), out: make(chan []byte, 1), done: make(chan struct{})}
 }
+
 func (c *safetyDatagram) Read(p []byte) (int, error) {
 	select {
 	case b := <-c.in:
@@ -38,6 +40,7 @@ func (c *safetyDatagram) Read(p []byte) (int, error) {
 		return 0, io.EOF
 	}
 }
+
 func (c *safetyDatagram) Write(p []byte) (int, error) {
 	select {
 	case c.out <- append([]byte(nil), p...):

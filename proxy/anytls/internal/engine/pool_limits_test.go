@@ -14,9 +14,14 @@ import (
 
 func TestPoolLimitsValidation(t *testing.T) {
 	for _, opts := range []ClientOptions{
-		{MaxSessions: -1}, {MaxSessions: 4097}, {MaxIdleSessions: -1}, {MaxConcurrentDials: -1},
-		{MinIdleSession: -1}, {MaxSessions: 2, MaxIdleSessions: 3},
-		{MaxSessions: 2, MaxConcurrentDials: 3}, {MaxIdleSessions: 1, MinIdleSession: 2},
+		{MaxSessions: -1},
+		{MaxSessions: 4097},
+		{MaxIdleSessions: -1},
+		{MaxConcurrentDials: -1},
+		{MinIdleSession: -1},
+		{MaxSessions: 2, MaxIdleSessions: 3},
+		{MaxSessions: 2, MaxConcurrentDials: 3},
+		{MaxIdleSessions: 1, MinIdleSession: 2},
 	} {
 		if opts.ValidateLimits() == nil {
 			t.Fatal("invalid limits accepted", opts)

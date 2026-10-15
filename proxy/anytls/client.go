@@ -24,11 +24,13 @@ import (
 	"github.com/xtls/xray-core/transport/internet/stat"
 )
 
-type clientDialKey struct{}
-type clientDial struct {
-	dialer internet.Dialer
-	tags   []string
-}
+type (
+	clientDialKey struct{}
+	clientDial    struct {
+		dialer internet.Dialer
+		tags   []string
+	}
+)
 
 // Client owns physical sessions; Process owns only a logical stream. Pending
 // admissions are cancellable on retirement, while admitted streams may drain.
@@ -61,8 +63,10 @@ func newClient(ctx context.Context, config *ClientConfig, pm policy.Manager) (*C
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	c := &Client{ctx: ctx, cancel: cancel, server: server, policy: pm,
-		pending: make(map[*clientOperation]struct{}), active: make(map[*clientOperation]struct{}), done: make(chan struct{})}
+	c := &Client{
+		ctx: ctx, cancel: cancel, server: server, policy: pm,
+		pending: make(map[*clientOperation]struct{}), active: make(map[*clientOperation]struct{}), done: make(chan struct{}),
+	}
 	c.pool, err = engine.NewClient(engine.ClientOptions{
 		Password: server.User.Account.(*MemoryAccount).password, DialOut: c.dial,
 		CancelableWrites:         true,

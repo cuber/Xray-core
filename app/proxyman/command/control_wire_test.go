@@ -34,6 +34,7 @@ func (h *controlInbound) Tag() string { return "entry" }
 func (h *controlInbound) ReceiverSettings() *serial.TypedMessage {
 	return serial.ToTypedMessage(h.receiver)
 }
+
 func (h *controlInbound) ProxySettings() *serial.TypedMessage {
 	return serial.ToTypedMessage(h.user.Account.ToProto())
 }
@@ -41,6 +42,7 @@ func (h *controlInbound) GetInbound() proxy.Inbound { return h }
 func (h *controlInbound) GetUsers(context.Context) []*protocol.MemoryUser {
 	return []*protocol.MemoryUser{h.user}
 }
+
 func (h *controlInbound) GetUser(_ context.Context, email string) *protocol.MemoryUser {
 	if email == h.user.Email {
 		return h.user
@@ -57,6 +59,7 @@ type controlInbounds struct {
 func (m controlInbounds) ListHandlers(context.Context) []inbound.Handler {
 	return []inbound.Handler{m.handler}
 }
+
 func (m controlInbounds) GetHandler(context.Context, string) (inbound.Handler, error) {
 	return m.handler, nil
 }
@@ -70,6 +73,7 @@ func (h controlOutbound) Tag() string { return "exit" }
 func (h controlOutbound) SenderSettings() *serial.TypedMessage {
 	return serial.ToTypedMessage(h.sender)
 }
+
 func (h controlOutbound) ProxySettings() *serial.TypedMessage {
 	return serial.ToTypedMessage(&vless.Account{Id: "00000000-0000-0000-0000-000000000001"})
 }

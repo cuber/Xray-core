@@ -76,7 +76,7 @@ func externalFragmentClient(t *testing.T, kind, binary, password string, relayPo
 		t.Fatal(err)
 	}
 	path, ready := filepath.Join(dir, "config.json"), filepath.Join(dir, "running")
-	if err := os.WriteFile(path, raw, 0600); err != nil {
+	if err := os.WriteFile(path, raw, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	args := []string{"run", "-c", path}

@@ -37,6 +37,7 @@ func (w answerWriter) WriteMessage(b *buf.Buffer) error {
 	}
 	return nil
 }
+
 func TestSharedSliceNormalization(t *testing.T) {
 	shared := []net.IP{net.ParseIP("192.0.2.1")}
 	before := []net.IP{append(net.IP(nil), shared[0]...)}

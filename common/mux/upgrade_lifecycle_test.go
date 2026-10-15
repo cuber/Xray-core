@@ -33,6 +33,7 @@ func (w *upgradeWriter) WriteMultiBuffer(b buf.MultiBuffer) error {
 	buf.ReleaseMulti(b)
 	return io.ErrClosedPipe
 }
+
 func (w *upgradeWriter) Close() error {
 	w.once.Do(func() { close(w.stop) })
 	return nil

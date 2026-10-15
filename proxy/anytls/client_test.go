@@ -148,7 +148,9 @@ func (c *stalledClientConn) Write(p []byte) (int, error) {
 	}
 	return len(p), nil
 }
-func (c *stalledClientConn) Read([]byte) (int, error)         { <-c.closed; return 0, net.ErrClosed }
+
+func (c *stalledClientConn) Read([]byte) (int, error) { <-c.closed; return 0, net.ErrClosed }
+
 func (c *stalledClientConn) Close() error                     { c.once.Do(func() { close(c.closed) }); return nil }
 func (c *stalledClientConn) SetDeadline(time.Time) error      { return nil }
 func (c *stalledClientConn) SetWriteDeadline(time.Time) error { return nil }

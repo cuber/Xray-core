@@ -180,7 +180,7 @@ func TestU012CombinedIndependentSemanticOracle(t *testing.T) {
 			t.Fatal(err)
 		}
 		path := filepath.Join(dir, fixture.name)
-		if err := os.WriteFile(path, data, 0600); err != nil {
+		if err := os.WriteFile(path, data, 0o600); err != nil {
 			t.Fatal(err)
 		}
 		data, err = os.ReadFile(path)
@@ -215,7 +215,7 @@ func TestU012CombinedIndependentSemanticOracle(t *testing.T) {
 	domains := []string{"API.Example.TEST", "www.Example.Test", "rx12.EXAMPLE.test", "rxX.example.test", "notexample.test", "track.other.test", "ONLY-ADS.TEST", "UPPER.test", "nomatch.test", ""}
 	ipSets := [][]string{nil, {"192.0.2.1"}, {"192.0.2.200"}, {"192.0.3.1"}, {"2001:db8:1::1"}, {"2001:db9::1"}, {"198.51.100.1", "2001:db8::2"}}
 	// Explicit anchors guard against a vacuous or accidentally broadened oracle.
-	anchor := semanticContext{domain: "API.EXAMPLE.TEST", ips: []xnet.IP{xnet.IP{192, 0, 2, 1}}}
+	anchor := semanticContext{domain: "API.EXAMPLE.TEST", ips: []xnet.IP{{192, 0, 2, 1}}}
 	if got := ref.matches(rules, anchor); !slices.Equal(got, []string{"intersection", "full", "blue", "blue-repeat", "ads", "suffix", "ip", "fallback"}) {
 		t.Fatalf("reference anchor: %v", got)
 	}

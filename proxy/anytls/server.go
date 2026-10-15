@@ -44,8 +44,10 @@ type userRecord struct {
 // in-flight frames and UoT input). Dispatcher buffers have a separate cap.
 const maxActiveStreams = (32 * 1024 * 1024) / (256 * 1024)
 
-const maxUDPLinks = 128
-const maxPipeBuffer = 32 * 1024
+const (
+	maxUDPLinks   = 128
+	maxPipeBuffer = 32 * 1024
+)
 
 func boundedBufferPolicy(p policy.Buffer) policy.Buffer {
 	if p.PerConnection < 0 || p.PerConnection > maxPipeBuffer {
@@ -54,25 +56,28 @@ func boundedBufferPolicy(p policy.Buffer) policy.Buffer {
 	return p
 }
 
-type connectionKey struct{}
-type connection struct {
-	net.Conn
-	ctx              context.Context
-	cancel           context.CancelFunc
-	user             *userRecord
-	streams          int
-	streamCount      uint64
-	retiring         bool
-	monitorDone      chan struct{}
-	timeout          atomic.Int64
-	admissionFailure string
-}
+type (
+	connectionKey struct{}
+	connection    struct {
+		net.Conn
+		ctx              context.Context
+		cancel           context.CancelFunc
+		user             *userRecord
+		streams          int
+		streamCount      uint64
+		retiring         bool
+		monitorDone      chan struct{}
+		timeout          atomic.Int64
+		admissionFailure string
+	}
+)
 
 func (c *connection) touch() {
 	if d := c.timeout.Load(); d > 0 {
 		c.Conn.SetReadDeadline(time.Now().Add(time.Duration(d)))
 	}
 }
+
 func (c *connection) Read(p []byte) (int, error) {
 	c.touch()
 	return c.Conn.Read(p)
@@ -103,8 +108,10 @@ type Server struct {
 	lastAdmissionWarning                time.Time
 }
 
-var _ proxy.Inbound = (*Server)(nil)
-var _ proxy.UserManager = (*Server)(nil)
+var (
+	_ proxy.Inbound     = (*Server)(nil)
+	_ proxy.UserManager = (*Server)(nil)
+)
 
 func NewServer(ctx context.Context, c *ServerConfig) (*Server, error) {
 	if err := c.Validate(); err != nil {
@@ -117,6 +124,7 @@ func NewServer(ctx context.Context, c *ServerConfig) (*Server, error) {
 	pm := core.MustFromContext(ctx).GetFeature(policy.ManagerType()).(policy.Manager)
 	return newServer(c, pm)
 }
+
 func newServer(c *ServerConfig, pm policy.Manager) (*Server, error) {
 	if err := c.Validate(); err != nil {
 		return nil, err
@@ -173,6 +181,7 @@ func newServer(c *ServerConfig, pm policy.Manager) (*Server, error) {
 	}
 	return s, nil
 }
+
 func (s *Server) AddUser(_ context.Context, u *protocol.MemoryUser) error {
 	if u == nil || u.Email == "" {
 		return fmt.Errorf("anytls: email is required")
@@ -197,6 +206,7 @@ func (s *Server) AddUser(_ context.Context, u *protocol.MemoryUser) error {
 	s.passwords[a.hash] = r
 	return nil
 }
+
 func (s *Server) RemoveUser(_ context.Context, email string) error {
 	s.mu.Lock()
 	r := s.users[email]
@@ -219,11 +229,13 @@ func (s *Server) RemoveUser(_ context.Context, email string) error {
 	}
 	return nil
 }
+
 func cloneUser(u protocol.MemoryUser) *protocol.MemoryUser {
-	a := *(u.Account.(*MemoryAccount))
+	a := *u.Account.(*MemoryAccount)
 	u.Account = &a
 	return &u
 }
+
 func (s *Server) GetUser(_ context.Context, email string) *protocol.MemoryUser {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -232,6 +244,7 @@ func (s *Server) GetUser(_ context.Context, email string) *protocol.MemoryUser {
 	}
 	return nil
 }
+
 func (s *Server) GetUsers(_ context.Context) []*protocol.MemoryUser {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -242,11 +255,13 @@ func (s *Server) GetUsers(_ context.Context) []*protocol.MemoryUser {
 	sort.Slice(out, func(i, j int) bool { return out[i].Email < out[j].Email })
 	return out
 }
+
 func (s *Server) GetUsersCount(context.Context) int64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return int64(len(s.users))
 }
+
 func (s *Server) authenticate(ctx context.Context, password []byte) (context.Context, bool) {
 	if len(password) != 32 {
 		return nil, false
@@ -272,6 +287,7 @@ func (s *Server) authenticate(ctx context.Context, password []byte) (context.Con
 	r.sessions++
 	return ctx, true
 }
+
 func (s *Server) openStream(ctx context.Context) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -284,6 +300,7 @@ func (s *Server) openStream(ctx context.Context) bool {
 	s.activeStreams++
 	return true
 }
+
 func (s *Server) closeStream(ctx context.Context) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -321,6 +338,7 @@ func validateServerStream(m *internet.MemoryStreamConfig) error {
 	}
 	return nil
 }
+
 func (s *Server) Process(ctx context.Context, network net.Network, conn stat.Connection, d routing.Dispatcher) error {
 	if network != net.Network_TCP {
 		return fmt.Errorf("anytls requires TCP")
@@ -370,6 +388,7 @@ func (s *Server) Process(ctx context.Context, network net.Network, conn stat.Con
 	}
 	return err
 }
+
 func (s *Server) Close() error {
 	s.mu.Lock()
 	s.closed = true
@@ -405,6 +424,7 @@ func streamContext(ctx context.Context, user protocol.MemoryUser, conn net.Conn)
 	ctx = session.ContextWithOutbounds(ctx, []*session.Outbound{{}})
 	return session.ContextWithContent(ctx, &content)
 }
+
 func (s *Server) NewConnectionEx(ctx context.Context, conn net.Conn, source, dest M.Socksaddr, onClose N.CloseHandlerFunc) {
 	defer conn.Close()
 	c := ctx.Value(connectionKey{}).(*connection)
@@ -431,6 +451,7 @@ func (s *Server) NewConnectionEx(ctx context.Context, conn net.Conn, source, des
 	ctx = log.ContextWithAccessMessage(ctx, &log.AccessMessage{From: source, To: target, Status: log.AccessAccepted, Email: u.Email})
 	s.copyTCP(ctx, conn, target)
 }
+
 func (s *Server) copyTCP(ctx context.Context, conn net.Conn, dest net.Destination) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -480,6 +501,7 @@ func (s *Server) copyTCP(ctx context.Context, conn net.Conn, dest net.Destinatio
 	}
 	return err
 }
+
 func init() {
 	common.Must(common.RegisterConfig((*ServerConfig)(nil), func(ctx context.Context, c interface{}) (interface{}, error) {
 		return NewServer(ctx, c.(*ServerConfig))

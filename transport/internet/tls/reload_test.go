@@ -46,10 +46,10 @@ func TestCertificateHotReloadConcurrentHandshake(t *testing.T) {
 	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: key})
 	dir := t.TempDir()
 	certPath, keyPath := filepath.Join(dir, "cert.pem"), filepath.Join(dir, "key.pem")
-	if err := os.WriteFile(certPath, certPEM, 0600); err != nil {
+	if err := os.WriteFile(certPath, certPEM, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(keyPath, keyPEM, 0600); err != nil {
+	if err := os.WriteFile(keyPath, keyPEM, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	entry := &Certificate{Certificate: certPEM, Key: keyPEM, CertificatePath: certPath, KeyPath: keyPath, OcspStapling: 1}
@@ -85,7 +85,7 @@ func TestCertificateHotReloadConcurrentHandshake(t *testing.T) {
 	replace := func(data []byte) {
 		t.Helper()
 		temporary := filepath.Join(dir, "next.pem")
-		if err := os.WriteFile(temporary, data, 0600); err != nil {
+		if err := os.WriteFile(temporary, data, 0o600); err != nil {
 			t.Fatal(err)
 		}
 		if err := os.Rename(temporary, certPath); err != nil {
@@ -175,10 +175,10 @@ func TestOCSPRefreshPreservesPublishedSnapshot(t *testing.T) {
 	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: key})
 	dir := t.TempDir()
 	certPath, keyPath := filepath.Join(dir, "cert.pem"), filepath.Join(dir, "key.pem")
-	if err := os.WriteFile(certPath, certPEM, 0600); err != nil {
+	if err := os.WriteFile(certPath, certPEM, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(keyPath, keyPEM, 0600); err != nil {
+	if err := os.WriteFile(keyPath, keyPEM, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	config := (&Config{Certificate: []*Certificate{{Certificate: certPEM, Key: keyPEM, CertificatePath: certPath, KeyPath: keyPath, OcspStapling: 1}}}).GetTLSConfig()

@@ -42,9 +42,11 @@ func TestExternalClients(t *testing.T) {
 	if err := f.addInbound(t, map[string]any{
 		"tag": "hy2-test", "listen": "127.0.0.1", "port": f.inbound["port"], "protocol": "hysteria",
 		"settings": map[string]any{"version": 2, "clients": []any{map[string]any{"email": "hy2-user", "auth": "hy2-test-secret"}}},
-		"streamSettings": map[string]any{"network": "hysteria", "security": "tls",
+		"streamSettings": map[string]any{
+			"network": "hysteria", "security": "tls",
 			"hysteriaSettings": map[string]any{"version": 2},
-			"tlsSettings":      map[string]any{"alpn": []string{"h3"}, "certificates": hy2TLS["certificates"]}},
+			"tlsSettings":      map[string]any{"alpn": []string{"h3"}, "certificates": hy2TLS["certificates"]},
+		},
 	}); err != nil {
 		t.Fatal("Hy2 UDP and AnyTLS TCP cannot coexist", err)
 	}
@@ -53,8 +55,10 @@ func TestExternalClients(t *testing.T) {
 	const ssUser = "ZmVkY2JhOTg3NjU0MzIxMA=="
 	if err := f.addInbound(t, map[string]any{
 		"tag": "ss2-test", "listen": "127.0.0.1", "port": ssPort, "protocol": "shadowsocks",
-		"settings": map[string]any{"method": "2022-blake3-aes-128-gcm", "password": ssMaster,
-			"clients": []any{map[string]any{"email": "singbox", "password": ssUser}}},
+		"settings": map[string]any{
+			"method": "2022-blake3-aes-128-gcm", "password": ssMaster,
+			"clients": []any{map[string]any{"email": "singbox", "password": ssUser}},
+		},
 	}); err != nil {
 		t.Fatal("SS-2022 regression listener", err)
 	}
@@ -75,7 +79,7 @@ func TestExternalClients(t *testing.T) {
 			}
 			dir := t.TempDir()
 			caPath := filepath.Join(dir, "ca.pem")
-			if err := os.WriteFile(caPath, f.caPEM, 0600); err != nil {
+			if err := os.WriteFile(caPath, f.caPEM, 0o600); err != nil {
 				t.Fatal(err)
 			}
 			host, portText, _ := net.SplitHostPort(f.address)
@@ -123,12 +127,12 @@ func TestExternalClients(t *testing.T) {
 			}
 			raw, _ := json.Marshal(config)
 			recordAnyTLSFixture(t, kind, raw)
-			if err := os.WriteFile(configPath, raw, 0600); err != nil {
+			if err := os.WriteFile(configPath, raw, 0o600); err != nil {
 				t.Fatal(err)
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			cmd := exec.CommandContext(ctx, binary, args...)
-			logFile, err := os.OpenFile(filepath.Join(dir, "client.log"), os.O_CREATE|os.O_WRONLY, 0600)
+			logFile, err := os.OpenFile(filepath.Join(dir, "client.log"), os.O_CREATE|os.O_WRONLY, 0o600)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -1,9 +1,10 @@
 package dns_test
 
 import (
-	"github.com/xtls/xray-core/testing/servers/dnsfixture"
 	"testing"
 	"time"
+
+	"github.com/xtls/xray-core/testing/servers/dnsfixture"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/miekg/dns"

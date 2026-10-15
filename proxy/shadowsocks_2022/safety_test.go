@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"github.com/xtls/xray-core/app/proxyman/command"
-	"github.com/xtls/xray-core/common/serial"
 	"io"
 	"net"
 	"runtime"
@@ -14,6 +12,9 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/xtls/xray-core/app/proxyman/command"
+	"github.com/xtls/xray-core/common/serial"
 
 	"github.com/xtls/xray-core/common/antireplay"
 	"github.com/xtls/xray-core/common/buf"
@@ -349,6 +350,7 @@ func (d safetyDispatcher) Close() error      { return nil }
 func (d safetyDispatcher) Dispatch(c context.Context, dst xnet.Destination) (*transport.Link, error) {
 	return d.call(c, dst)
 }
+
 func (d safetyDispatcher) DispatchLink(context.Context, xnet.Destination, *transport.Link) error {
 	return errors.New("unexpected DispatchLink")
 }
@@ -366,6 +368,7 @@ func safetyMulti(t *testing.T) *MultiUserInbound {
 	}
 	return &MultiUserInbound{method: m, masterPSK: key, udpMasterCipher: b, policyManager: safetyPolicy{time.Second}, saltFilter: antireplay.NewMapFilter[[32]byte](60), udpSessions: NewUDPSessionManager(time.Minute), usersByHash: utils.NewTypedSyncMap[[16]byte, *protocol.MemoryUser](), usersByEmail: utils.NewTypedSyncMap[string, *protocol.MemoryUser]()}
 }
+
 func sessionCounts(m *UDPSessionManager) (int, int) {
 	n, w := 0, 0
 	m.sessions.Range(func(_ uint64, s *ServerUDPSession) bool {
@@ -379,6 +382,7 @@ func sessionCounts(m *UDPSessionManager) (int, int) {
 	})
 	return n, w
 }
+
 func TestSafetyInvalidUDPAllocationWaves(t *testing.T) {
 	m, _ := GetCipherMethod(MethodAES128GCM)
 	key := bytes.Repeat([]byte{1}, 16)

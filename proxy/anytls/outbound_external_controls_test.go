@@ -61,10 +61,14 @@ func TestAnyTLSExternalControlPairs(t *testing.T) {
 					"tls": map[string]any{"enabled": true, "server_name": "anytls.test", "certificate_path": caPath},
 				}}, "route": map[string]any{"final": "proxy"}}
 			} else {
-				client = map[string]any{"socks-port": socksPort, "bind-address": "127.0.0.1", "mode": "rule", "log-level": "error",
-					"proxies": []any{map[string]any{"name": "proxy", "type": "anytls", "server": "127.0.0.1", "port": port,
-						"password": "control-secret", "sni": "anytls.test", "fingerprint": fingerprint, "skip-cert-verify": false, "udp": true}},
-					"rules": []string{"MATCH,proxy"}}
+				client = map[string]any{
+					"socks-port": socksPort, "bind-address": "127.0.0.1", "mode": "rule", "log-level": "error",
+					"proxies": []any{map[string]any{
+						"name": "proxy", "type": "anytls", "server": "127.0.0.1", "port": port,
+						"password": "control-secret", "sni": "anytls.test", "fingerprint": fingerprint, "skip-cert-verify": false, "udp": true,
+					}},
+					"rules": []string{"MATCH,proxy"},
+				}
 			}
 			stopServer := startExternalControl(t, serverBin, serverKind, filepath.Join(dir, "server"), server, port)
 			startExternalControl(t, clientBin, clientKind, filepath.Join(dir, "client"), client, socksPort)
@@ -123,16 +127,20 @@ func externalControlCertificate(t *testing.T, dir string) (string, string, strin
 	if err != nil {
 		t.Fatal(err)
 	}
-	ca := &x509.Certificate{SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "External control CA"},
+	ca := &x509.Certificate{
+		SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "External control CA"},
 		NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour), IsCA: true,
-		BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign}
+		BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign,
+	}
 	caDER, err := x509.CreateCertificate(rand.Reader, ca, ca, key.Public(), key)
 	if err != nil {
 		t.Fatal(err)
 	}
-	leaf := &x509.Certificate{SerialNumber: big.NewInt(2), DNSNames: []string{"anytls.test"},
+	leaf := &x509.Certificate{
+		SerialNumber: big.NewInt(2), DNSNames: []string{"anytls.test"},
 		NotBefore: ca.NotBefore, NotAfter: ca.NotAfter, KeyUsage: x509.KeyUsageDigitalSignature,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}
 	der, err := x509.CreateCertificate(rand.Reader, leaf, ca, key.Public(), key)
 	if err != nil {
 		t.Fatal(err)
@@ -147,7 +155,7 @@ func externalControlCertificate(t *testing.T, dir string) (string, string, strin
 		certPath: append(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), caPEM...),
 		keyPath:  pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyDER}), caPath: caPEM,
 	} {
-		if err := os.WriteFile(path, data, 0600); err != nil {
+		if err := os.WriteFile(path, data, 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -156,7 +164,7 @@ func externalControlCertificate(t *testing.T, dir string) (string, string, strin
 
 func startExternalControl(t *testing.T, binary, kind, dir string, config map[string]any, port int) func() {
 	t.Helper()
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := json.Marshal(config)
@@ -165,7 +173,7 @@ func startExternalControl(t *testing.T, binary, kind, dir string, config map[str
 	}
 	recordAnyTLSFixture(t, kind, raw)
 	path := filepath.Join(dir, "config.json")
-	if err := os.WriteFile(path, raw, 0600); err != nil {
+	if err := os.WriteFile(path, raw, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	args := []string{"run", "-c", path}
@@ -183,7 +191,7 @@ func startExternalControl(t *testing.T, binary, kind, dir string, config map[str
 		args = []string{"-d", filepath.Dir(dir), "-f", path, "-post-up", "touch " + quoted}
 	}
 	logPath := filepath.Join(dir, "process.log")
-	log, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY, 0600)
+	log, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		t.Fatal(err)
 	}

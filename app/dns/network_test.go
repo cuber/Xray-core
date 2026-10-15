@@ -1,8 +1,9 @@
 package dns_test
 
 import (
-	"github.com/xtls/xray-core/testing/networktest"
 	"testing"
+
+	"github.com/xtls/xray-core/testing/networktest"
 )
 
 func requirePublicDNS(t *testing.T) {

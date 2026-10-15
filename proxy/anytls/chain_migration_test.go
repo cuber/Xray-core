@@ -48,7 +48,9 @@ func assertAnyTLSLegacyChainRejected(t *testing.T, tag string) {
 		"protocol":      "anytls",
 		"settings":      map[string]any{"address": "127.0.0.1", "port": 443, "password": "migration-test"},
 		"proxySettings": map[string]any{"tag": tag},
-		"streamSettings": map[string]any{"network": "raw", "security": "tls", "tlsSettings": map[string]any{},
-			"sockopt": map[string]any{"dialerProxy": "alternate"}},
+		"streamSettings": map[string]any{
+			"network": "raw", "security": "tls", "tlsSettings": map[string]any{},
+			"sockopt": map[string]any{"dialerProxy": "alternate"},
+		},
 	})
 }

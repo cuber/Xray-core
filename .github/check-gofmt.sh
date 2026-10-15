@@ -22,4 +22,7 @@ while IFS= read -r -d '' file; do
     failed=1
   fi
 done < "$files"
-exit "$failed"
+if [ "$failed" -ne 0 ]; then
+  exit "$failed"
+fi
+go run ./infra/vformat/main.go -mode check -pwd ./

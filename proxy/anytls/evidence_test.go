@@ -63,7 +63,7 @@ func recordAnyTLSFixture(t *testing.T, label string, raw []byte) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	digest := sha256.Sum256([]byte(t.Name()))
@@ -107,7 +107,7 @@ func TestAnyTLSFixtureEvidenceRedaction(t *testing.T) {
 	}
 	for _, path := range files {
 		info, err := os.Stat(path)
-		if err != nil || info.Mode().Perm() != 0600 {
+		if err != nil || info.Mode().Perm() != 0o600 {
 			t.Fatalf("evidence permissions: %v %v", info, err)
 		}
 		data, err := os.ReadFile(path)

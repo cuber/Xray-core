@@ -17,6 +17,7 @@ func (c *handshakeReplyConn) Write(b []byte) (int, error) { return c.reply.Write
 func (*handshakeReplyConn) LocalAddr() stdnet.Addr {
 	return &stdnet.UnixAddr{Name: "/tmp/socks-server", Net: "unix"}
 }
+
 func (*handshakeReplyConn) RemoteAddr() stdnet.Addr {
 	return &stdnet.UnixAddr{Name: "/tmp/socks-client", Net: "unix"}
 }

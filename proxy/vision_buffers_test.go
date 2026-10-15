@@ -135,7 +135,10 @@ func TestVisionBuffersLazyPoolTransfer(t *testing.T) {
 
 func TestVisionBuffersRejectUnsupported(t *testing.T) {
 	var nilConn *inlineVisionConn
-	for _, owner := range []any{nil, nilConn, inlineVisionConn{}, &struct{}{},
+	for _, owner := range []any{
+		nil, nilConn,
+		inlineVisionConn{},
+		&struct{}{},
 		&struct {
 			input    bytes.Reader
 			rawInput []byte

@@ -69,7 +69,7 @@ func TestAnyTLSExternalClientsThroughNativeOutbound(t *testing.T) {
 			// reject this peer instead of silently accepting an untrusted TLS leg.
 			_, _, wrongCA, wrongFingerprint := externalControlCertificate(t, dir)
 			caPath := filepath.Join(dir, "core-ca.pem")
-			if err := os.WriteFile(caPath, f.caPEM, 0600); err != nil {
+			if err := os.WriteFile(caPath, f.caPEM, 0o600); err != nil {
 				t.Fatal(err)
 			}
 			startClient := func(name, trustPath, fingerprint string) (proxy.Dialer, string, func()) {
@@ -81,8 +81,10 @@ func TestAnyTLSExternalClientsThroughNativeOutbound(t *testing.T) {
 						"log":      map[string]any{"level": "error"},
 						"inbounds": []any{map[string]any{"type": "socks", "listen": "127.0.0.1", "listen_port": socksPort}},
 						"outbounds": []any{
-							map[string]any{"type": "anytls", "tag": "proxy", "server": "127.0.0.1", "server_port": portOf(f.address), "password": password,
-								"tls": map[string]any{"enabled": true, "server_name": "anytls.test", "certificate_path": trustPath, "insecure": false}},
+							map[string]any{
+								"type": "anytls", "tag": "proxy", "server": "127.0.0.1", "server_port": portOf(f.address), "password": password,
+								"tls": map[string]any{"enabled": true, "server_name": "anytls.test", "certificate_path": trustPath, "insecure": false},
+							},
 							map[string]any{"type": "direct", "tag": "ready-only"},
 						},
 						"route": map[string]any{"final": "proxy", "rules": []any{map[string]any{
@@ -92,8 +94,10 @@ func TestAnyTLSExternalClientsThroughNativeOutbound(t *testing.T) {
 				} else {
 					config = map[string]any{
 						"socks-port": socksPort, "bind-address": "127.0.0.1", "mode": "rule", "log-level": "error",
-						"proxies": []any{map[string]any{"name": "proxy", "type": "anytls", "server": "127.0.0.1", "port": portOf(f.address),
-							"password": password, "sni": "anytls.test", "fingerprint": fingerprint, "skip-cert-verify": false, "udp": true}},
+						"proxies": []any{map[string]any{
+							"name": "proxy", "type": "anytls", "server": "127.0.0.1", "port": portOf(f.address),
+							"password": password, "sni": "anytls.test", "fingerprint": fingerprint, "skip-cert-verify": false, "udp": true,
+						}},
 						"rules": []string{fmt.Sprintf("DST-PORT,%d,DIRECT", portOf(readyTarget)), "MATCH,proxy"},
 					}
 				}

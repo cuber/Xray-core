@@ -410,7 +410,7 @@ func TestIPMatcher6US(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "fixture.dat"), data, 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "fixture.dat"), data, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("xray.location.asset", dir)

@@ -64,7 +64,7 @@ func TestDirectAPIUnixLifecycle(t *testing.T) {
 			t.Fatal(err)
 		}
 		info, err := os.Stat(path)
-		if err != nil || info.Mode().Perm() != 0600 {
+		if err != nil || info.Mode().Perm() != 0o600 {
 			t.Fatal("private socket permission", info, err)
 		}
 		testHealth(t, "unix://"+path)
@@ -108,7 +108,7 @@ func TestDirectAPIUnixStaleAndInvalidPaths(t *testing.T) {
 	}
 	testHealth(t, "unix://"+path)
 	c.Close()
-	if err := os.WriteFile(path, []byte("preserve"), 0600); err != nil {
+	if err := os.WriteFile(path, []byte("preserve"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := testAPI(t, path).Start(); err == nil {

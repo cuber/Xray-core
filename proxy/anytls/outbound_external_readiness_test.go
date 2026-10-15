@@ -32,7 +32,7 @@ func TestAnyTLSMihomoStartupReadiness(t *testing.T) {
 	cert := f.inbound["streamSettings"].(map[string]any)["tlsSettings"].(map[string]any)["certificates"].([]any)[0].(map[string]any)
 	certPath, keyPath := filepath.Join(dir, "cert.pem"), filepath.Join(dir, "key.pem")
 	for path, data := range map[string]string{certPath: strings.Join(cert["certificate"].([]string), "\n"), keyPath: strings.Join(cert["key"].([]string), "\n")} {
-		if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+		if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -52,10 +52,13 @@ func TestAnyTLSMihomoStartupReadiness(t *testing.T) {
 	port := unusedPort(t)
 	config := map[string]any{
 		"mode": "rule", "log-level": "debug",
-		"listeners": []any{map[string]any{"name": "anytls", "type": "anytls", "listen": "127.0.0.1", "port": port,
-			"users": map[string]string{"test": "remote-secret"}, "certificate": certPath, "private-key": keyPath}},
+		"listeners": []any{map[string]any{
+			"name": "anytls", "type": "anytls", "listen": "127.0.0.1", "port": port,
+			"users": map[string]string{"test": "remote-secret"}, "certificate": certPath, "private-key": keyPath,
+		}},
 		"rule-providers": map[string]any{"startup-barrier": map[string]any{
-			"type": "http", "behavior": "classical", "url": provider.URL, "path": "startup.yaml", "proxy": "DIRECT"}},
+			"type": "http", "behavior": "classical", "url": provider.URL, "path": "startup.yaml", "proxy": "DIRECT",
+		}},
 		"rules": []string{"RULE-SET,startup-barrier,DIRECT", "MATCH,DIRECT"},
 	}
 	ready := make(chan struct{})

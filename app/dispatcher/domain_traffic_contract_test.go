@@ -56,6 +56,7 @@ func (r *trafficContractReader) ReadMultiBuffer() (buf.MultiBuffer, error) {
 	r.payload = nil
 	return buf.MergeBytes(nil, payload), r.err
 }
+
 func (r *trafficContractReader) ReadMultiBufferTimeout(time.Duration) (buf.MultiBuffer, error) {
 	return r.ReadMultiBuffer()
 }

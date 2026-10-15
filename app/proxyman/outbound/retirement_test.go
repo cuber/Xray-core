@@ -35,6 +35,7 @@ func (h *retiringTestHandler) Retire() <-chan struct{} {
 	h.retired.Store(true)
 	return h.done
 }
+
 func (h *retiringTestHandler) Close() error {
 	h.manager.GetHandler("replacement")
 	h.closed.Store(true)

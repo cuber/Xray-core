@@ -11,9 +11,11 @@ import (
 	feature_stats "github.com/xtls/xray-core/features/stats"
 )
 
-type DomainTrafficEntry = feature_stats.DomainTrafficEntry
-type DomainTrafficBucket = feature_stats.DomainTrafficBucket
-type DomainTrafficSnapshot = feature_stats.DomainTrafficSnapshot
+type (
+	DomainTrafficEntry    = feature_stats.DomainTrafficEntry
+	DomainTrafficBucket   = feature_stats.DomainTrafficBucket
+	DomainTrafficSnapshot = feature_stats.DomainTrafficSnapshot
+)
 
 const (
 	defaultDomainTrafficInterval   = 5 * time.Second

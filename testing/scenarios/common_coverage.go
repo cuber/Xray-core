@@ -37,7 +37,7 @@ func RunXrayProtobuf(config []byte) *exec.Cmd {
 	if covDir == "" {
 		covDir = filepath.Join(filepath.Dir(testBinaryPath), "coverage")
 	}
-	common.Must(os.MkdirAll(covDir, 0700))
+	common.Must(os.MkdirAll(covDir, 0o700))
 	randomID := uuid.New()
 	profile := randomID.String() + ".out"
 	proc := exec.Command(testBinaryPath, "-test.run=^TestRunMainForCoverage$", "-test.coverprofile", profile, "-test.outputdir", covDir, "--", "run", "-config=stdin:", "-format=pb")

@@ -44,6 +44,7 @@ type nonComparableConnection struct {
 func (nonComparableConnection) LocalAddr() net.Addr {
 	return &net.TCPAddr{IP: net.LocalHostIP.IP(), Port: 1234}
 }
+
 func (nonComparableConnection) RemoteAddr() net.Addr {
 	return &net.TCPAddr{IP: net.LocalHostIP.IP(), Port: 5678}
 }
@@ -252,12 +253,14 @@ type sharedRetirementInbound struct {
 func (*sharedRetirementInbound) Network() []net.Network {
 	return []net.Network{net.Network_TCP, net.Network_UNIX, net.Network_UDP}
 }
+
 func (p *sharedRetirementInbound) Close() error {
 	if p.closes.Add(1) == 1 {
 		close(p.release)
 	}
 	return nil
 }
+
 func (p *sharedRetirementInbound) Process(ctx context.Context, _ net.Network, conn stat.Connection, _ routing.Dispatcher) error {
 	p.started <- ctx
 	io.Copy(io.Discard, conn)

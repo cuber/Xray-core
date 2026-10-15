@@ -180,13 +180,26 @@ func TestContractUserMatchingEdges(t *testing.T) {
 		rule, user string
 		want       bool
 	}{
-		{"admin@la.att", "admin@la.att", true}, {"admin@la.att", "Admin@la.att", false}, {"admin@la.att", "admin@LA.ATT", false},
-		{"domain:la.att", "u@la.att", true}, {"domain:la.att", "u@LA.ATT", true}, {"domain:LA.ATT", "u@la.att", true},
-		{"domain:la.att", "u@gmail.com@la.att", true}, {"domain:la.att", "u@x.la.att", false}, {"domain:la.att", "la.att", false},
-		{"domain:la.att", "u@la.att@other", false}, {"domain:la.att", "u@", false}, {"domain:la.att", "", false},
-		{"domain:", "u@", false}, {"domain:", "domain:", false}, {"domain:la.att", "@la.att", true},
-		{"regexp:^u@la\\.att$", "u@la.att", true}, {"regexp:^u@la\\.att$", "U@la.att", false},
-		{"regexp:[", "u@la.att", false}, {"regexp:[", "regexp:[", false}, {"regexp:", "regexp:", true},
+		{"admin@la.att", "admin@la.att", true},
+		{"admin@la.att", "Admin@la.att", false},
+		{"admin@la.att", "admin@LA.ATT", false},
+		{"domain:la.att", "u@la.att", true},
+		{"domain:la.att", "u@LA.ATT", true},
+		{"domain:LA.ATT", "u@la.att", true},
+		{"domain:la.att", "u@gmail.com@la.att", true},
+		{"domain:la.att", "u@x.la.att", false},
+		{"domain:la.att", "la.att", false},
+		{"domain:la.att", "u@la.att@other", false},
+		{"domain:la.att", "u@", false},
+		{"domain:la.att", "", false},
+		{"domain:", "u@", false},
+		{"domain:", "domain:", false},
+		{"domain:la.att", "@la.att", true},
+		{"regexp:^u@la\\.att$", "u@la.att", true},
+		{"regexp:^u@la\\.att$", "U@la.att", false},
+		{"regexp:[", "u@la.att", false},
+		{"regexp:[", "regexp:[", false},
+		{"regexp:", "regexp:", true},
 		{"", "", false},
 	} {
 		t.Run(fmt.Sprintf("%s/%s", tc.rule, tc.user), func(t *testing.T) {

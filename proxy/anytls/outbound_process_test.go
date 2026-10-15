@@ -69,7 +69,7 @@ func publishAnyTLSProcessReady(path string, pid int) error {
 	// Never expose the file between creation and completion of the PID write.
 	staged := path + ".tmp"
 	defer os.Remove(staged)
-	if err := os.WriteFile(staged, []byte(strconv.Itoa(pid)), 0600); err != nil {
+	if err := os.WriteFile(staged, []byte(strconv.Itoa(pid)), 0o600); err != nil {
 		return err
 	}
 	return os.Rename(staged, path)
@@ -82,7 +82,7 @@ func validAnyTLSProcessIdentity(ready []byte, childPID, parentPID int) bool {
 func TestAnyTLSProcessReadyPublication(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "core.ready")
 	// A partially written staging file must not signal readiness.
-	if err := os.WriteFile(path+".tmp", []byte("72"), 0600); err != nil {
+	if err := os.WriteFile(path+".tmp", []byte("72"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
@@ -126,7 +126,7 @@ func startAnyTLSCoreProcess(t *testing.T, config map[string]any) *anyTLSCoreProc
 		t.Fatal(err)
 	}
 	recordAnyTLSFixture(t, "core-process", raw)
-	if err = os.WriteFile(path, raw, 0600); err != nil {
+	if err = os.WriteFile(path, raw, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	executable, err := os.Executable()
@@ -136,7 +136,7 @@ func startAnyTLSCoreProcess(t *testing.T, config map[string]any) *anyTLSCoreProc
 	p := &anyTLSCoreProcess{done: make(chan struct{}), logPath: filepath.Join(dir, "core.log")}
 	p.cmd = exec.Command(executable, "-test.run=^TestAnyTLSProcessHelper$", "-test.timeout=3m")
 	p.cmd.Env = append(os.Environ(), "ANYTLS_PROCESS_CONFIG="+path)
-	log, err := os.OpenFile(p.logPath, os.O_CREATE|os.O_WRONLY, 0600)
+	log, err := os.OpenFile(p.logPath, os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		t.Fatal(err)
 	}

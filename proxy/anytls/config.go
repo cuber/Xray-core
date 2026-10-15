@@ -22,6 +22,7 @@ func (a *Account) AsAccount() (protocol.Account, error) {
 	}
 	return &MemoryAccount{password: a.Password, hash: sha256.Sum256([]byte(a.Password))}, nil
 }
+
 func (a *MemoryAccount) Equals(b protocol.Account) bool {
 	other, ok := b.(*MemoryAccount)
 	return ok && subtle.ConstantTimeCompare(a.hash[:], other.hash[:]) == 1

@@ -60,6 +60,7 @@ func (c *chainCountsDiagnosticConn) Write(p []byte) (int, error) {
 	defer c.writes.Add(-1)
 	return c.Conn.Write(p)
 }
+
 func (c *chainCountsDiagnosticConn) Close() error {
 	c.t.Logf("chain physical close remote=%v age=%v activeWrites=%d stack=%s", c.RemoteAddr(), time.Since(c.born), c.writes.Load(), debug.Stack())
 	return c.Conn.Close()

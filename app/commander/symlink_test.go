@@ -14,7 +14,7 @@ func TestDirectAPIUnixRejectsSymlinkWithoutChangingTarget(t *testing.T) {
 			target := filepath.Join(filepath.Dir(path), "target")
 			switch kind {
 			case "file":
-				if err := os.WriteFile(target, []byte("unrelated target"), 0600); err != nil {
+				if err := os.WriteFile(target, []byte("unrelated target"), 0o600); err != nil {
 					t.Fatal(err)
 				}
 			case "live-socket":
