@@ -46,10 +46,23 @@ func resolveSrcAddr(network net.Network, src net.Address) net.Addr {
 	}
 }
 
+func systemUDPLoopbackSource(src net.Address, dest net.Destination, sockopt *SocketConfig) net.Address {
+	if src != nil || dest.Network != net.Network_UDP || dest.Address == nil || !dest.Address.Family().IsIPv4() || !dest.Address.IP().IsLoopback() {
+		return src
+	}
+	if sockopt != nil && (sockopt.Interface != "" || sockopt.DialerProxy != "") {
+		return src
+	}
+	// A wildcard dual-stack socket can share an IPv4 loopback socket's port
+	// on Darwin. Bind concretely so ephemeral allocation reserves that source.
+	return net.LocalHostIP
+}
+
 func (d *DefaultSystemDialer) Dial(ctx context.Context, src net.Address, dest net.Destination, sockopt *SocketConfig) (net.Conn, error) {
 	errors.LogDebug(ctx, "dialing to "+dest.String())
 
 	if dest.Network == net.Network_UDP {
+		src = systemUDPLoopbackSource(src, dest, sockopt)
 		destAddr, err := net.ResolveUDPAddr("udp", dest.NetAddr())
 		if err != nil {
 			return nil, err

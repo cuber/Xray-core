@@ -252,7 +252,9 @@ func (w *ServerWorker) handleStatusNew(ctx context.Context, meta *FrameMetadata,
 			transferType: protocol.TransferTypePacket,
 			XUDP:         x,
 		}
+		XUDPManager.Lock()
 		x.Status = Active
+		XUDPManager.Unlock()
 		if !w.sessionManager.Add(x.Mux) {
 			x.Mux.Close(false)
 			return errors.New("failed to add new session")

@@ -130,6 +130,7 @@ type ClientWorkerFactory interface {
 }
 
 type DialingWorkerFactory struct {
+	Context  context.Context
 	Proxy    proxy.Outbound
 	Dialer   internet.Dialer
 	Strategy ClientStrategy
@@ -152,7 +153,11 @@ func (f *DialingWorkerFactory) Create() (*ClientWorker, error) {
 		outbounds := []*session.Outbound{{
 			Target: net.TCPDestination(muxCoolAddress, muxCoolPort),
 		}}
-		ctx := session.ContextWithOutbounds(context.Background(), outbounds)
+		base := f.Context
+		if base == nil {
+			base = context.Background()
+		}
+		ctx := session.ContextWithOutbounds(context.WithoutCancel(base), outbounds)
 		ctx, cancel := context.WithCancel(ctx)
 
 		if errP := p.Process(ctx, &transport.Link{Reader: uplinkReader, Writer: downlinkWriter}, d); errP != nil {

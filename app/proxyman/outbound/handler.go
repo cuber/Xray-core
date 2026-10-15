@@ -137,8 +137,9 @@ func NewHandler(ctx context.Context, config *core.OutboundHandlerConfig) (outbou
 					Enabled: true,
 					Picker: &mux.IncrementalWorkerPicker{
 						Factory: &mux.DialingWorkerFactory{
-							Proxy:  proxyHandler,
-							Dialer: h,
+							Context: core.ToBackgroundDetachedContext(ctx),
+							Proxy:   proxyHandler,
+							Dialer:  h,
 							Strategy: mux.ClientStrategy{
 								MaxConcurrency: uint32(config.Concurrency),
 								MaxConnection:  128,
@@ -158,8 +159,9 @@ func NewHandler(ctx context.Context, config *core.OutboundHandlerConfig) (outbou
 					Enabled: true,
 					Picker: &mux.IncrementalWorkerPicker{
 						Factory: &mux.DialingWorkerFactory{
-							Proxy:  proxyHandler,
-							Dialer: h,
+							Context: core.ToBackgroundDetachedContext(ctx),
+							Proxy:   proxyHandler,
+							Dialer:  h,
 							Strategy: mux.ClientStrategy{
 								MaxConcurrency: uint32(config.XudpConcurrency),
 								MaxConnection:  128,
