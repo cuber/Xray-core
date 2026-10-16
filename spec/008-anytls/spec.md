@@ -52,8 +52,8 @@ import `common/singbridge`; pinned `sing` engine/UoT dependencies remain.
 ### 出站扩展
 
 出站新增契约、实施步骤和验收矩阵见 [outbound.md](outbound.md)。该扩展属于
-同一 spec，不另行编号。下文和历史证据中的“不实现 outbound”描述原入站交付
-边界，不再限制本次扩展；历史测试通过不代表出站通过。当前仅授权本地实现与
+同一 spec，不另行编号。历史证据中的“不实现 outbound”描述原入站交付
+边界，不再限制出站扩展；历史入站测试通过不代表出站通过。出站实施阶段仅授权本地实现与
 验证，不自动部署节点、替换生产链路或公开分发。
 
 出站的详细测试方法见 [outbound-tests.md](outbound-tests.md)，公共代码影响面
@@ -119,7 +119,8 @@ AnyTLS 会在一条经过认证的 TCP/TLS 会话内承载多个逻辑流。路�
 
 ## 功能需求
 
-- FR-001: 仅新增 AnyTLS inbound，复用 Xray TCP/TLS 监听与证书体系。
+- FR-001: AnyTLS inbound 复用 Xray TCP/TLS 监听与证书体系；出站追加需求为
+  [outbound.md](outbound.md) 中独立的 OT 编号，不替换本项入站要求。
   配置必须遵循 Xray 原生分层：通用监听、settings、streamSettings、policy、routing、
   stats/api 各归其位；不得照搬 sing-box 配置或在协议内重复建立这些通用能力。
 - FR-002: 配置采用 Xray `clients` 中的 `email`、`level`、`password`；email 和
@@ -162,7 +163,8 @@ AnyTLS 会在一条经过认证的 TCP/TLS 会话内承载多个逻辑流。路�
 
 ## 非目标
 
-- 不实现 AnyTLS outbound，也不添加 Core/Sidecar 的 AnyTLS 出站 probe。
+- 除本规格已定义的 inbound/outbound 外，不新增其他协议或 Sidecar 专用 AnyTLS
+  命令行 probe/订阅格式；现有消费者互通测试不等于新增产品命令。
 - 不新增订阅协议、分享链接、Portal AnyTLS 管理页或数据库字段。
 - 不迁移 SS-2022、Hy2、VLESS 用户，不更改现有端口、DNS、证书和生产拓扑。
 - 不支持额外的 Xray Mux、Vision、REALITY、WS/XHTTP 或明文公网入站组合。
@@ -189,7 +191,11 @@ email 是服务端标识，不是 AnyTLS 客户端在线路上声明的可信身
 - SC-002: 双客户端 TCP/UDP 互通、精确计数、用户撤销和并发隔离通过。
 - SC-003: Core 与 Sidecar 既有相关功能回归通过，Darwin/Linux 构建可追溯。
 - SC-004: 资源压力和退出清理达到 tests.md 门槛；无未解决的身份绕过或重复计数。
-- SC-005: 控制面沿用现有用户/统计 API；没有引入 outbound 或生产迁移副作用。
+- SC-005: 入站与出站沿用现有控制面/统计 API；出站按 OT/B/C 矩阵独立验收，
+  不能由入站通过替代。实现不自动授权生产迁移或公开分发。
+
+当前分层入口见 [README.md](README.md)：入站、出站、池/地址适配及安全加固仍是
+同一协议 spec 的子契约；共享生命周期和基础设施保留在所属的前置 spec。
 
 ## 授权与修订记录
 

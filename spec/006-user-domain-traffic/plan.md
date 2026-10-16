@@ -1,5 +1,10 @@
 # 用户域名流量实施计划
 
+当前范围仅为 Core 采样与 RPC。以下 2026-09-27 重建/追加授权是历史计划，
+其中 Sidecar 聚合、snapshot 和消费者测试已移交
+[Sidecar spec007](../../../xray-sidecar-rebase-20261014/spec/007-domain-traffic-aggregation/plan.md)。
+本次拆分只校准文档边界，不重新重建提交或触发构建部署。
+
 1. 按 [spec.md](spec.md) 固定现有契约，与原提交逐文件对应。
 2. 在独立 worktree 重组功能和测试；proto 源与生成文件同笔。
 3. 编译各提交测试包，执行 [tests.md](tests.md) 中已有定向测试和最终完整回归。

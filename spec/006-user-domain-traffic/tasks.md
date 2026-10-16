@@ -1,5 +1,9 @@
 # 用户域名流量任务
 
+下列 T001–T009 是原阶段的完成记录，不表示本次重新执行。
+Core 当前复验见 [tests.md](tests.md)，消费者责任转至
+[Sidecar spec007/tasks](../../../xray-sidecar-rebase-20261014/spec/007-domain-traffic-aggregation/tasks.md)。
+
 - [x] T001 [US-001] 从 001 提取 FR-001 契约和 V-019 至 V-027 测试矩阵。
 - [x] T002 [US-001] 对照重建提交检查内容与依赖，编译并执行现有定向测试。
 - [x] T003 [US-001] 记录差距和最终 tree 对比；待补验收不伪报通过。

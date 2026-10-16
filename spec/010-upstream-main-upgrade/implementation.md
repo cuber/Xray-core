@@ -17,6 +17,13 @@ Source specs and evidence are imported from develop, then draft002 is moved to
 spec010. References inside immutable dated evidence remain historical. The
 canonical develop checkout and approved build/pin/runtime remain untouched.
 
+Current documentation ownership (2026-10-16):
+[Core011](../011-ss2022-safety/spec.md) owns the existing SS2022 safety contract;
+[current validation/task navigation](current-validation.md) maps its original
+U-001..003/V-003..005 provenance. Core010 retains the fixed-main integration and
+release gate. Dated checkpoints below keep their original source/status; this
+split neither reruns them nor marks historical alternatives or P12 complete.
+
 ## Phases
 
 - [x] P01 Publish draft audit; lock source/upstream, create isolated branch,
@@ -35,7 +42,9 @@ canonical develop checkout and approved build/pin/runtime remain untouched.
   serial normal/race suites and strict ten-minute soaks pass, with platform and
   diagnostic skips recorded in the owning AnyTLS upgrade evidence.
 - [x] P09 Resolve native SS gates U-001/002/003 and shared U-004..012;
-  no source-level concern is declared fixed without a regression reproducer.
+  consume the SS safety contract/results now owned by
+  [Core011](../011-ss2022-safety/validation.md), retaining this phase's integration
+  decision. No source-level concern is declared fixed without a regression reproducer.
 - [x] P10 Integrate isolated Sidecar/config migrations; normal/race source tests
   and migration staging pass. Final exact artifact/pin checks belong to P11;
   no production pin change or staged-config application is implied.

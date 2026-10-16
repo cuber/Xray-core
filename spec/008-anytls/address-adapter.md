@@ -125,7 +125,7 @@ The user authorized adoption directly on the approved Core `develop`, tracking
 The exact refactor above is applied there; no upstream commits are imported.
 SS-2022, `common/singbridge`, `go.mod` and `go.sum` remain byte-for-byte unchanged
 from the baseline. The broader upgrade is still an undecided
-[draft002](../../draft/002-upstream-sync/spec.md).
+[promoted spec010 (formerly draft002)](../010-upstream-main-upgrade/spec.md).
 
 Environment: macOS Darwin arm64, Go 1.26.1, owned loopback TCP/UDP fixtures.
 Raw logs and strict runner reports live outside Core in the ignored

@@ -8,6 +8,18 @@ Existing test functions alone are not proof they passed against this candidate.
 Store results with commit, dirty state, OS/Go version, config/DAT/client hashes,
 command, exit status, test count/skips, resource cleanup and elapsed time.
 
+## Current Ownership (2026-10-16)
+
+The SS-only contract/oracles for U-001..003 and V-003..005 now live in
+[Core011 tests](../011-ss2022-safety/tests.md), with original-ID/source mapping in
+[011 validation](../011-ss2022-safety/validation.md). The dated matrix below keeps
+its IDs and original research wording, including proposed cases; it is not a
+claim of a new execution, nor the current authority for zero handshake policy
+or short-first-read semantics. Core011 documents the selected native semantics.
+Cross-client compatibility, U-004..012, V-013..015 and fixed-main integration/
+release decisions stay Core010. Current task navigation and frozen-evidence
+boundaries are in [current-validation.md](current-validation.md).
+
 ## Fixed Main Refresh: Migration Gates (2026-10-14)
 
 Candidate upstream is `0888beb38a9ba45440557175e71ce21cf8ba3b13`, not moving

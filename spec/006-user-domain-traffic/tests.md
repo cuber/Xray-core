@@ -1,115 +1,40 @@
-# 用户域名流量验证矩阵
+# Core 用户域名流量复验
 
-继承 001 的 V-019 至 V-027 编号。2026-09-27 用户明确选择：**Core 与 Sidecar
-均为有界尽力缓存，容量淘汰直接删明细、不搬 other；已采集历史不因 Core 后续
-淘汰而撤回，未采集即淘汰允许丢失。** 旧 other 字段兼容读取，不重分配身份。
-因此缓存总量不是完整 Stats；V-023/V-025/V-026 不要求淘汰前后字节守恒。
+本页只定义提供方的复验方法，不声称文档拆分时重新执行测试。
+历史命令与实测见 [2026-09-27 矩阵](history/validation-20260927.md) 和
+[Core evidence](../001-core-fork-contracts/evidence-010-core.md)。
+Sidecar 消费方 V-024 至 V-027 见
+[Sidecar spec007/tests](../../../xray-sidecar-rebase-20261014/spec/007-domain-traffic-aggregation/tests.md)。
 
-本轮 Core 路径是 `../xray-core-spec`；Sidecar 默认 replace 仍指向原 `../xray-core`。
-联测使用临时 modfile，不修改 pin。完整实测、负向证据及限制见
-[Core evidence](../001-core-fork-contracts/evidence-010-core.md) 与
-[Sidecar evidence](../001-core-fork-contracts/evidence-010-sidecar.md)。
-历史重建结果仍见 [001 reconstruction](../001-core-fork-contracts/reconstruction.md)。
+## 复验命令
 
-## 公共步骤
-
-遵守 [公共复验规程](../001-core-fork-contracts/test-procedure.md)。本轮仅格式化
-自己修改的 Go 文件，Sidecar 另执行 `make check-fmt`。使用临时文件和 loopback
-随机端口，不连接生产。每组保存 `go test -json` 输出、退出码和实际命中的测试。
-
-Core 定向验证（在 `../xray-core-spec`）：
+从本 Core 根目录执行，不启动生产服务，不修改消费者 pin：
 
 ```sh
 go test -json -race -count=3 -timeout=5m ./app/stats ./app/stats/command ./app/dispatcher -run '^(TestDomainTraffic|TestGetDomainTraffic)'
 ```
 
-Sidecar 联测（在 `../xray-sidecar`，先创建临时 modfile）：
+保存实际 HEAD、工具链、完整命令、退出码、命中的测试和 SKIP 原因。
+跨仓联测须核对消费者的 Core pin 或显式临时 modfile，不能把历史路径直接当作当前源码。
 
-```sh
-audit_dir=$(mktemp -d)
-cp go.mod go.sum "$audit_dir/"
-go mod edit -modfile="$audit_dir/go.mod" -replace=github.com/xtls/xray-core=/Volumes/Linux/opensource/cuber/xray-core-spec
-make check-fmt
-go test -modfile="$audit_dir/go.mod" -json -race -count=3 -timeout=5m . -run '^TestDomainTraffic'
-```
+## 原编号与精确 Oracle
 
-测试代码自动清理 listeners、gRPC channels、临时 snapshot 和受控子进程。临时
-modfile 与 JSON 日志是本地审计产物，不进入仓库。主流程统一提交和本地构建，
-最终结果见 [验收](../001-core-fork-contracts/acceptance.md)，不部署发布包。
-正式 build wrapper 的 worktree 限制见 evidence，不能把定向测试等同发布验收。
+| ID | 场景 / 预期 | 对应测试（均以 TestDomainTraffic 开头） |
+|---|---|---|
+| V-019 | disabled 与 enabled-empty 可区分；普通 Stats 都保持 123 | `RPCDisabledAndEnabledEmptyKeepOrdinaryStats` |
+| V-020 | 三组合 oracle 450/660；带数据和错误仍计数；写失败不改字节口径；sniff 重放只计一次 | `ByteOracleErrorsAndWriterFailure`、`TimeoutDataAndEmpty`、`SniffCacheReplayCountsOnce` |
+| V-021 | 最终 outbound 的 Target > RouteTarget > OriginalTarget；标准化；跨用户隔离；认证 unknown 占容量 | `AttributionPriority`、`BucketsNormalizeAndTrackDirections`、`UserIsolation`、`AuthenticatedUnknownAndTieEviction` |
+| V-022 | 开放桶不导出；回拨不重开、不复活；idle 不制造空 sequence；start==cutoff 保留 | `BoundariesIdleAndRollback`、`SequenceHasNoFalseGapAcrossEmptyBuckets` |
+| V-023 | 刷新 A 后淘汰 B，other=0；饱和不回绕；完整 Stats=2000 而缓存仅保留容量内组合 | `LRUUsesLastSeenAndDiscardsEvictedBytes`、`SaturatingCounters`、`ConcurrentRecordSnapshotAndCompleteStats` |
+| V-024 提供方 | 分页1、开放 latest、旧/未来 cursor、新 boot；只导出闭合桶，不伪造 gap | `PagedCursorOpenLatestGapAndBoot` |
+| V-025 提供方 | 容量1：alice/A=100/200 后被 bob/B=30/40 淘汰；晚查询仅 B，other=0 | `LRUDiscardsUncollectedHistory` |
 
-## 矩阵
+同域名跨用户及 LRU 同时间平局用集合/容量断言，不能依赖 map 遍历顺序。
+Core 只保存短窗口；普通 Stats 与有损域名缓存分别断言，不要求淘汰前后守恒。
+已导出桶可因 LRU 删明细；消费者早采集 130/240、晚采集 30/40 是接受的边界，
+不是提供方承诺撤回消费者旧数据。消费者双向验证归 Sidecar spec007。
 
-| ID / 原 FR | 输入和操作 | 精确预期 | 本轮测试 |
-|---|---|---|---|
-| V-019 / 004 | disabled / enabled-empty，普通 counter 加 123；真实 gRPC 查询两类统计 | enabled 可区分；零域名桶；普通 Stats 都为 123 | `TestDomainTrafficRPCDisabledAndEnabledEmptyKeepOrdinaryStats` |
-| V-020 / 004 | alice/example 100/200、bob/example 300/400、alice/other 50/60；data+nil/EOF/timeout、writer 成功/失败；WrapLink + sniff cache 重放 | 无淘汰 oracle=450/660，三组合隔离；writer 返回前已计数；缓存重放不双计，完整 user Stats=100/200 | `TestDomainTrafficByteOracleErrorsAndWriterFailure`、`TimeoutDataAndEmpty`、`SniffCacheReplayCountsOnce` |
-| V-021 / 004 | Target/RouteTarget/OriginalTarget 逐一替换为 IP；最后 outbound；空白/大小写/尾点；跨用户同域名和有身份 unknown | 当前 outbound 的 Target > RouteTarget > OriginalTarget；不回溯前一 hop；认证 unknown 占容量，匿名 unknown 不占 | `TestDomainTrafficAttributionPriority`、`BucketsNormalizeAndTrackDirections`、`UserIsolation`、`AuthenticatedUnknownAndTieEviction` |
-| V-022 / 004 | fake clock 100、104.999999999、105；回拨 99；前进 110/170/175；retention cutoff 400/405 再回拨 90 | 开放桶不可读；回拨钳制、不重开已发布桶、不恢复已过期桶；60s idle 无伪 sequence；start==cutoff 保留 | `TestDomainTrafficBoundariesIdleAndRollback`、`SequenceHasNoFalseGapAcrossEmptyBuckets` |
-| V-023 / 004 | 容量2、A/B/刷新A/C；同时间平局；MaxUint64 附近；四 writer 各500次并发 Snapshot | B 直接删除、other=0；平局只指定容量不指定牺牲者；饱和不回绕；完整 Stats=2000，缓存仅2/4 | `TestDomainTrafficLRUUsesLastSeenAndDiscardsEvictedBytes`、`SaturatingCounters`、`AuthenticatedUnknownAndTieEviction`、`ConcurrentRecordSnapshotAndCompleteStats` |
-| V-024 / 004,005 | 同 boot 分页1、重复cursor、开放 latest=3、过旧cursor、新boot及 MaxUint64 cursor | 应用一次；cursor只到收到的最大seq；开放latest不跳过；过旧标gap但不补造；新boot保留Sidecar历史 | Core `TestDomainTrafficPagedCursorOpenLatestGapAndBoot`；Sidecar `RPCPagingOpenCursorAndBootMerge`、`RPCExpiredCursorReportsGap` |
-| V-025 / 004,005 | Core容量1，alice/A=100/200闭合后S1先拉；bob/B=30/40淘汰A，S1增量与S2晚拉 | 新Core及独立fixture严格S1=130/240、S2=30/40、other=0；真实RPC消费者兼容旧Core other100/200，late明细严格仅bob30/40，不回溯撤回early | Core `TestDomainTrafficLRUDiscardsUncollectedHistory`；Sidecar `RPCBestEffortEarlyLateCollection`、`NewCoreResponseEarlyLateCollection` |
-| V-026 / 005 | t599/600边界；每10m 32个新组合，重复3虚拟日；组合7/entry11与组合64/entry9；跨桶同组合 | 直接10m桶；最多145桶；entries/索引精确为7或9；内部汇总一致但淘汰损失允许；旧other/unknown不新增/不分给用户 | Sidecar `TestDomainTrafficThreeVirtualDaysExactBudgets`、`BoundaryAndSharedIdentityEntryBudget` |
-| V-027 / 005,008 | schema2保存/重放，schema1重分桶，坏JSON/schema/重复/索引/匿名汇总错误；写失败；真实子进程kill/restart | 失败恢复不污染；保存字节与cursor一起恢复；旧other保持；文件0600目录0700；失败保存旧文件hash不变；未落盘字节允许暂失 | Sidecar `TestDomainTrafficMalformedSnapshotsAreAtomic`、`SnapshotFailurePreservesOldAndPermissions`、`LegacySnapshotBoundaryBudgetsAndReplay`、`SnapshotRestoresWithSmallerEntryBudget`、`ConcurrentApplyResultSnapshot`、`SnapshotKillRestart`、`MalformedSnapshotProcessStillServesHTTP` |
+## 覆盖边界
 
-表中省略重复前缀的测试名均以 `TestDomainTraffic` 开始。精确复验筛选如下。
-
-## 逐项命令
-
-在 Core worktree 执行：
-
-```sh
-# V-019
-go test -json -race -count=1 -timeout=5m ./app/stats/command -run '^TestDomainTrafficRPCDisabledAndEnabledEmptyKeepOrdinaryStats$'
-# V-020
-go test -json -race -count=1 -timeout=5m ./app/dispatcher -run '^TestDomainTraffic(ByteOracleErrorsAndWriterFailure|TimeoutDataAndEmpty|SniffCacheReplayCountsOnce)$'
-# V-021
-go test -json -race -count=1 -timeout=5m ./app/dispatcher ./app/stats -run '^TestDomainTraffic(AttributionPriority|BucketsNormalizeAndTrackDirections|UserIsolation|AuthenticatedUnknownAndTieEviction)$'
-# V-022
-go test -json -race -count=1 -timeout=5m ./app/stats -run '^TestDomainTraffic(BoundariesIdleAndRollback|SequenceHasNoFalseGapAcrossEmptyBuckets)$'
-# V-023
-go test -json -race -count=1 -timeout=5m ./app/stats -run '^TestDomainTraffic(LRUUsesLastSeenAndDiscardsEvictedBytes|SaturatingCounters|AuthenticatedUnknownAndTieEviction|ConcurrentRecordSnapshotAndCompleteStats)$'
-# V-024
-go test -json -race -count=1 -timeout=5m ./app/stats -run '^TestDomainTrafficPagedCursorOpenLatestGapAndBoot$'
-# V-025
-go test -json -race -count=1 -timeout=5m ./app/stats -run '^TestDomainTrafficLRUDiscardsUncollectedHistory$'
-```
-
-在 Sidecar 执行，`audit_dir` 使用上面的临时 modfile：
-
-```sh
-# V-024
-go test -modfile="$audit_dir/go.mod" -json -race -count=1 -timeout=5m . -run '^TestDomainTrafficRPC(PagingOpenCursorAndBootMerge|ExpiredCursorReportsGap)$'
-# V-025: 默认旧Core和临时modfile新Core都须通过；Core自身测试负责严格淘汰契约。
-go test -json -race -count=1 -timeout=5m . -run '^TestDomainTraffic(RPCBestEffortEarlyLateCollection|NewCoreResponseEarlyLateCollection)$'
-go test -modfile="$audit_dir/go.mod" -json -race -count=1 -timeout=5m . -run '^TestDomainTraffic(RPCBestEffortEarlyLateCollection|NewCoreResponseEarlyLateCollection)$'
-# V-026
-go test -modfile="$audit_dir/go.mod" -json -race -count=1 -timeout=5m . -run '^TestDomainTraffic(ThreeVirtualDaysExactBudgets|BoundaryAndSharedIdentityEntryBudget)$'
-# V-027
-go test -modfile="$audit_dir/go.mod" -json -race -count=1 -timeout=5m . -run '^TestDomainTraffic(MalformedSnapshotsAreAtomic|SnapshotFailurePreservesOldAndPermissions|LegacySnapshotBoundaryBudgetsAndReplay|SnapshotRestoresWithSmallerEntryBudget|ConcurrentApplyResultSnapshot|SnapshotKillRestart|MalformedSnapshotProcessStillServesHTTP)$'
-```
-
-## 独立 Oracle 与边界
-
-- V-020 无淘汰时三组合450/660；alice150/260、bob300/400。载荷大小是独立输入，
-  不用 HTTP/协议封装字节替代。sniff 测试调用真实 WrapLink/cachedReader，但不假称完整网络路由 E2E。
-- V-022 回拨行为是本轮明确实现的逻辑时间策略，不再把偶然顺序当作既定事实。
-  提前向前跳时会过期丢数据；回拨不复活它，逻辑时间追上前不强行关桶。
-- V-025 原 Core 的晚消费者为130/240且other=100/200，新 Core 必须为30/40且other=0。
-  真实RPC的Sidecar测试精确保持实际other，明细和用户汇总严格仅bob30/40；独立新Core
-  响应fixture严格验证early130/240、late30/40、other0，不依赖开发pin。Core测试仍严格
-  验证新LRU。early/late不等不是失败；普通Stats与这个有损缓存严格分离。
-- V-026 每步32条等大1/2字节明细，另输入兼容other=11/13及匿名unknown=5/7。
-  若保留桶数B、明细预算K，总量必须为 `(16B+K)/(20B+2K)`，而非全部写入量。
-  每一步核对桶边界、entryCount与实际map项、lastSeen与实际组合的一一关系，
-  独立检查user/domain汇总。每虚拟日记录GC后heap和snapshot字节上限；heap曲线不是替代容量断言。
-- V-027 子进程运行受控测试二进制，报告snapshot完成后才SIGKILL，独立进程恢复；
-  落盘450/660之后未保存的9/13应缺失，重放后一次恢复，新Core boot再追加7/11。
-  坏snapshot时真实临时HTTP仍可用，但未启动production main、collector定时器或服务管理器。
-- 故障注入覆盖JSON/schema/结构、mkdir及rename失败；不宣称覆盖真实磁盘满、fsync硬件故障、
-  断电目录持久性或生产一分钟调度。主服务恢复日志与定时器集成仍由最终系统验收负责。
-
-## 状态
-
-本轮上述定向测试和跨消费者联测已实际执行，详见 evidence 的命令、退出码与日志。
-全量测试、生产构建和统一提交由父进程负责，本页不替代其验收。
+上述 deterministic/race 测试不替代主服务启动、定时器、24h 真实运行或生产灰度。
+实际升级回归版本与 FAIL/SKIP 见 [Core spec010](../010-upstream-main-upgrade/implementation.md)。

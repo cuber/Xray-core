@@ -6,6 +6,12 @@ live in [draft/](draft/README.md). The fixed-main upgrade candidate and its
 verification status are recorded in
 [spec010](spec/010-upstream-main-upgrade/implementation.md).
 
+Feature contracts and dated upgrade evidence are separate: domain recording/RPC
+belongs to [Core006](spec/006-user-domain-traffic/spec.md), consumer aggregation
+to [Sidecar007](../xray-sidecar-rebase-20261014/spec/007-domain-traffic-aggregation/spec.md),
+and permanent SS2022 safety to [Core011](spec/011-ss2022-safety/spec.md).
+AnyTLS's inbound/outbound documents remain one [spec008](spec/008-anytls/README.md).
+
 Our production build entry is `../xray-config/xray-core/build.sh`, also exposed
 by `../xray-config/scripts/xrayctl.py build core`. Normal builds use local
 `develop` tracking `cuber/develop`; they never fetch, rebase or reset. The wrapper

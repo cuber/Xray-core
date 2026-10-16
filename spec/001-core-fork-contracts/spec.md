@@ -1,4 +1,4 @@
-# Feature Specification: Core 分叉契约与回归验收
+# Feature Specification: Core 分叉清单与历史验收索引
 
 - Feature ID: 001-core-fork-contracts
 - Created: 2026-09-27
@@ -30,8 +30,21 @@ paragraphs below describe their dated runs, not current branch/deployment status
 
 AnyTLS 协议本身继续由 [008](../008-anytls/spec.md) 唯一负责，
 不复制其身份、UoT、资源限额和许可证契约。001 负责清单、依赖和跨功能回归索引，
-详细契约已拆至 002–007，由 contracts.md 导航。DomainTraffic 以 006 为准，旧 docs 保留
-历史验收证据，不再把旧分钟粒度当成当前要求。
+各功能的当前权威由下表和 contracts.md 导航。下文旧 FR 保留追溯摘要，不再独立定义
+第二份运行时契约；历史 docs 不覆盖所属 spec。001 不负责升级实施或发布结论。
+
+| 原编号 | 当前唯一契约 |
+|---|---|
+| FR-001 | 本规格：固定 base/head 清单与重建可追溯性 |
+| FR-002 / FR-004 | [Core002 连接生命周期](../002-core-connection-lifecycle/spec.md) |
+| FR-003 | [Core003 监听/UDS](../003-core-listeners-uds/spec.md)；直接 API 另见 [Core009](../009-direct-control-listener/spec.md) |
+| FR-005 | [Core004 Observatory](../004-core-observatory/spec.md) |
+| FR-006 / FR-007 | [Core005 路由调度](../005-core-routing-balancing/spec.md) |
+| FR-008 | [Core006 采样与 RPC](../006-user-domain-traffic/spec.md) |
+| FR-009 | [Sidecar007 聚合与恢复](../../../xray-sidecar-rebase-20261014/spec/007-domain-traffic-aggregation/spec.md) |
+| FR-010 / FR-011 / FR-012 | [Core007 共享回归](../007-core-regression/spec.md)；SS2022 安全专项见 [Core011](../011-ss2022-safety/spec.md) |
+| AnyTLS | [Core008](../008-anytls/spec.md)，包含入站、出站及其共享前置依赖 |
+| 上游迁移/集成 | [Core010](../010-upstream-main-upgrade/spec.md)，不与永久功能契约混合 |
 
 ## 用户场景与验收
 
@@ -75,7 +88,7 @@ Then 记录实际通过、失败和跳过；不能把未启用公网测试算成
   TLS 验证不得为了测试全绿而关闭；格式检查不修改源文件。
 - FR-012: proto 字段/编号、账户注册、依赖升级及既有协议回归必须有跨组件兼容检查。
 
-## 非目标
+## 原重建阶段非目标
 
 - 不吸收 origin/main、不替换 ipsBlocked、不改变 3s 探测或任何生产策略。
 - 不重新实现 AnyTLS，不新增协议、API 或 xrayctl 命令。
@@ -90,7 +103,10 @@ Then 记录实际通过、失败和跳过；不能把未启用公网测试算成
 - SC-004: 实现与契约的差距记录为阻塞项；后续验证附版本、命令、退出码、证据路径。
 - SC-005: docs/ 和模块入口可逐级发现本规格，无秘密和断链。
 
-## 当前审计发现
+## 历史审计发现（2026-09-27）
+
+以下描述当时审计边界。当前默认/淘汰规则分别以 Core006 和 Sidecar007 为准，
+升级后的共享改动归各功能 spec，不能从旧合并提交标题判断现有所有权。
 
 1. Core 默认容量现为 4096 个用户×域名组合，Sidecar 默认 8192；
    旧设计中的 512/4096 不是当前默认值，显式配置值仍需单独核对。

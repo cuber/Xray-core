@@ -5,9 +5,11 @@
 - Authorized: 2026-09-27，用户同意分类整理、重建历史并备份原分支；随后明确授权
   Core/Sidecar LRU 直接删除明细、不搬 other，以及 V-019 至 V-027 补测和窄范围修复。
 - Source: 原 Core e7a21974，相对 b4f08981；完整清单见 [001](../001-core-fork-contracts/inventory.md)。
-- Scope: 有界尽力采集、增量 cursor、Sidecar 十分钟聚合和快照。不吸收上游、不改生产、
+- Scope: Core 有界尽力采集、用户归因、桶和增量 cursor/RPC。不吸收上游、不改生产、
   不修改普通完整 Stats 计数、不改 RPC/schema/version pin。主流程统一提交，不部署。
-- 原 001 FR-008、FR-009 继续作为稳定追溯编号，以下契约为本类别权威内容。
+- 原 001 FR-008 由本规格负责；FR-009 的消费者聚合与恢复移交
+  [Sidecar spec007](../../../xray-sidecar-rebase-20261014/spec/007-domain-traffic-aggregation/spec.md)。
+  旧编号与测试证据不变，本次仅拆分文档所有权。
 
 ## US-001 — 分类维护与独立验证（P1）
 
@@ -27,10 +29,10 @@ Then 按用户确认的以下契约验证，保留历史重建证据与后续修
   在下游写入结果返回前计数。不是 TCP ACK 成功送达字节，也不包含外层协议开销。
   Reader 的带数据+错误返回仍统计已有数据；嗅探缓存保留该载荷供后续重放，
   同时返回原错误；缓存重放不再次通过计数 Reader。避免 Reader/Writer 双计数。
-- Core 与 Sidecar 都是按组合跨桶全局 LRU 的有界尽力缓存，容量淘汰直接删除该组合
+- Core 是按组合跨桶全局 LRU 的有界尽力缓存，容量淘汰直接删除该组合
   仍保留桶内明细，不搬 other；自然过期直接丢弃。相同 lastSeen 平局不指定牺牲者，
-  但必须满足组合和 entry 预算。Sidecar 已采集历史不因 Core 后续淘汰而回溯删除；
-  Sidecar 自己的容量与保留期仍可删除它。未采集即遭 Core 淘汰的数据允许丢失。
+  但必须满足组合预算。未采集即遭 Core 淘汰的数据允许丢失；RPC 不发送撤销通知，
+  不维护消费者确认状态。消费者的独立保留策略不属于 Core 的内存预算。
 - Record/Snapshot 时惰性裁剪，不存在“每五分钟清空全部”的语义。
   边界桶 start == cutoff 保留，可能有当前桶加 60 个历史桶。
 - 仅返回已结束桶，sequence 在有记录的新桶建立时分配，空闲时间不生成空桶。
@@ -41,17 +43,8 @@ Then 按用户确认的以下契约验证，保留历史重建证据与后续修
   不重开已发布桶，不恢复过期桶；墙钟追上前当前逻辑桶可能延迟闭合。
   未来 cursor（包括 MaxUint64）不因加法溢出伪报 gap。
 - uint64 加法饱和，不回绕。RPC 走现有 StatsService.GetDomainTrafficBuckets。
-- Sidecar 当前默认 10m/24h、8192 组合、max_entries 262144、snapshot schema 2；
-  以实际配置优先。按整桶保留，24h 结果可能包含不足 10m 的边界额外时间。
-  每分钟快照，原子替换；旧 schema 1 匿名重分桶，不猜用户。
-  快照恢复先校验后整体替换；重复桶/重复条目/无对应 last_seen/孤立索引、
-  非对齐时间、未知 schema、带身份的 other/unknown 必须拒绝且不污染当前状态。
-  schema 2 降低 entry 预算时按 LRU 直接丢明细，降低组合预算超限则保持原有拒绝行为。
-- 同 boot 重复 sequence 不重复计；core 新 boot 保留 sidecar 已累计历史再追加；
-  中断超过短窗口只能报告缺口，不补造。重启恢复桶与 cursor 必须一起原子恢复。
-- 缓存内部汇总一致：全部保留 entries 的上下行 = 未截断 domains/users 的对应汇总；
-  缓存总量再加兼容 other/匿名 unknown。它不是累计完整流量，淘汰前后不要求守恒，
-  不同采集时机不要求相等；不能把 other 强行分配给用户。跨用户同域名条目按集合比较。
+- 消费者必须区分 Core boot，不能把 LatestSequence 当成已收到桶的确认。
+  Sidecar 的幂等应用、跨 boot 合并、十分钟/24h 聚合和原子快照以 Sidecar spec007 为准。
 - V-025 明确验收：Core 容量 1，先 alice/A=100/200，再 bob/B=30/40；
   早采集 Sidecar 保留 130/240，晚采集只有 30/40，两者 other 均为 0。
   普通 Stats 不受影响。闭合桶不承诺身份明细不可变。
@@ -65,3 +58,14 @@ Then 按用户确认的以下契约验证，保留历史重建证据与后续修
 ## 导航
 
 [技术计划](plan.md) · [任务](tasks.md) · [检查清单](checklists/requirements.md)
+
+## 所有权与历史编号
+
+| 原追溯项 | 当前权威 |
+|---|---|
+| 001 FR-008、V-019 至 V-023 | 本规格：Core 采样、字节、归因、LRU、时间 |
+| V-024 / V-025 提供方 | 本规格：分页、boot/gap、淘汰前后 RPC 可见性 |
+| 001 FR-009、V-024 / V-025 消费方、V-026 / V-027 | Sidecar spec007：聚合、预算、snapshot 与恢复 |
+
+原跨仓矩阵作为 [2026-09-27 历史验证](history/validation-20260927.md) 保留，
+不再作为 Sidecar 当前契约的第二份可编辑副本。未更改实现、pin 或部署状态。

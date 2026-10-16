@@ -18,8 +18,31 @@
   pin update, force-push or deployment is implied.
 - Current plan and acceptance: [implementation.md](implementation.md).
 
+## Current Ownership Split (2026-10-16)
+
+Core010 owns the fixed `0888beb3` main-upgrade difference review, fork-feature
+integration, cross-protocol/independent-client compatibility, paired consumers/
+configuration migration and build/release/adoption gates. It does not become a
+permanent owner for each protocol's implementation contract.
+
+The existing SS2022 safety implementation's current contract is now
+[Core011](../011-ss2022-safety/spec.md): handshake/clear, single/multi/relay,
+dynamic users, UDP identity/admission/replay/retirement and SS outbound Close.
+Core010 U-001..003 and V-003..005 are retained historical/integration IDs; their
+SS-only requirement/test mapping is in [011 validation](../011-ss2022-safety/validation.md).
+V-005 cross-client compatibility and the fixed-main release decision stay here.
+This is a documentation ownership split of an already locally verified candidate,
+not another runtime change, test run or production adoption.
+
+Use [current validation/task navigation](current-validation.md) together with
+the implementation ledger. The original `tasks.md` and protocol-chain plan are
+hash-frozen evidence inputs and remain byte-for-byte unchanged. Their unchecked
+historical alternatives are not new backlog commitments or silently passed work.
+
 The remaining dated research describes decisions before implementation approval;
 its prior authorization limits and paths are historical, not the current status.
+In particular, US-002/FR-003 below are the original SS requirement references;
+their current SS safety authority is Core011, not a second editable contract.
 
 ## Current Decision (2026-10-14)
 

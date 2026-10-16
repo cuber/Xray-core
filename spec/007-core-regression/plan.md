@@ -1,5 +1,13 @@
 # 回归基础设施与通用修复实施计划
 
+## 当前计划边界（2026-10-16）
+
+保留 readv/DoQ、公共测试/格式/vet 设施及 DNS/TLS/VLESS/XHTTP/cache 等非 SS 修复。
+SS2022 专属安全计划现在由 [Core011](../011-ss2022-safety/plan.md) 维护；
+本页下文涉及 SS 的步骤保留为原重建计划，不再作为当前独立 SS 工作队列。
+只有历史 V-032 的 SS 部分及对应 lostcancel/资源契约转交，公共缓存与其它 vet
+修复不转交。原证据的 source、日期、命令与任务状态不变；本次仅文档拆分，未复跑或部署。
+
 ## 2026-10-14 increment
 
 Extract only terminal readv handling and deterministic DNS fixture changes from

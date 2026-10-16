@@ -1,5 +1,14 @@
 # 回归基础设施与通用修复任务
 
+## 当前任务边界（2026-10-16）
+
+SS 专属当前任务与需求映射见 [Core011 tasks](../011-ss2022-safety/tasks.md) 和
+[原编号映射](../011-ss2022-safety/validation.md#original-number-mapping)。
+下文 T005 的 SS 部分、T007 及 V-032 的 SS 出站关闭证明保留其历史状态，
+不重做或重标为 011 的新执行；T006 中公共 vet 和非 SS 修复仍归 007。
+这些勾选不证明 fixed-main 候选所有历史任务/平台验收均通过。
+Windows readv TODO、共享 fixture/格式门禁和其它非 SS 任务继续由本 spec 维护。
+
 ## 2026-10-14 increment
 
 - [x] Extract readv syscall errors and their mock/real-reset tests from 2074c223.

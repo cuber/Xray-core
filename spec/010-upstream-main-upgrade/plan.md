@@ -1,8 +1,24 @@
-# Technical Plan (Proposed, Not Implemented)
+# Technical Plan
 
 Implementation authorized 2026-10-14. The current candidate plan is
 [implementation.md](implementation.md); the phases below are retained historical
 research, not instructions to apply every individual upstream backport.
+
+## Current Ownership Boundary (2026-10-16)
+
+Keep fixed-main difference review, fork-feature and consumer/config integration,
+cross-client compatibility, whole-Core/build gates and release adoption here.
+The existing SS2022-specific implementation plan is now
+[Core011](../011-ss2022-safety/plan.md), including deadline clearing, dynamic
+users/UDP identity/admission/replay/retirement and outbound resource safety.
+Historical B2/SS Deadline Boundary below remain dated design alternatives, not
+current instructions to restore singbridge or change zero-timeout semantics.
+Core011 records the selected native behavior and source-specific verification.
+
+The live task/gate boundary is [current-validation.md](current-validation.md).
+Do not regenerate historical hashes or alter frozen tasks/protocol evidence for
+this documentation split. Integration P09 still consumes SS results; Core011
+does not authorize adoption, pin changes, canary or deployment.
 
 ## Current Plan Override (2026-10-14)
 

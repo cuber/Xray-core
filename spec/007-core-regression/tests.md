@@ -1,5 +1,11 @@
 # 回归基础设施与通用修复验证矩阵
 
+Current ownership (2026-10-16): SS2022-specific requirements and rerun oracles
+are in [Core011 tests](../011-ss2022-safety/tests.md). The V-032 SS portion and
+SS lostcancel results below retain their original reconstruction provenance;
+cache invalidation and all shared regression facilities remain Core007. This
+navigation change is not a new runtime execution or production acceptance.
+
 Fixed-upstream candidate results (2026-10-14), including exact offline/public
 boundaries and executed commands: [upgrade evidence](upgrade-20261014.md).
 

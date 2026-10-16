@@ -6,8 +6,18 @@
 - Status: Implemented（定向、全库离线回归及隔离双平台构建完成；未部署）
 - Authorized: 2026-09-27，用户授权在共享隔离 worktree 补齐 V-028 至 V-033、窄范围运行时修复及格式 baseline 修复；主流程统一提交，不部署。
 - Source: 原 Core e7a21974，相对 b4f08981；历史清单见 [001](../001-core-fork-contracts/inventory.md)。
-- Scope: DNS/XHTTP/VLESS、SS2022 资源、VMess vet、Router publication 取消所有权、缓存并发、TLS 证书热重载、离线 fixtures、代理与格式门禁。
+- Scope: DNS/XHTTP/VLESS、VMess vet、Router publication 取消所有权、缓存并发、TLS 证书热重载、离线 fixtures、代理与格式门禁；历史 SS2022 资源条目的当前归属见 Core011。
 - 原 001 FR-010 至 FR-012 保留稳定追溯；实际差异、命令和退出码见 [本轮证据](../001-core-fork-contracts/evidence-011.md)。
+
+## 当前归属边界（2026-10-16）
+
+本 spec 保留公共回归设施及非 SS 专属修复。SS2022 握手期限、认证后清期限、
+动态用户/UDP identity/admission/replay/retirement 和出站早退 Close/资源安全的
+当前契约归 [Core011](../011-ss2022-safety/spec.md)，
+旧编号映射及候选验证边界见 [011 validation](../011-ss2022-safety/validation.md)。
+这里只拆分已有实现的文档归属，不新增运行时改动或测试执行，不代表上线。
+下文原状态、SC-001、V-032 及历史任务仍是其原始重建阶段记录；
+V-032 的 cache 部分和公共 vet/fixture 门禁仍归本 spec，不将旧证据重标为 011 实验。
 
 ## US-001 — 分类维护与独立验证（P1）
 
@@ -28,7 +38,8 @@ Then 真实断言字节、关闭、信任、并发与失败语义，分开记录
   新叶证书/CA 通过 atomic 快照发布，OCSP copy-on-write，不改写进行中握手持有的对象。
   无效文件保留最后有效叶证书，SNI 拒绝和客户端证书校验保持生效。
 - outbound cache 在 Remove 完成后的新查询不得返回旧 tag；并发在途快照允许旧结果。
-  SS2022 TCP/UDP 与 timeout-only 路径均需资源关闭，早期 TCP 失败不能泄漏 Dial 结果。
+  原 SS2022 TCP/UDP、timeout-only 与早期 Dial 结果关闭条目的当前契约转至
+  [Core011 FR-008](../011-ss2022-safety/spec.md#requirements)；历史 V-032 不改号。
 - Router TestRoute 的 stats.Publish 异步保留 context；RPC 返回不能取消排队消息。
   publication 保留四秒超时，取消由该期限拥有。不得用立即 defer cancel 消除 vet。
 - VMess 无受支持 response command，拒绝未知命令且不写输出，保留短输入与认证失败错误。

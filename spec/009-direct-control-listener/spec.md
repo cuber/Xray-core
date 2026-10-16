@@ -26,7 +26,8 @@ Extend the existing `api.listen` string without new protobuf fields:
   API socket permissions are the local access boundary, not gRPC authentication.
 - No AnyTLS, traffic routing, statistics or health algorithm changes.
 
-See [plan](plan.md), [tests](tests.md), [tasks](tasks.md).
+See [plan](plan.md), [tests](tests.md), [tasks](tasks.md),
+[requirements checklist](checklists/requirements.md).
 
 Ownership: spec003 owns traffic listeners, multi-address binding and SOCKS UDS.
 This spec owns `api.listen` direct control sockets and the exclusive Unix helper
