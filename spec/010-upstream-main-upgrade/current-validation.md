@@ -1,5 +1,18 @@
 # Current Validation And Task Boundaries
 
+## Mainline Adoption, 2026-10-17
+
+The user explicitly authorized source adoption after the limited rollout.
+Read [promotion](main-promotion-20261017.md) for retained tags/histories and
+unchanged runtime source. P12's source-adoption boundary has advanced; full
+fleet deployment, public-resource/provider and Windows/long-soak acceptance
+have not. Config003 records fresh canonical verification results.
+
+The dated ownership/evidence map below remains useful. Its original no-adoption
+statements describe the earlier documentation phase, not a veto on this later
+authorization. The earlier investigation is separated from the current spec
+in [initial investigation](initial-investigation-20261004.md).
+
 ## Authority, 2026-10-16
 
 Core010 remains the fixed-main upgrade difference/integration/release contract.

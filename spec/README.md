@@ -30,6 +30,14 @@ reference sibling repositories as integration evidence, not implementation input
 | [010](010-upstream-main-upgrade/spec.md) | Fixed upstream integration, verification and mainline promotion; node rollout remains explicit |
 | [011](011-ss2022-safety/spec.md) | Permanent SS2022 authentication, handshake, UDP/session and resource safety contract |
 
+The 2026-10-17 mainline review keeps feature boundaries stable rather than
+splitting AnyTLS inbound/outbound or merging traffic listeners003 with direct
+API009. Their ownership, rollback and verification differ. Spec007 remains the
+shared regression/fix owner, not one numbered spec per narrow bug. Spec010's
+current contract is now separated from its
+[initial investigation](010-upstream-main-upgrade/initial-investigation-20261004.md);
+historical Draft/auth restrictions do not override later explicit adoption.
+
 The verified `rebase/main-20261014` runtime is promoted to `develop` on
 2026-10-17; see [promotion and code-identity boundaries](010-upstream-main-upgrade/main-promotion-20261017.md).
 The original candidate worktree and its exact rollback bundles remain frozen.
