@@ -27,15 +27,18 @@ reference sibling repositories as integration evidence, not implementation input
 | [007](007-core-regression/spec.md) | Regression infrastructure and shared fixes |
 | [008](008-anytls/spec.md) | AnyTLS inbound/outbound, routing, statistics and control API |
 | [009](009-direct-control-listener/spec.md) | Direct control-plane UDS listener without traffic inbounds/routes |
-| [010](010-upstream-main-upgrade/spec.md) | Locally verified fixed-main candidate; production adoption remains separate |
+| [010](010-upstream-main-upgrade/spec.md) | Fixed upstream integration, verification and mainline promotion; node rollout remains explicit |
 | [011](011-ss2022-safety/spec.md) | Permanent SS2022 authentication, handshake, UDP/session and resource safety contract |
 
-On `rebase/main-20261014`, current feature contracts are maintained by their
+The verified `rebase/main-20261014` runtime is promoted to `develop` on
+2026-10-17; see [promotion and code-identity boundaries](010-upstream-main-upgrade/main-promotion-20261017.md).
+The original candidate worktree and its exact rollback bundles remain frozen.
+Current feature contracts are maintained by their
 owning specs; dated acceptance remains bound to its tested revisions. Candidate
 integration/release progress is recorded in [spec010](010-upstream-main-upgrade/implementation.md),
 not inferred from the imported source fork's historical PASS results.
 The consumer half of former Core006 is now
-[Sidecar007](../../xray-sidecar-rebase-20261014/spec/007-domain-traffic-aggregation/spec.md).
+[Sidecar007](../../xray-sidecar/spec/007-domain-traffic-aggregation/spec.md).
 Spec010 tracks upstream migration and integration; spec011 owns the lasting
 SS2022 safety contract. Existing requirement IDs and frozen evidence stay stable.
 
