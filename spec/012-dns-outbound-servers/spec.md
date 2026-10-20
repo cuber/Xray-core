@@ -109,8 +109,13 @@ the same name differently.
 - 2026-10-20: Strict isolation without fallback; the user wants an exit to fail when
   its resolver path fails ("sidecar 挂了就让节点失败").
 - 2026-10-20: Per-server caches keep working and are isolated by server. The Lazy
-  consumer disables them for its Sidecar-backed servers (`disableCache`), because
-  Sidecar caches by exit subnet and handles cold start (xray-sidecar/spec/009).
+  consumer keeps them on for its Sidecar-backed servers: Sidecar controls what Core
+  caches through the answers' TTLs (zero before an exit IP is known, capped
+  afterwards) and reports its own failures as HTTP errors, which Core does not cache
+  (xray-sidecar/spec/009). Core caches a SERVFAIL or empty answer for its fixed
+  300 s default, so a failure must not reach it as a DNS message. This revises the
+  earlier decision to disable these caches (user: "让xray-core不要缓存…等拿到了
+  egress ip 的再返回正常的 ttl…这样就能复用 xray-core 的缓存了").
 
 ## Authorization And Revisions
 
