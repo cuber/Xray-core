@@ -28,6 +28,8 @@ message NameServer {
   bool actUnprior = 14;
   uint32 policyID = 17;
   string id = 18;
+  // Only targetStrategy lookups of these outbounds use this server; empty serves any lookup.
+  repeated string outbound_tag = 19;
 }
 
 enum QueryStrategy {

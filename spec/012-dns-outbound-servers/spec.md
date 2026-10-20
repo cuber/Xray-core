@@ -9,7 +9,8 @@
 - Consumers: [xray-sidecar/spec/009](../../../xray-sidecar/spec/009-egress-dns/spec.md)
   (per-exit DoH views) and
   [xray-config/spec/008](../../../xray-config/spec/008-lazy-egress-dns/spec.md) (Lazy rollout).
-- Implementation status: not implemented.
+- Implementation status: implemented on `develop` (2026-10-20); rollout tracked in
+  xray-config/spec/008.
 
 ## Problem And Goal
 
@@ -74,7 +75,7 @@ the same name differently.
 - FR-007: Reject `outboundTags` when `dns.script` is set; script selection is out of scope.
 - FR-008: The parallel-query policy signature includes `outboundTags`, so servers
   that differ only by tags are not grouped together.
-- FR-009: The DNS decision log at info level includes the outbound tag when present.
+- FR-009: The existing DNS decision log (debug level) includes the outbound tag when present.
 
 ## Non-Goals
 

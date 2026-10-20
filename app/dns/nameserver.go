@@ -42,6 +42,22 @@ type Client struct {
 	ipOption      *dns.IPOption
 	checkSystem   bool
 	policyID      uint32
+	// outboundTags restricts the client to targetStrategy lookups of these outbounds.
+	outboundTags map[string]struct{}
+}
+
+// servesOutbound reports whether a lookup by the given outbound may use this client.
+func (c *Client) servesOutbound(tag string) bool {
+	if len(c.outboundTags) == 0 {
+		return false
+	}
+	_, ok := c.outboundTags[tag]
+	return ok
+}
+
+// restricted reports whether the client only serves bound outbounds.
+func (c *Client) restricted() bool {
+	return len(c.outboundTags) > 0
 }
 
 // NewServer creates a name server object according to the network destination url.
@@ -99,6 +115,14 @@ func NewClient(
 	updateRules func(bool),
 ) (*Client, error) {
 	client := &Client{id: ns.Id}
+	// Set before the deferred feature callback: selection must know the binding
+	// as soon as the client is listed.
+	if len(ns.OutboundTag) > 0 {
+		client.outboundTags = make(map[string]struct{}, len(ns.OutboundTag))
+		for _, outboundTag := range ns.OutboundTag {
+			client.outboundTags[outboundTag] = struct{}{}
+		}
+	}
 	err := core.RequireFeatures(ctx, func(dispatcher routing.Dispatcher) error {
 		// Create a new server for each client for now
 		server, err := NewServer(ctx, ns.Address.AsDestination(), dispatcher, disableCache, serveStale, serveExpiredTTL, clientIP)

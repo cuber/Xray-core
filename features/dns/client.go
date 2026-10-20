@@ -12,6 +12,9 @@ type IPOption struct {
 	IPv4Enable bool
 	IPv6Enable bool
 	FakeEnable bool
+	// OutboundTag names the outbound resolving its own target (targetStrategy);
+	// empty for every other lookup.
+	OutboundTag string
 }
 
 // Client is a Xray feature for querying DNS information.

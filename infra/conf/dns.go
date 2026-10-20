@@ -33,6 +33,7 @@ type NameServerConfig struct {
 	ServeExpiredTTL *uint32    `json:"serveExpiredTTL"`
 	FinalQuery      bool       `json:"finalQuery"`
 	UnexpectedIPs   StringList `json:"unexpectedIPs"`
+	OutboundTags    StringList `json:"outboundTags"`
 }
 
 // UnmarshalJSON implements encoding/json.Unmarshaler.UnmarshalJSON
@@ -60,6 +61,7 @@ func (c *NameServerConfig) UnmarshalJSON(data []byte) error {
 		ServeExpiredTTL *uint32    `json:"serveExpiredTTL"`
 		FinalQuery      bool       `json:"finalQuery"`
 		UnexpectedIPs   StringList `json:"unexpectedIPs"`
+		OutboundTags    StringList `json:"outboundTags"`
 	}
 	if err := json.Unmarshal(data, &advanced); err == nil {
 		c.ID = advanced.ID
@@ -78,6 +80,7 @@ func (c *NameServerConfig) UnmarshalJSON(data []byte) error {
 		c.ServeExpiredTTL = advanced.ServeExpiredTTL
 		c.FinalQuery = advanced.FinalQuery
 		c.UnexpectedIPs = advanced.UnexpectedIPs
+		c.OutboundTags = advanced.OutboundTags
 		return nil
 	}
 
@@ -136,6 +139,25 @@ func (c *NameServerConfig) Build() (*dns.NameServer, error) {
 		myClientIP = []byte(c.ClientIP.IP())
 	}
 
+	var outboundTags []string
+	if c.OutboundTags != nil {
+		if len(c.OutboundTags) == 0 {
+			return nil, errors.New("outboundTags must name at least one outbound")
+		}
+		seen := make(map[string]struct{}, len(c.OutboundTags))
+		for _, tag := range c.OutboundTags {
+			tag = strings.TrimSpace(tag)
+			if tag == "" {
+				return nil, errors.New("outboundTags contains an empty tag")
+			}
+			if _, dup := seen[tag]; dup {
+				return nil, errors.New("outboundTags lists ", tag, " twice")
+			}
+			seen[tag] = struct{}{}
+			outboundTags = append(outboundTags, tag)
+		}
+	}
+
 	return &dns.NameServer{
 		Id: c.ID,
 		Address: &net.Endpoint{
@@ -157,6 +179,7 @@ func (c *NameServerConfig) Build() (*dns.NameServer, error) {
 		FinalQuery:      c.FinalQuery,
 		UnexpectedIp:    unexpectedIPRules,
 		ActUnprior:      actUnprior,
+		OutboundTag:     outboundTags,
 	}, nil
 }
 
@@ -277,8 +300,8 @@ func (c *DNSConfig) Build() (*dns.Config, error) {
 			return nil, errors.New("DNS script cannot be used with disableFallback, disableFallbackIfMatch or enableParallelQuery")
 		}
 		for i, server := range c.Servers {
-			if len(server.Domains) > 0 || server.SkipFallback || server.FinalQuery {
-				return nil, errors.New("DNS script cannot be used with domains, skipFallback or finalQuery in server ", i)
+			if len(server.Domains) > 0 || server.SkipFallback || server.FinalQuery || server.OutboundTags != nil {
+				return nil, errors.New("DNS script cannot be used with domains, skipFallback, finalQuery or outboundTags in server ", i)
 			}
 		}
 	}
@@ -356,6 +379,7 @@ func (c *DNSConfig) Build() (*dns.Config, error) {
 		writeList("expected", nsc.ExpectedIPs)
 		writeList("expect", nsc.ExpectIPs)
 		writeList("unexpected", nsc.UnexpectedIPs)
+		writeList("outbounds", nsc.OutboundTags)
 
 		key := sb.String()
 

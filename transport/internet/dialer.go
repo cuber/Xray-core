@@ -95,10 +95,16 @@ var ResolveOutboundManager func(context.Context) outbound.Manager
 var ResolveDNSClient func(context.Context) dns.Client
 
 func LookupForIP(domain string, strategy DomainStrategy, localAddr net.Address) ([]net.IP, error) {
+	return LookupForOutboundIP(domain, strategy, localAddr, "")
+}
+
+// LookupForOutboundIP resolves an outbound's own target, so DNS servers bound to
+// that outbound tag can serve it.
+func LookupForOutboundIP(domain string, strategy DomainStrategy, localAddr net.Address, outboundTag string) ([]net.IP, error) {
 	dnsClientMu.RLock()
 	dnsClient := dnsClient
 	dnsClientMu.RUnlock()
-	return lookupForIP(dnsClient, domain, strategy, localAddr)
+	return lookupForIP(dnsClient, domain, strategy, localAddr, outboundTag)
 }
 
 // LookupForIPContext never borrows another instance's DNS client.
@@ -107,23 +113,25 @@ func LookupForIPContext(ctx context.Context, domain string, strategy DomainStrat
 	if ResolveDNSClient != nil {
 		client = ResolveDNSClient(ctx)
 	}
-	return lookupForIP(client, domain, strategy, localAddr)
+	return lookupForIP(client, domain, strategy, localAddr, "")
 }
 
-func lookupForIP(dnsClient dns.Client, domain string, strategy DomainStrategy, localAddr net.Address) ([]net.IP, error) {
+func lookupForIP(dnsClient dns.Client, domain string, strategy DomainStrategy, localAddr net.Address, outboundTag string) ([]net.IP, error) {
 	if dnsClient == nil {
 		return nil, errors.New("DNS client not initialized")
 	}
 
 	ips, _, err := dnsClient.LookupIP(domain, dns.IPOption{
-		IPv4Enable: (localAddr == nil && strategy.PreferIP4()) || (localAddr != nil && localAddr.Family().IsIPv4() && (strategy.PreferIP4() || strategy.FallbackIP4())),
-		IPv6Enable: (localAddr == nil && strategy.PreferIP6()) || (localAddr != nil && localAddr.Family().IsIPv6() && (strategy.PreferIP6() || strategy.FallbackIP6())),
+		IPv4Enable:  (localAddr == nil && strategy.PreferIP4()) || (localAddr != nil && localAddr.Family().IsIPv4() && (strategy.PreferIP4() || strategy.FallbackIP4())),
+		IPv6Enable:  (localAddr == nil && strategy.PreferIP6()) || (localAddr != nil && localAddr.Family().IsIPv6() && (strategy.PreferIP6() || strategy.FallbackIP6())),
+		OutboundTag: outboundTag,
 	})
 	{ // Resolve fallback
 		if (len(ips) == 0 || err != nil) && strategy.HasFallback() && localAddr == nil {
 			ips, _, err = dnsClient.LookupIP(domain, dns.IPOption{
-				IPv4Enable: strategy.FallbackIP4(),
-				IPv6Enable: strategy.FallbackIP6(),
+				IPv4Enable:  strategy.FallbackIP4(),
+				IPv6Enable:  strategy.FallbackIP6(),
+				OutboundTag: outboundTag,
 			})
 		}
 	}

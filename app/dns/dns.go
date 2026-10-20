@@ -32,6 +32,8 @@ type DNS struct {
 	matcherInfos           []*DomainMatcherInfo
 	checkSystem            bool
 	script                 *scriptEngine
+	// boundOutbounds lists outbound tags that have dedicated clients.
+	boundOutbounds map[string]struct{}
 }
 
 // DomainMatcherInfo contains information attached to index returned by Server.domainMatcher.
@@ -170,8 +172,18 @@ func New(ctx context.Context, config *Config) (*DNS, error) {
 		clients = append(clients, NewLocalDNSClient(ipOption))
 	}
 
+	boundOutbounds := make(map[string]struct{})
+	for _, client := range clients {
+		for outboundTag := range client.outboundTags {
+			boundOutbounds[outboundTag] = struct{}{}
+		}
+	}
+
 	var script *scriptEngine
 	if config.Script != "" {
+		if len(boundOutbounds) > 0 {
+			return nil, errors.New("DNS script cannot be used with outbound-bound servers")
+		}
 		if script, err = newScriptEngine(config.Script); err != nil {
 			return nil, errors.New("failed to prepare DNS script").Base(err)
 		}
@@ -189,6 +201,7 @@ func New(ctx context.Context, config *Config) (*DNS, error) {
 		enableParallelQuery:    config.EnableParallelQuery,
 		checkSystem:            checkSystem,
 		script:                 script,
+		boundOutbounds:         boundOutbounds,
 	}, nil
 }
 
@@ -306,11 +319,24 @@ func (s *DNS) LookupIP(domain string, option dns.IPOption) ([]net.IP, uint32, er
 	}
 }
 
-func (s *DNS) sortClients(domain string) []*Client {
+func (s *DNS) sortClients(domain string, outboundTag string) []*Client {
 	clients := make([]*Client, 0, len(s.clients))
 	clientUsed := make([]bool, len(s.clients))
 	clientNames := make([]string, 0, len(s.clients))
 	domainRules := []string{}
+
+	// An outbound with dedicated clients uses only those, never any fallback;
+	// every other lookup never uses a dedicated client.
+	_, bound := s.boundOutbounds[outboundTag]
+	if outboundTag == "" {
+		bound = false
+	}
+	eligible := func(client *Client) bool {
+		if bound {
+			return client.servesOutbound(outboundTag)
+		}
+		return !client.restricted()
+	}
 
 	// Priority domain matching
 	hasMatch := false
@@ -322,6 +348,9 @@ func (s *DNS) sortClients(domain string) []*Client {
 		for _, match := range matchSlice {
 			info := s.matcherInfos[match]
 			client := s.clients[info.clientIdx]
+			if !eligible(client) {
+				continue
+			}
 			domainRule := info.domainRule
 			domainRules = append(domainRules, fmt.Sprintf("%s(DNS idx:%d)", domainRule, info.clientIdx))
 			if clientUsed[info.clientIdx] {
@@ -332,34 +361,57 @@ func (s *DNS) sortClients(domain string) []*Client {
 			clientNames = append(clientNames, client.Name())
 			hasMatch = true
 			if client.finalQuery {
-				logDecision(s.ctx, domain, domainRules, clientNames)
+				logDecision(s.ctx, domain, outboundTag, domainRules, clientNames)
 				return clients
 			}
 		}
 	}
 
-	if !(s.disableFallback || s.disableFallbackIfMatch && hasMatch) {
-		// Default round-robin query
+	if bound {
 		for idx, client := range s.clients {
-			if clientUsed[idx] || client.skipFallback {
+			if clientUsed[idx] || !client.servesOutbound(outboundTag) {
 				continue
 			}
 			clientUsed[idx] = true
 			clients = append(clients, client)
 			clientNames = append(clientNames, client.Name())
 			if client.finalQuery {
-				logDecision(s.ctx, domain, domainRules, clientNames)
+				break
+			}
+		}
+		logDecision(s.ctx, domain, outboundTag, domainRules, clientNames)
+		return clients
+	}
+
+	if !(s.disableFallback || s.disableFallbackIfMatch && hasMatch) {
+		// Default round-robin query
+		for idx, client := range s.clients {
+			if clientUsed[idx] || client.skipFallback || client.restricted() {
+				continue
+			}
+			clientUsed[idx] = true
+			clients = append(clients, client)
+			clientNames = append(clientNames, client.Name())
+			if client.finalQuery {
+				logDecision(s.ctx, domain, outboundTag, domainRules, clientNames)
 				return clients
 			}
 		}
 	}
 
-	logDecision(s.ctx, domain, domainRules, clientNames)
+	logDecision(s.ctx, domain, outboundTag, domainRules, clientNames)
 
 	if len(clients) == 0 {
-		if len(s.clients) > 0 {
-			clients = append(clients, s.clients[0])
-			clientNames = append(clientNames, s.clients[0].Name())
+		var first *Client
+		for _, client := range s.clients {
+			if !client.restricted() {
+				first = client
+				break
+			}
+		}
+		if first != nil {
+			clients = append(clients, first)
+			clientNames = append(clientNames, first.Name())
 			errors.LogWarning(s.ctx, "domain ", domain, " will use the first DNS: ", clientNames)
 		} else {
 			errors.LogError(s.ctx, "no DNS clients available for domain ", domain, " and no default clients configured")
@@ -369,11 +421,15 @@ func (s *DNS) sortClients(domain string) []*Client {
 	return clients
 }
 
-func logDecision(ctx context.Context, domain string, domainRules []string, clientNames []string) {
+func logDecision(ctx context.Context, domain string, outboundTag string, domainRules []string, clientNames []string) {
 	if len(domainRules) > 0 {
 		errors.LogDebug(ctx, "domain ", domain, " matches following rules: ", domainRules)
 	}
 	if len(clientNames) > 0 {
+		if outboundTag != "" {
+			errors.LogDebug(ctx, "domain ", domain, " for outbound ", outboundTag, " will use DNS in order: ", clientNames)
+			return
+		}
 		errors.LogDebug(ctx, "domain ", domain, " will use DNS in order: ", clientNames)
 	}
 }
@@ -404,7 +460,7 @@ func mergeQueryErrors(domain string, errs []error) error {
 
 func (s *DNS) serialQuery(domain string, option dns.IPOption) ([]net.IP, uint32, error) {
 	var errs []error
-	for _, client := range s.sortClients(domain) {
+	for _, client := range s.sortClients(domain, option.OutboundTag) {
 		if !option.FakeEnable && strings.EqualFold(client.Name(), "FakeDNS") {
 			errors.LogDebug(s.ctx, "skip DNS resolution for domain ", domain, " at server ", client.Name())
 			continue
@@ -427,7 +483,7 @@ func (s *DNS) serialQuery(domain string, option dns.IPOption) ([]net.IP, uint32,
 
 func (s *DNS) parallelQuery(domain string, option dns.IPOption) ([]net.IP, uint32, error) {
 	var errs []error
-	clients := s.sortClients(domain)
+	clients := s.sortClients(domain, option.OutboundTag)
 
 	resultsChan := asyncQueryAll(domain, option, clients, s.ctx)
 
