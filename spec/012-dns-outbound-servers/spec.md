@@ -9,8 +9,9 @@
 - Consumers: [xray-sidecar/spec/009](../../../xray-sidecar/spec/009-egress-dns/spec.md)
   (per-exit DoH views) and
   [xray-config/spec/008](../../../xray-config/spec/008-lazy-egress-dns/spec.md) (Lazy rollout).
-- Implementation status: implemented on `develop` (2026-10-20); rollout tracked in
-  xray-config/spec/008.
+- Implementation status: selection (US-001–US-003) implemented on `develop`
+  (`a0831478`, 2026-10-20); control plane (US-004) implemented 2026-10-20. Rollout is
+  tracked in xray-config/spec/008.
 
 ## Problem And Goal
 
@@ -55,6 +56,19 @@ the same name differently.
    `domainStrategy`, `sockopt.domainStrategy`, freedom, observatory, DNS outbound),
    Then the restricted server is never used, neither as a domain match nor as fallback.
 
+### US-004 — Control-plane visibility (P1)
+
+Independent acceptance: a started instance with `DNSService` enabled and a
+gRPC client on its API listener.
+
+1. Given restricted and unrestricted servers, When a client calls
+   `DNSService.ListServers`, Then it receives every loaded server in configured
+   order with its address, DNS tag, `outboundTags`, cache mode and current Core
+   cache entry count, plus the global DNS options.
+2. Given a Core without the service, or `DNSService` absent from `api.services`,
+   Then the call fails with gRPC `Unimplemented`, and consumers show the data as
+   unavailable instead of reading configuration files.
+
 ## Functional Requirements
 
 - FR-001: `dns.servers[]` objects accept `outboundTags`, a non-empty list of
@@ -76,6 +90,27 @@ the same name differently.
 - FR-008: The parallel-query policy signature includes `outboundTags`, so servers
   that differ only by tags are not grouped together.
 - FR-009: The existing DNS decision log (debug level) includes the outbound tag when present.
+- FR-010: Read-only `xray.app.dns.command.DNSService/ListServers`, enabled by the
+  `api.services` name `DNSService`. Per server, in configured order: index, Core
+  server name, configured address, DNS tag, `outboundTags` (empty = unrestricted),
+  effective query strategy, timeout, `skipFallback`, `finalQuery`, domain-rule count,
+  whether expected/unexpected IP rules exist, `disableCache`, `serveStale` and the
+  current number of cached names. Global: query strategy, `disableFallback`,
+  `disableFallbackIfMatch`, `enableParallelQuery`, static-host count, script presence.
+- FR-011: Values come from the loaded `app/dns` instance. When the DNS feature is
+  not `app/dns` (no `dns` section), the response says the system resolver is in use
+  and lists no servers.
+- FR-012: Addresses carry no URL userinfo. The response size is bounded by the
+  configured servers; reading cache sizes takes each cache's read lock only.
+
+## Control Plane
+
+Per the Core control-plane parity rules ([README](../README.md#control-plane-parity)):
+selection and bindings are observable through `DNSService.ListServers` (FR-010–FR-012).
+Consumers: xray-sidecar/spec/009 adds it to `/xray-debug` beside the resolver's own
+state; xray-config/spec/008 shows it in a Portal DNS tab and enables `DNSService` on
+nodes with bound servers. Per-query decisions stay in the debug log (FR-009); no
+mutating RPC is added.
 
 ## Non-Goals
 
@@ -101,6 +136,9 @@ the same name differently.
   servers identically to `1a05cc1`.
 - SC-003: `go test ./...` passes, and `./build.sh` produces both binaries from a
   clean committed tree.
+- SC-004: A contract test calls `ListServers` over a real gRPC listener of a started
+  instance for a default configuration and for restricted servers with cached
+  entries, and checks `Unimplemented` when the service is not enabled.
 
 ## Clarifications And Decisions
 
@@ -117,7 +155,12 @@ the same name differently.
   earlier decision to disable these caches (user: "让xray-core不要缓存…等拿到了
   egress ip 的再返回正常的 ttl…这样就能复用 xray-core 的缓存了").
 
+- 2026-10-20: The control plane joins this spec rather than a new one (user: "用B方案，
+  spec应该合并到上个dns改造的里面"): a Core RPC reports loaded state, Sidecar does not
+  parse configuration files for it.
+
 ## Authorization And Revisions
 
 - 2026-10-20: Approved for implementation. Deployment scope and order belong to
   xray-config/spec/008.
+- 2026-10-20: US-004 (control plane) approved and added under the parity rules.

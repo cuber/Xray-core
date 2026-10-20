@@ -35,7 +35,23 @@ when the handler drops its tag). Existing ordering tests unchanged and passing.
 
 ## Close
 
-- [ ] T006 `go test ./...`, commit, `./build.sh` (Darwin + Linux) — depends: T004,
-  T005; covers SC-001, SC-003; verify: logs and binary revision.
-- [ ] T007 Update status, index and fork inventory (`spec/README.md`,
-  `001-core-fork-contracts`) — depends: T006; verify: links.
+- [x] T006 `go test ./...`, commit, `./build.sh` (Darwin + Linux) — depends: T004,
+  T005; covers SC-001, SC-003; verify: logs and binary revision. Evidence: `a0831478`,
+  built through `xrayctl build all` (`ff62acf` after a spec-only commit).
+- [x] T007 Update status, index and fork inventory (`spec/README.md`,
+  `001-core-fork-contracts`) — depends: T006; verify: links. The dated 2026-09-27
+  `inventory.md` audit stays historical; the 001 contract table routes to 012.
+
+## US-004 Control plane
+
+- [x] T008 [US-004] Sanitized address on `Client`, `CacheController.size()`,
+  `DNS.ControlSnapshot()` — `app/dns`; depends: T003; covers FR-010–FR-012.
+- [x] T009 [US-004] `app/dns/command` proto/service, `api.services` name `DNSService`,
+  distro registration — depends: T008; covers FR-010, FR-011.
+- [x] T010 [US-004] Contract test over real gRPC (SC-004), `go test ./...`, build —
+  depends: T009. Evidence: `app/dns/command/command_test.go` starts JSON instances and
+  calls the API listener: loaded servers in order, userinfo stripped, sorted
+  `outboundTags`, per-server cache counts after real lookups (1 bound, 2 unrestricted,
+  0 with `disableCache`), default port 53, system resolver without `dns`, and
+  `Unimplemented` without the service. Keeping userinfo fails it. `go test -race`
+  for `app/dns/...` and `infra/conf`, and full `go test ./...`, pass.

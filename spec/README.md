@@ -29,7 +29,7 @@ reference sibling repositories as integration evidence, not implementation input
 | [009](009-direct-control-listener/spec.md) | Direct control-plane UDS listener without traffic inbounds/routes |
 | [010](010-upstream-main-upgrade/spec.md) | Fixed upstream integration, verification and mainline promotion; node rollout remains explicit |
 | [011](011-ss2022-safety/spec.md) | Permanent SS2022 authentication, handshake, UDP/session and resource safety contract |
-| [012](012-dns-outbound-servers/spec.md) | DNS servers restricted to named outbounds for `targetStrategy` lookups; per-server caches, strict isolation |
+| [012](012-dns-outbound-servers/spec.md) | DNS servers restricted to named outbounds for `targetStrategy` lookups; per-server caches, strict isolation; read-only `DNSService` |
 
 The 2026-10-17 mainline review keeps feature boundaries stable rather than
 splitting AnyTLS inbound/outbound or merging traffic listeners003 with direct
@@ -62,9 +62,43 @@ last in the original 001-008 reconstruction. Later features allocate new IDs.
 On 2026-09-27 the user authorized repository-local renumbering: old global
 005/006/007/008/009/010/011/012 map to local 001/002/003/004/005/006/007/008.
 Historical hashes, requirement IDs, test names and evidence filenames remain
-provenance, not allocations in the new sequence. Next spec: 012; next draft: 003.
+provenance, not allocations in the new sequence. Next spec: 013; next draft: 003.
 Core draft002 was promoted to [spec010](010-upstream-main-upgrade/spec.md)
 on 2026-10-14 following explicit implementation authorization.
+
+## Control-Plane Parity
+
+Adopted 2026-10-20 (user: "后续所有对core的改动，都需要考虑控制面，你得记录一套规约").
+These rules bind every Core spec and change; a spec that does not satisfy them is
+incomplete.
+
+- CP-1 Scope: a change that adds or alters configuration, loaded runtime state,
+  selection or scheduling decisions, caches, health, sessions or counters defines
+  how the control plane observes it, in a `Control Plane` section of its spec. A
+  change with no new observable state says so with the reason (for example an
+  internal bug fix).
+- CP-2 Runtime truth: report what the running instance loaded and does, through
+  Core gRPC. Consumers do not reconstruct runtime state from configuration files
+  when Core can report it.
+- CP-3 Read-only first: observation RPCs have no side effects. A mutating RPC needs
+  its own requirement, authorization, failure and rollback semantics.
+- CP-4 Placement: extend the service that owns the feature (Handler, Routing,
+  Observatory, Stats, Logger); add a service only for a new feature domain, register
+  it in `infra/conf/api.go` and `main/distro/all`, and document its `api.services`
+  name. Proto changes are additive; field numbers are never renumbered or reused.
+- CP-5 Safety and bounds: a new RPC returns no secret the caller could not already
+  read (strip URL userinfo; no user keys), bounds its response by configured
+  objects, and holds only short read locks that never stall the data plane.
+- CP-6 Compatibility: an older Core answers `Unimplemented`; consumers render
+  "unavailable", never a guess, an empty list presented as healthy, or file data.
+- CP-7 Tests: a contract test calls the RPC through a real gRPC server on a started
+  instance, covering a default configuration and the feature's own state.
+- CP-8 Consumers: the same spec family names the Sidecar `/xray-debug` field and the
+  Portal presentation (in the Sidecar and Config specs), or records them as a dated
+  non-goal. Nodes enable a new service through tracked `api.services`, and
+  acceptance covers it where the feature is deployed.
+
+Existing specs adopt these rules when they are next changed.
 
 Approved, Implementing, Implemented and Superseded specs live here. Undecided
 proposals belong in `draft/`, not in the implementation backlog. Move documents

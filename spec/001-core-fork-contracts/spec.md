@@ -45,6 +45,7 @@ AnyTLS 协议本身继续由 [008](../008-anytls/spec.md) 唯一负责，
 | FR-010 / FR-011 / FR-012 | [Core007 共享回归](../007-core-regression/spec.md)；SS2022 安全专项见 [Core011](../011-ss2022-safety/spec.md) |
 | AnyTLS | [Core008](../008-anytls/spec.md)，包含入站、出站及其共享前置依赖 |
 | 上游迁移/集成 | [Core010](../010-upstream-main-upgrade/spec.md)，不与永久功能契约混合 |
+| 出站绑定 DNS 与 `DNSService` | [Core012](../012-dns-outbound-servers/spec.md) |
 
 ## 用户场景与验收
 

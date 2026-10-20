@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package xray.app.dns.command;
+option csharp_namespace = "Xray.App.Dns.Command";
+option go_package = "github.com/xtls/xray-core/app/dns/command";
+option java_package = "com.xray.app.dns.command";
+option java_multiple_files = true;
+
+message ListServersRequest {}
+
+// Server is one loaded DNS client, in configured order.
+message Server {
+  uint32 index = 1;
+  // Core's server name, e.g. "DOH//dns.google".
+  string name = 2;
+  // Configured address without URL userinfo.
+  string address = 3;
+  // DNS tag its own queries are routed with.
+  string tag = 4;
+  // Outbounds whose targetStrategy lookups it serves; empty means unrestricted.
+  repeated string outbound_tags = 5;
+  // Effective query strategy: UseIP, UseIPv4, UseIPv6 or UseSystem.
+  string query_strategy = 6;
+  uint32 timeout_ms = 7;
+  bool skip_fallback = 8;
+  bool final_query = 9;
+  uint32 domain_rules = 10;
+  bool expected_ips = 11;
+  bool unexpected_ips = 12;
+  bool disable_cache = 13;
+  bool serve_stale = 14;
+  // Names currently held in this server's cache.
+  uint32 cache_entries = 15;
+}
+
+message ListServersResponse {
+  repeated Server servers = 1;
+  // True when the DNS feature is not app/dns: the system resolver is used.
+  bool system_resolver = 2;
+  string query_strategy = 3;
+  bool disable_fallback = 4;
+  bool disable_fallback_if_match = 5;
+  bool enable_parallel_query = 6;
+  uint32 static_hosts = 7;
+  bool script = 8;
+}
+
+message Config {}
+
+service DNSService {
+  rpc ListServers(ListServersRequest) returns (ListServersResponse) {}
+}

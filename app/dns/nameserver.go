@@ -44,6 +44,8 @@ type Client struct {
 	policyID      uint32
 	// outboundTags restricts the client to targetStrategy lookups of these outbounds.
 	outboundTags map[string]struct{}
+	// address is the configured address without userinfo, for the control plane.
+	address string
 }
 
 // servesOutbound reports whether a lookup by the given outbound may use this client.
@@ -114,7 +116,7 @@ func NewClient(
 	ipOption dns.IPOption,
 	updateRules func(bool),
 ) (*Client, error) {
-	client := &Client{id: ns.Id}
+	client := &Client{id: ns.Id, address: controlAddress(ns.Address)}
 	// Set before the deferred feature callback: selection must know the binding
 	// as soon as the client is listed.
 	if len(ns.OutboundTag) > 0 {

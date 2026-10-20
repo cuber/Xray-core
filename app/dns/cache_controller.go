@@ -57,6 +57,13 @@ func NewCacheController(name string, disableCache bool, serveStale bool, serveEx
 	return c
 }
 
+// size reports the cached names, for the control plane.
+func (c *CacheController) size() int {
+	c.RLock()
+	defer c.RUnlock()
+	return len(c.ips)
+}
+
 // CacheCleanup clears expired items from cache
 func (c *CacheController) CacheCleanup() error {
 	expiredKeys, err := c.collectExpiredKeys()
