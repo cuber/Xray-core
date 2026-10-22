@@ -48,14 +48,23 @@ plain SS-2022 and Mux.Cool, decided per connection.
     sessions are both accepted) and Brutal disabled.
   - The server auto-detects smux, yamux or h2mux per session.
   - The metacubex client used by mihomo is wire-identical (research §3).
-- **D4 Dependency.** sing-mux requires `sagernet/sing` ≥ v0.9.5, but Core pins v0.8.14.
+- **D4 Dependency.** sing-mux is its own module (`github.com/sagernet/sing-mux`) built
+  on the base library `sagernet/sing`. Each release declares a minimum sing version,
+  and a Go build links exactly one sing version, the highest required. v0.3.8 and later
+  require sing ≥ v0.9.5; v0.3.4–v0.3.7 require ≥ v0.7.14. Core pins v0.8.14, and
   sing's only runtime user is AnyTLS (`proxy/anytls`, `proxy/anytls/internal/engine`),
   which runs on 12 nodes, mostly relays and LA schedulers (xray-config, 2026-10-22).
+  - Option C (recommended): require sing-mux **v0.3.7** (2026-09-19) as a normal
+    dependency. A probe module with sing v0.8.14 + sing-mux v0.3.7 passes `go mod tidy`
+    (sing stays v0.8.14), `go build`, `go vet` and a `NewService` run (research §3).
+    Against v0.3.9, the server path is identical: the only change is close callbacks
+    on stream wrappers, used by the client's idle tracking. AnyTLS stays unchanged and
+    no foreign code is copied. Moving past v0.3.7 later reopens A as a separate change.
   - Option A: bump sing to v0.9.x. The API breaks found (`CloseRead`/`CloseWrite`
     signatures, vectorised packet waiter aliases) are not used by AnyTLS. Buffer and
     copy behaviour changed, though, so every relay running AnyTLS gets new runtime
     behaviour. The spec008 regression and interop suites gate it.
-  - Option B (recommended): vendor the sing-mux server subset (about 1.5k of 2.5k
+  - Option B: vendor the sing-mux server subset (about 1.5k of 2.5k
     lines, without the client and brutal) at a pinned commit, built against v0.8.14.
     Every symbol it uses exists there, so AnyTLS stays unchanged and the blast radius is
     limited to inbounds with sing-mux on. The cost is syncing upstream fixes by hand;
@@ -177,8 +186,8 @@ plain SS-2022 and Mux.Cool, decided per connection.
 
 ## Clarifications and Decisions
 
-- [NEEDS CLARIFICATION C1: dependency — vendor the sing-mux server against v0.8.14
-  (recommended, AnyTLS unchanged) or bump sing to v0.9.x?]
+- [NEEDS CLARIFICATION C1: dependency — sing-mux v0.3.7 on sing v0.8.14 (recommended:
+  no sing change, no copied code), vendoring, or a sing v0.9 bump?]
 - [NEEDS CLARIFICATION C2: per-inbound opt-in (recommended) or always-on like Mux.Cool?]
 - [NEEDS CLARIFICATION C3: per-carrier stream cap — 256 proposed.]
 - [NEEDS CLARIFICATION C4: Portal presentation now, or a dated non-goal with

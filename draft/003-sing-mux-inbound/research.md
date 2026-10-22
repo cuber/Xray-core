@@ -95,6 +95,20 @@ compiled or run. Core paths are relative to this repository; library aliases:
   - Every sing symbol sing-mux uses exists in v0.8.14.
   - v0.9 breaks `N.CloseRead/CloseWrite` signatures and vectorised packet-waiter types;
     AnyTLS uses neither.
+- **Release requirements** (proxy.golang.org `.mod`/`.info`):
+
+  | sing-mux | Date | Requires sing |
+  |---|---|---|
+  | v0.3.3 | 2025-08-13 | v0.6.7 |
+  | v0.3.4–v0.3.7 | 2026-01-16 to 2026-09-19 | v0.7.14 |
+  | v0.3.8–v0.3.9 | 2026-09-19 to 2026-09-27 | v0.9.5 |
+
+- **v0.3.7 on sing v0.8.14.** Verified 2026-10-22 with a probe module in the session
+  scratchpad: `go mod tidy` keeps sing v0.8.14 and adds yamux v0.1.2 and smux
+  v1.5.50-sing-box-mod.1; `go build`, `go vet` and a `NewService` run succeed.
+- **v0.3.7 vs v0.3.9.** Only `client.go`, `error.go`, `server.go` and `session.go`
+  differ (158 lines). The server change is struct-literal field names; the wrappers
+  gain `onClose` close callbacks that only the client's idle-session tracking sets.
 - **Licences.** sing-mux and sing: GPL-3.0-or-later. smux: MIT. yamux: MPL-2.0.
 
 ## 4. mihomo Client Behaviour
