@@ -68,7 +68,9 @@ plain SS-2022 and Mux.Cool, decided per connection.
     - Over SS-2022 raw TCP that cannot happen. Inbounds on HTTP/2-based transports
       (gRPC, h2, XHTTP) stay out of scope unless the same wrapper is added to Core's
       carrier adapter.
-  - Option A: bump sing to v0.9.x. The API breaks found (`CloseRead`/`CloseWrite`
+  - Option A: bump sing to v0.9.x. It gives AnyTLS nothing (research §6): upstream
+    sing-anytls still requires v0.8.14, and the one upstream fix since our import is
+    already covered by stricter local bounds. The API breaks found (`CloseRead`/`CloseWrite`
     signatures, vectorised packet waiter aliases) are not used by AnyTLS. Buffer and
     copy behaviour changed, though, so every relay running AnyTLS gets new runtime
     behaviour. The spec008 regression and interop suites gate it.

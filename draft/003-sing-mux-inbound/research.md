@@ -165,3 +165,32 @@ compiled or run. Core paths are relative to this repository; library aliases:
 - No `sing-box.arpa`, `sing-mux`, `smux`, `yamux` or `h2mux` in this tree or in
   `origin/main` `0888beb3` (2026-10-14).
 - Upstream removed `common/singbridge` (#6831) after limiting sing to SS-2022 (#6286).
+
+## 6. AnyTLS and a sing v0.9 Bump
+
+- **Usage (xray-config, 2026-10-22).**
+  - Inbounds on 6hk, hk.dmit.t1.tiny, hk.rfc.co.mini, hk.rfc.co.vgd, phk.nano, the three LA
+    DMIT schedulers and TK SHI/ZDS.
+  - Outbounds: the operator's local Xray (27) and one on tgz.lite, which no routing rule,
+    balancer or dialerProxy references.
+  - Not rendered in subscriptions. It runs in the same Xray process as all relay traffic.
+- **Engine.**
+  - Imported from SagerNet/sing-anytls `7ca72921` (2026-09-24) with local hardening
+    (`proxy/anytls/internal/engine/ORIGIN.md`).
+  - Upstream has one later commit, `580984e4` (2026-09-28), "Fix padding scheme parsing",
+    which caps a range at 1 MiB.
+  - The local engine already rejects ranges above 65535 and bounds bytes per packet
+    (128 KiB) and per scheme (1 MiB) (`engine/padding.go:18-23,102-108`).
+  - Upstream `go.mod` still requires sing v0.8.14.
+- **sing v0.8.14 → v0.9.6** (33 commits, `gh api repos/SagerNet/sing/compare`).
+  - **Paths AnyTLS uses** get refactors, not fixes:
+    - memory/buffer pool refactor (`3ed631a5`), affecting `buf.NewSize`, which the engine
+      uses for every frame and record (`session.go:231,578,600,638,694`);
+    - read buffers sized from writer MTU (`cbeb0ed7`), affecting `InitializeReadWaiter`
+      (`stream.go:269`);
+    - early-conn detection through upstream layers (`438fd16d`), affecting
+      `NeedHandshakeForRead/Write` (`stream.go:461-465`);
+    - UDP packet batch support (`b2a2cf13`).
+  - **Fixes in v0.9.x** cover features AnyTLS does not use: HTTP/2 error wrapping,
+    splice counters, half-close lookups, the deadline writer, Windows, JSON and file
+    manager.
