@@ -97,7 +97,7 @@ Goal: an opt-in, per-inbound sing-mux server.
 
 | ID | Requirement | Verified by ([validation](validation.md)) |
 |---|---|---|
-| FR-001 | D1 interception on enabled inbounds; disabled inbounds unchanged; AnyTLS rejected | V-02, V-03, V-06 |
+| FR-001 | D1 interception on enabled inbounds; standard SS-2022 on an enabled inbound and disabled inbounds unchanged; AnyTLS rejected | V-02, V-03, V-06, V-10 |
 | FR-002 | Stream parity: inbound tag, `user:` rules, domain and sniffed routing, user traffic, distinct session IDs | V-01, V-02, V-04, V-05 |
 | FR-003 | TCP and UDP (fixed and PacketAddr) streams; smux/yamux/h2mux, with and without padding | V-01, V-02, V-04, V-05 |
 | FR-004 | Lifecycle D6, including preamble timeout, close joins and idle release | V-01, V-02, V-07 |

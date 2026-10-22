@@ -429,6 +429,23 @@ func TestInProcessClientThroughSS2022(t *testing.T) {
 	}
 }
 
+// TestPlainSS2022OnSingMuxInbound sends standard SS-2022 from Xray's own outbound
+// to the inbound that also serves sing-mux: routing, user rules, sniffing and user
+// traffic work as before, and the sing-mux server sees nothing.
+func TestPlainSS2022OnSingMuxInbound(t *testing.T) {
+	f := newFixture(t)
+	before := f.muxStats(t, "ss-in")
+	traffic := f.userTraffic(t, "loop")
+	checkRoutes(t, socksDial(f.loopPort), 5)
+	after := f.muxStats(t, "ss-in")
+	if after.SingMux.TotalCarriers != before.SingMux.TotalCarriers || after.MuxCool.TotalCarriers != before.MuxCool.TotalCarriers {
+		t.Fatalf("plain SS-2022 was multiplexed: before %+v, after %+v", before, after)
+	}
+	if f.userTraffic(t, "loop") <= traffic {
+		t.Fatal("plain SS-2022 user traffic was not counted")
+	}
+}
+
 func TestUserRemovalRefusesNewStreams(t *testing.T) {
 	f := newFixture(t)
 	client := newLoopClient(t, f.loopPort, "h2mux", false, 1)
@@ -710,6 +727,8 @@ type clientCase struct {
 	protocol string
 	padding  bool
 	onlyTCP  bool
+	// plain disables the client's multiplexing: standard SS-2022 on the same inbound.
+	plain bool
 }
 
 func clientCases(withOnlyTCP bool) []clientCase {
@@ -723,7 +742,7 @@ func clientCases(withOnlyTCP bool) []clientCase {
 		// The subscription's proposed setting: TCP multiplexed, UDP on plain SS-2022.
 		cases = append(cases, clientCase{protocol: "h2mux", padding: true, onlyTCP: true})
 	}
-	return cases
+	return append(cases, clientCase{plain: true})
 }
 
 // checkExternal runs the route and UDP checks through a client process and the relay.
@@ -742,6 +761,19 @@ func checkExternal(t *testing.T, f *fixture, relay *countingRelay, email string,
 	after := f.muxStats(t, "ss-in").SingMux
 	t.Logf("%d requests + UDP: %d TCP connections, %d carriers, %d streams", 5*len(routes), relay.accepted.Load(),
 		after.TotalCarriers-before.TotalCarriers, after.TotalStreams-before.TotalStreams)
+	if f.userTraffic(t, email) <= traffic {
+		t.Fatalf("no user traffic counted for %s", email)
+	}
+	if c.plain {
+		// Standard SS-2022: one connection per request and no sing-mux state.
+		if n := relay.accepted.Load(); n < int32(5*len(routes)) {
+			t.Fatalf("%d TCP connections for %d plain requests", n, 5*len(routes))
+		}
+		if after.TotalCarriers != before.TotalCarriers || after.TotalStreams != before.TotalStreams {
+			t.Fatalf("plain SS-2022 reached the sing-mux server: %+v", after)
+		}
+		return
+	}
 	if n := relay.accepted.Load(); n < 1 || n > 4 {
 		t.Fatalf("%d TCP connections for %d requests, want 1-4", n, 5*len(routes))
 	}
@@ -761,9 +793,6 @@ func checkExternal(t *testing.T, f *fixture, relay *countingRelay, email string,
 	if c.padding && after.ActivePaddedCarriers == 0 {
 		t.Fatalf("padded carrier not reported: %+v", after)
 	}
-	if f.userTraffic(t, email) <= traffic {
-		t.Fatalf("no user traffic counted for %s", email)
-	}
 }
 
 func TestMihomoClients(t *testing.T) {
@@ -772,17 +801,24 @@ func TestMihomoClients(t *testing.T) {
 	for i, binary := range binaries {
 		t.Logf("mihomo %d: %s", i, clientVersion(binary, "-v"))
 		for _, c := range clientCases(true) {
-			t.Run(fmt.Sprintf("%d/%s/padding=%v/only-tcp=%v", i, c.protocol, c.padding, c.onlyTCP), func(t *testing.T) {
+			name := fmt.Sprintf("%d/%s/padding=%v/only-tcp=%v", i, c.protocol, c.padding, c.onlyTCP)
+			if c.plain {
+				name = fmt.Sprintf("%d/plain-ss2022", i)
+			}
+			t.Run(name, func(t *testing.T) {
 				relay := newCountingRelay(t, f.ssPort)
 				socksPort, udpPort := unusedPort(t), unusedTCPUDPPort(t)
 				dir := t.TempDir()
+				proxyConfig := map[string]any{
+					"name": "proxy", "type": "ss", "server": "127.0.0.1", "port": relay.port, "cipher": ssMethod,
+					"password": ssMaster + ":" + userKeys["mihomo"], "udp": true,
+				}
+				if !c.plain {
+					proxyConfig["smux"] = map[string]any{"enabled": true, "protocol": c.protocol, "max-connections": 4, "min-streams": 4, "padding": c.padding, "only-tcp": c.onlyTCP}
+				}
 				config := map[string]any{
 					"socks-port": socksPort, "bind-address": "127.0.0.1", "allow-lan": false, "mode": "rule", "log-level": "warning", "ipv6": false,
-					"proxies": []any{map[string]any{
-						"name": "proxy", "type": "ss", "server": "127.0.0.1", "port": relay.port, "cipher": ssMethod,
-						"password": ssMaster + ":" + userKeys["mihomo"], "udp": true,
-						"smux": map[string]any{"enabled": true, "protocol": c.protocol, "max-connections": 4, "min-streams": 4, "padding": c.padding, "only-tcp": c.onlyTCP},
-					}},
+					"proxies": []any{proxyConfig},
 					"tunnels": []any{map[string]any{"network": []string{"udp"}, "address": fmt.Sprintf("127.0.0.1:%d", udpPort), "target": "127.0.0.1:9", "proxy": "proxy"}},
 					"rules":   []string{"MATCH,proxy"},
 				}
@@ -804,22 +840,29 @@ func TestSingBoxClients(t *testing.T) {
 	for i, binary := range binaries {
 		t.Logf("sing-box %d: %s", i, clientVersion(binary, "version"))
 		for _, c := range clientCases(false) {
-			t.Run(fmt.Sprintf("%d/%s/padding=%v", i, c.protocol, c.padding), func(t *testing.T) {
+			name := fmt.Sprintf("%d/%s/padding=%v", i, c.protocol, c.padding)
+			if c.plain {
+				name = fmt.Sprintf("%d/plain-ss2022", i)
+			}
+			t.Run(name, func(t *testing.T) {
 				relay := newCountingRelay(t, f.ssPort)
 				socksPort, udpPort := unusedPort(t), unusedTCPUDPPort(t)
 				dir := t.TempDir()
+				outbound := map[string]any{
+					"type": "shadowsocks", "tag": "ss", "server": "127.0.0.1", "server_port": relay.port, "method": ssMethod,
+					"password": ssMaster + ":" + userKeys["singbox"],
+				}
+				if !c.plain {
+					outbound["multiplex"] = map[string]any{"enabled": true, "protocol": c.protocol, "max_connections": 4, "min_streams": 4, "padding": c.padding}
+				}
 				config := map[string]any{
 					"log": map[string]any{"level": "warn"},
 					"inbounds": []any{
 						map[string]any{"type": "socks", "tag": "socks", "listen": "127.0.0.1", "listen_port": socksPort},
 						map[string]any{"type": "direct", "tag": "udp", "listen": "127.0.0.1", "listen_port": udpPort, "network": "udp", "override_address": "127.0.0.1", "override_port": 9},
 					},
-					"outbounds": []any{map[string]any{
-						"type": "shadowsocks", "tag": "ss", "server": "127.0.0.1", "server_port": relay.port, "method": ssMethod,
-						"password":  ssMaster + ":" + userKeys["singbox"],
-						"multiplex": map[string]any{"enabled": true, "protocol": c.protocol, "max_connections": 4, "min_streams": 4, "padding": c.padding},
-					}},
-					"route": map[string]any{"final": "ss"},
+					"outbounds": []any{outbound},
+					"route":     map[string]any{"final": "ss"},
 				}
 				raw, _ := json.Marshal(config)
 				path := filepath.Join(dir, "config.json")
