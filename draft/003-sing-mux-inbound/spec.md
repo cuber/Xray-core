@@ -48,14 +48,18 @@ plain SS-2022 and Mux.Cool, decided per connection.
     sessions are both accepted) and Brutal disabled.
   - The server auto-detects smux, yamux or h2mux per session.
   - The metacubex client used by mihomo is wire-identical (research §3).
-- **D4 Dependency.** sing-mux requires `sagernet/sing` ≥ v0.9.5, but Core pins v0.8.14
-  for AnyTLS.
-  - Option A (recommended): bump sing to v0.9.x. The API breaks found (`CloseRead`/
-    `CloseWrite` signatures, vectorised packet waiter aliases) are not used by AnyTLS.
-    Buffer and copy behaviour changed, so the spec008 regression and interop suites
-    gate the bump.
-  - Option B: vendor a pinned sing-mux copy that builds against v0.8.14. Every symbol it
-    uses exists there, but this carries foreign code across upstream merges.
+- **D4 Dependency.** sing-mux requires `sagernet/sing` ≥ v0.9.5, but Core pins v0.8.14.
+  sing's only runtime user is AnyTLS (`proxy/anytls`, `proxy/anytls/internal/engine`),
+  which runs on 12 nodes, mostly relays and LA schedulers (xray-config, 2026-10-22).
+  - Option A: bump sing to v0.9.x. The API breaks found (`CloseRead`/`CloseWrite`
+    signatures, vectorised packet waiter aliases) are not used by AnyTLS. Buffer and
+    copy behaviour changed, though, so every relay running AnyTLS gets new runtime
+    behaviour. The spec008 regression and interop suites gate it.
+  - Option B (recommended): vendor the sing-mux server subset (about 1.5k of 2.5k
+    lines, without the client and brutal) at a pinned commit, built against v0.8.14.
+    Every symbol it uses exists there, so AnyTLS stays unchanged and the blast radius is
+    limited to inbounds with sing-mux on. The cost is syncing upstream fixes by hand;
+    the wire protocol has been stable.
   - New modules either way: `hashicorp/yamux` (MPL-2.0) and `sagernet/smux` (MIT).
     sing-mux is GPL-3.0-or-later, like the sing module Core already links.
 - **D5 Per-stream context.** Follow AnyTLS `streamContext`:
@@ -85,8 +89,11 @@ plain SS-2022 and Mux.Cool, decided per connection.
   - UDP streams in fixed-destination and PacketAddr modes; PacketAddr opens one link per
     destination, as AnyTLS `udp.go` does.
   - Brutal requests receive the library's "not enabled" error.
-- **D9 Mux.Cool observability.** The same registry counts Mux.Cool carriers and streams.
-  It is observability only; Mux.Cool behaviour does not change.
+- **D9 Mux.Cool unchanged.** Mux.Cool is native Core code (`common/mux`) and does not
+  use sing. The new branch is selected per connection by destination: `v1.mux.cool`
+  goes to Mux.Cool, `sp.mux.sing-box.arpa:444` to sing-mux, anything else to the
+  ordinary dispatch. The Mux.Cool client (FCC links, Lazy management) is untouched.
+  The same registry also counts Mux.Cool carriers and streams, for observability only.
 
 ## Functional Requirements
 
@@ -170,8 +177,8 @@ plain SS-2022 and Mux.Cool, decided per connection.
 
 ## Clarifications and Decisions
 
-- [NEEDS CLARIFICATION C1: dependency — bump sing to v0.9.x (recommended) or vendor
-  sing-mux against v0.8.14?]
+- [NEEDS CLARIFICATION C1: dependency — vendor the sing-mux server against v0.8.14
+  (recommended, AnyTLS unchanged) or bump sing to v0.9.x?]
 - [NEEDS CLARIFICATION C2: per-inbound opt-in (recommended) or always-on like Mux.Cool?]
 - [NEEDS CLARIFICATION C3: per-carrier stream cap — 256 proposed.]
 - [NEEDS CLARIFICATION C4: Portal presentation now, or a dated non-goal with
