@@ -2,14 +2,15 @@
 
 - Feature ID: 013-sing-mux-inbound (promoted from draft003, 2026-10-22; draft003 is reserved)
 - Created: 2026-10-22
-- Status: Implemented and verified locally; not built for release or deployed.
-  Rollout (node enablement and subscriptions) is a separate decision.
+- Status: Implemented and verified locally. Rollout (node enablement, starting with
+  tgz.lite on 2026-10-22) is tracked in xray-config spec009.
 - Baseline: Core `8d15534a` (develop)
 - Authorization (2026-10-22): "你先把实现做好，完整测试通过；并且要用 mihome 和 singbox
   测试", and "这个阶段portal 和订阅都先别做；只做core". This covers Core only. The rollout
   plan is discussed after implementation.
-- Consumer proposal: [xray-sidecar draft001 entry multiplexing](../../../xray-sidecar/draft/001-entry-multiplex/spec.md)
-  (draft; deferred by the user).
+- Consumers: [xray-sidecar spec010 entry multiplexing](../../../xray-sidecar/spec/010-entry-multiplex/spec.md)
+  (subscriptions, `/xray-debug` `inbound_mux`, Portal and acceptance; promoted from
+  Sidecar draft001 on 2026-10-22).
 - Evidence: [research.md](research.md) for design facts, and [validation.md](validation.md)
   for test results.
 
@@ -124,12 +125,10 @@ Goal: an opt-in, per-inbound sing-mux server.
 - **Enablement.** `HandlerService` is already in `api.services` on every entry board.
   No new service is registered.
 - **Tests.** A contract test runs over a real gRPC server on a started instance (V-03).
-- **Consumers (dated non-goal, 2026-10-22).** The user deferred Portal and subscription
-  work ("这个阶段portal 和订阅都先别做；只做core").
-  - The Sidecar `/xray-debug` field, Prometheus gauges, Portal view and acceptance check
-    are planned in Sidecar draft001 D8 and stay unimplemented until that draft is taken
-    up.
-  - Until then, the RPC is readable with grpcurl through the existing API listener.
+- **Consumers.** First deferred ("这个阶段portal 和订阅都先别做；只做core"), then taken up
+  the same day in Sidecar spec010 D8: the `/xray-debug` `inbound_mux` section (an older
+  Core is `unavailable`), the Portal 复用 tab and the acceptance `sing_mux` check.
+  Prometheus gauges and the Grafana panel remain deferred.
 
 ## Non-goals
 
@@ -141,7 +140,8 @@ Goal: an opt-in, per-inbound sing-mux server.
 - Inbounds on HTTP/2-based transports (gRPC, h2, XHTTP): sing v0.9.5's HTTP/2
   error-wrapping fix is not present (research §3). Enabling there needs that wrapper
   first.
-- Node configuration, subscriptions, Sidecar and Portal (deferred by the user).
+- Node configuration and rollout (xray-config spec009); subscriptions, Sidecar and Portal
+  (Sidecar spec010).
 
 ## Edge Cases
 

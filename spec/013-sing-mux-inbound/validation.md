@@ -44,4 +44,5 @@ creates `~/.config/mihomo/config.yaml`, so the tests never do that.
 - No device test of Clash Verge, FlClash or CMFA apps; their mihomo cores are covered by V-04.
 - No Linux runtime run. The Linux build comes from `xrayctl build core`.
 - No deployment, so no acceptance check exists yet.
-- No Sidecar `/xray-debug`, Portal or subscription consumers (deferred by the user).
+- Consumers (`/xray-debug`, Portal, acceptance, subscriptions) are validated in
+  [Sidecar spec010](../../../xray-sidecar/spec/010-entry-multiplex/validation.md).
