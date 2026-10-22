@@ -9,7 +9,7 @@ documents and record the mapping here; never keep two authoritative copies.
 | ID | Status | Proposal |
 |---|---|---|
 | 002 | Promoted 2026-10-14; ID reserved | [spec010: fixed-main upgrade](../spec/010-upstream-main-upgrade/spec.md) |
-| 003 | Draft, 2026-10-22 | [sing-mux inbound multiplexing](003-sing-mux-inbound/spec.md) for mihomo/sing-box clients; consumer [Sidecar draft001](../../xray-sidecar/draft/001-entry-multiplex/spec.md) |
+| 003 | Promoted 2026-10-22; ID reserved | [spec013: sing-mux inbound multiplexing](../spec/013-sing-mux-inbound/spec.md); consumer [Sidecar draft001](../../xray-sidecar/draft/001-entry-multiplex/spec.md) stays a draft |
 
 On 2026-10-05 the user explicitly assigned this proposal draft002 and requested
 its installation in the canonical Core repository, not a cache clone. The earlier

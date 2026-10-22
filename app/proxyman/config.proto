@@ -45,6 +45,14 @@ message ReceiverConfig {
   SniffingConfig sniffing_settings = 6;
   // Explicit IP listeners sharing one inbound. Mutually exclusive with listen.
   repeated xray.common.net.IPOrDomain listen_addresses = 7;
+  // Accept sing-mux (sing-box/mihomo multiplex) sessions on this inbound.
+  SingMuxConfig sing_mux = 8;
+}
+
+message SingMuxConfig {
+  bool enabled = 1;
+  // Concurrent streams per carrier; 0 selects the default.
+  uint32 max_streams = 2;
 }
 
 message InboundHandlerConfig {

@@ -30,6 +30,7 @@ reference sibling repositories as integration evidence, not implementation input
 | [010](010-upstream-main-upgrade/spec.md) | Fixed upstream integration, verification and mainline promotion; node rollout remains explicit |
 | [011](011-ss2022-safety/spec.md) | Permanent SS2022 authentication, handshake, UDP/session and resource safety contract |
 | [012](012-dns-outbound-servers/spec.md) | DNS servers restricted to named outbounds for `targetStrategy` lookups; per-server caches, strict isolation; read-only `DNSService` |
+| [013](013-sing-mux-inbound/spec.md) | Opt-in per-inbound sing-mux server for mihomo/sing-box multiplexing; stream parity, bounds, revocation, read-only `GetInboundMuxStats` (promoted from draft003) |
 
 The 2026-10-17 mainline review keeps feature boundaries stable rather than
 splitting AnyTLS inbound/outbound or merging traffic listeners003 with direct
@@ -62,7 +63,7 @@ last in the original 001-008 reconstruction. Later features allocate new IDs.
 On 2026-09-27 the user authorized repository-local renumbering: old global
 005/006/007/008/009/010/011/012 map to local 001/002/003/004/005/006/007/008.
 Historical hashes, requirement IDs, test names and evidence filenames remain
-provenance, not allocations in the new sequence. Next spec: 013; next draft: 004.
+provenance, not allocations in the new sequence. Next spec: 014; next draft: 004.
 Core draft002 was promoted to [spec010](010-upstream-main-upgrade/spec.md)
 on 2026-10-14 following explicit implementation authorization.
 

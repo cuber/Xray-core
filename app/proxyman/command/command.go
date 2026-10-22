@@ -2,10 +2,12 @@ package command
 
 import (
 	"context"
+	"sort"
 
 	"github.com/xtls/xray-core/app/commander"
 	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/errors"
+	"github.com/xtls/xray-core/common/mux"
 	"github.com/xtls/xray-core/common/protocol"
 	"github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/features/inbound"
@@ -160,6 +162,58 @@ func (s *handlerServer) GetInboundUsersCount(ctx context.Context, request *GetIn
 		return nil, errors.New("proxy is not a UserManager")
 	}
 	return &GetInboundUsersCountResponse{Count: um.GetUsersCount(ctx)}, nil
+}
+
+type muxStatsProvider interface {
+	MuxStats() mux.Stats
+}
+
+// GetInboundMuxStats reports the loaded sing-mux setting and the sing-mux and
+// Mux.Cool carriers of one inbound, or of every inbound when no tag is given.
+func (s *handlerServer) GetInboundMuxStats(ctx context.Context, request *GetInboundMuxStatsRequest) (*GetInboundMuxStatsResponse, error) {
+	var handlers []inbound.Handler
+	if request.Tag != "" {
+		handler, err := s.ihm.GetHandler(ctx, request.Tag)
+		if err != nil {
+			return nil, errors.New("failed to get handler: ", request.Tag).Base(err)
+		}
+		if _, ok := handler.(muxStatsProvider); !ok {
+			return nil, errors.New("inbound has no multiplexing server: ", request.Tag)
+		}
+		handlers = []inbound.Handler{handler}
+	} else {
+		handlers = s.ihm.ListHandlers(ctx)
+	}
+	response := &GetInboundMuxStatsResponse{}
+	for _, handler := range handlers {
+		provider, ok := handler.(muxStatsProvider)
+		if !ok {
+			continue
+		}
+		stats := provider.MuxStats()
+		sing := stats.SingMux
+		response.Inbounds = append(response.Inbounds, &InboundMuxStats{
+			Tag: handler.Tag(),
+			SingMux: &SingMuxStats{
+				Enabled:              sing.Enabled,
+				MaxStreams:           sing.MaxStreams,
+				ActiveCarriers:       sing.ActiveCarriers,
+				ActivePaddedCarriers: sing.ActivePadded,
+				ActiveTcpStreams:     sing.ActiveTCPStreams,
+				ActiveUdpStreams:     sing.ActiveUDPStreams,
+				TotalCarriers:        sing.TotalCarriers,
+				TotalStreams:         sing.TotalStreams,
+				Rejected:             sing.Rejected,
+			},
+			MuxCool: &MuxCoolStats{
+				ActiveCarriers: stats.MuxCool.ActiveCarriers,
+				ActiveStreams:  stats.MuxCool.ActiveStreams,
+				TotalCarriers:  stats.MuxCool.TotalCarriers,
+			},
+		})
+	}
+	sort.Slice(response.Inbounds, func(i, j int) bool { return response.Inbounds[i].Tag < response.Inbounds[j].Tag })
+	return response, nil
 }
 
 func (s *handlerServer) AddOutbound(ctx context.Context, request *AddOutboundRequest) (*AddOutboundResponse, error) {

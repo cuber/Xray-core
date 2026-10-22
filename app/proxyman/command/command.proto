@@ -83,6 +83,41 @@ message ListOutboundsResponse {
   repeated core.OutboundHandlerConfig outbounds = 1;
 }
 
+message GetInboundMuxStatsRequest {
+  // Empty selects every inbound.
+  string tag = 1;
+}
+
+message SingMuxStats {
+  bool enabled = 1;
+  uint32 max_streams = 2;
+  // Active carriers by stream protocol: smux, yamux, h2mux.
+  map<string, uint64> active_carriers = 3;
+  uint64 active_padded_carriers = 4;
+  uint64 active_tcp_streams = 5;
+  uint64 active_udp_streams = 6;
+  uint64 total_carriers = 7;
+  uint64 total_streams = 8;
+  // Refusals by reason: preamble, closed, limit, revoked, invalid, nested, dispatch.
+  map<string, uint64> rejected = 9;
+}
+
+message MuxCoolStats {
+  uint64 active_carriers = 1;
+  uint64 active_streams = 2;
+  uint64 total_carriers = 3;
+}
+
+message InboundMuxStats {
+  string tag = 1;
+  SingMuxStats sing_mux = 2;
+  MuxCoolStats mux_cool = 3;
+}
+
+message GetInboundMuxStatsResponse {
+  repeated InboundMuxStats inbounds = 1;
+}
+
 service HandlerService {
   rpc AddInbound(AddInboundRequest) returns (AddInboundResponse) {}
 
@@ -95,6 +130,8 @@ service HandlerService {
   rpc GetInboundUsers(GetInboundUserRequest) returns (GetInboundUserResponse) {}
 
   rpc GetInboundUsersCount(GetInboundUserRequest) returns (GetInboundUsersCountResponse) {}
+
+  rpc GetInboundMuxStats(GetInboundMuxStatsRequest) returns (GetInboundMuxStatsResponse) {}
 
   rpc AddOutbound(AddOutboundRequest) returns (AddOutboundResponse) {}
 

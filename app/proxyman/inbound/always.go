@@ -8,6 +8,7 @@ import (
 	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/mux"
+	"github.com/xtls/xray-core/common/mux/singmux"
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/serial"
 	"github.com/xtls/xray-core/common/session"
@@ -109,7 +110,7 @@ func NewAlwaysOnInboundHandler(ctx context.Context, tag string, receiverConfig *
 		receiverConfig: receiverConfig,
 		proxyConfig:    proxyConfig,
 		proxy:          p,
-		mux:            mux.NewServer(ctx),
+		mux:            mux.NewServerWithSingMux(ctx, singMuxOptions(receiverConfig.SingMux, p)),
 		tag:            tag,
 	}
 
@@ -240,6 +241,26 @@ func (h *AlwaysOnInboundHandler) Close() error {
 
 func (h *AlwaysOnInboundHandler) Tag() string {
 	return h.tag
+}
+
+// MuxStats reports the inbound's sing-mux and Mux.Cool runtime state.
+func (h *AlwaysOnInboundHandler) MuxStats() mux.Stats {
+	return h.mux.Stats()
+}
+
+// singMuxOptions enables sing-mux as configured. Streams of a user removed from
+// a user-managed inbound are refused, while its open streams continue.
+func singMuxOptions(config *proxyman.SingMuxConfig, p proxy.Inbound) singmux.Options {
+	if config == nil || !config.Enabled {
+		return singmux.Options{}
+	}
+	options := singmux.Options{Enabled: true, MaxStreams: config.MaxStreams}
+	if um, ok := p.(proxy.UserManager); ok {
+		options.UserActive = func(ctx context.Context, email string) bool {
+			return um.GetUser(ctx, email) != nil
+		}
+	}
+	return options
 }
 
 func (h *AlwaysOnInboundHandler) GetInbound() proxy.Inbound {

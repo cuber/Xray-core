@@ -3,12 +3,15 @@ package mux
 import (
 	"context"
 	"io"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/buf"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/log"
+	"github.com/xtls/xray-core/common/mux/singmux"
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/protocol"
 	"github.com/xtls/xray-core/common/session"
@@ -21,15 +24,73 @@ import (
 
 type Server struct {
 	dispatcher routing.Dispatcher
+	sing       *singmux.Server
+	cool       coolRegistry
 }
 
-// NewServer creates a new mux.Server.
+// Stats is the runtime state of an inbound's multiplexing servers.
+type Stats struct {
+	SingMux singmux.Snapshot
+	MuxCool MuxCoolStats
+}
+
+// MuxCoolStats counts the Mux.Cool carriers dispatched through a Server.
+type MuxCoolStats struct {
+	ActiveCarriers uint64
+	ActiveStreams  uint64
+	TotalCarriers  uint64
+}
+
+type coolRegistry struct {
+	mu      sync.Mutex
+	workers map[*ServerWorker]struct{}
+	total   atomic.Uint64
+}
+
+// NewServer creates a new mux.Server that leaves sing-mux carriers to routing.
 func NewServer(ctx context.Context) *Server {
-	s := &Server{}
+	return NewServerWithSingMux(ctx, singmux.Options{})
+}
+
+// NewServerWithSingMux creates a mux.Server that also serves sing-mux carriers
+// when options enable them.
+func NewServerWithSingMux(ctx context.Context, options singmux.Options) *Server {
+	s := &Server{sing: singmux.NewServer(ctx, options)}
 	core.RequireFeatures(ctx, func(d routing.Dispatcher) {
 		s.dispatcher = d
 	})
 	return s
+}
+
+// Stats reports the sing-mux and Mux.Cool state of this server.
+func (s *Server) Stats() Stats {
+	return Stats{SingMux: s.sing.Snapshot(), MuxCool: s.cool.snapshot()}
+}
+
+func (r *coolRegistry) track(w *ServerWorker) {
+	r.mu.Lock()
+	if r.workers == nil {
+		r.workers = make(map[*ServerWorker]struct{})
+	}
+	r.workers[w] = struct{}{}
+	r.mu.Unlock()
+	r.total.Add(1)
+	go func() {
+		<-w.done.Wait()
+		r.mu.Lock()
+		delete(r.workers, w)
+		r.mu.Unlock()
+	}()
+}
+
+func (r *coolRegistry) snapshot() MuxCoolStats {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	stats := MuxCoolStats{ActiveCarriers: uint64(len(r.workers)), TotalCarriers: r.total.Load()}
+	for w := range r.workers {
+		stats.ActiveStreams += uint64(w.ActiveConnections())
+	}
+	return stats
 }
 
 // Type implements common.HasType.
@@ -39,6 +100,15 @@ func (s *Server) Type() interface{} {
 
 // Dispatch implements routing.Dispatcher
 func (s *Server) Dispatch(ctx context.Context, dest net.Destination) (*transport.Link, error) {
+	// Inbounds without sing-mux keep routing the carrier destination like any
+	// other, so a proxy chain can still forward it to a sing-mux server upstream.
+	if dest.Network == net.Network_TCP && s.sing.Enabled() && singmux.IsDestination(dest) {
+		opts := pipe.OptionsFromContext(ctx)
+		uplinkReader, uplinkWriter := pipe.New(opts...)
+		downlinkReader, downlinkWriter := pipe.New(opts...)
+		go s.sing.Serve(ctx, &transport.Link{Reader: uplinkReader, Writer: downlinkWriter})
+		return &transport.Link{Reader: downlinkReader, Writer: uplinkWriter}, nil
+	}
 	if dest.Address != muxCoolAddress {
 		return s.dispatcher.Dispatch(ctx, dest)
 	}
@@ -47,19 +117,23 @@ func (s *Server) Dispatch(ctx context.Context, dest net.Destination) (*transport
 	uplinkReader, uplinkWriter := pipe.New(opts...)
 	downlinkReader, downlinkWriter := pipe.New(opts...)
 
-	_, err := NewServerWorker(ctx, s.dispatcher, &transport.Link{
+	worker, err := NewServerWorker(ctx, s.dispatcher, &transport.Link{
 		Reader: uplinkReader,
 		Writer: downlinkWriter,
 	})
 	if err != nil {
 		return nil, err
 	}
+	s.cool.track(worker)
 
 	return &transport.Link{Reader: downlinkReader, Writer: uplinkWriter}, nil
 }
 
 // DispatchLink implements routing.Dispatcher
 func (s *Server) DispatchLink(ctx context.Context, dest net.Destination, link *transport.Link) error {
+	if dest.Network == net.Network_TCP && s.sing.Enabled() && singmux.IsDestination(dest) {
+		return s.sing.Serve(ctx, link)
+	}
 	if dest.Address != muxCoolAddress {
 		return s.dispatcher.DispatchLink(ctx, dest, link)
 	}
@@ -67,6 +141,7 @@ func (s *Server) DispatchLink(ctx context.Context, dest net.Destination, link *t
 	if err != nil {
 		return err
 	}
+	s.cool.track(worker)
 	select {
 	case <-ctx.Done():
 	case <-worker.done.Wait():
@@ -79,9 +154,10 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// Close implements common.Closable.
+// Close implements common.Closable. It ends sing-mux carriers and waits for
+// their streams; Mux.Cool workers end with their connections.
 func (s *Server) Close() error {
-	return nil
+	return s.sing.Close()
 }
 
 type ServerWorker struct {

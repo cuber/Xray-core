@@ -11,6 +11,7 @@ import (
 	"github.com/xtls/xray-core/app/proxyman"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/geodata"
+	"github.com/xtls/xray-core/common/mux/singmux"
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/serial"
 	core "github.com/xtls/xray-core/core"
@@ -137,6 +138,26 @@ type InboundDetourConfig struct {
 	Tag             string           `json:"tag"`
 	StreamSetting   *StreamConfig    `json:"streamSettings"`
 	SniffingConfig  *SniffingConfig  `json:"sniffing"`
+	SingMux         *SingMuxConfig   `json:"singMux"`
+}
+
+// SingMuxConfig enables the sing-mux (sing-box/mihomo multiplex) server of an inbound.
+type SingMuxConfig struct {
+	Enabled    bool   `json:"enabled"`
+	MaxStreams uint32 `json:"maxStreams"`
+}
+
+func (c *SingMuxConfig) Build(protocol string) (*proxyman.SingMuxConfig, error) {
+	if c == nil || !c.Enabled {
+		return nil, nil
+	}
+	if strings.EqualFold(protocol, "anytls") {
+		return nil, errors.New("singMux is not supported on anytls inbounds")
+	}
+	if c.MaxStreams > singmux.MaxStreamsLimit {
+		return nil, errors.New("singMux.maxStreams must not exceed ", singmux.MaxStreamsLimit)
+	}
+	return &proxyman.SingMuxConfig{Enabled: true, MaxStreams: c.MaxStreams}, nil
 }
 
 // UnmarshalJSON preserves the legacy single-address API while accepting IP lists.
@@ -258,6 +279,11 @@ func (c *InboundDetourConfig) Build() (*core.InboundHandlerConfig, error) {
 		}
 		receiverSettings.SniffingSettings = s
 	}
+	singMux, err := c.SingMux.Build(c.Protocol)
+	if err != nil {
+		return nil, err
+	}
+	receiverSettings.SingMux = singMux
 
 	settings := []byte("{}")
 	if c.Settings != nil {

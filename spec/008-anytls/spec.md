@@ -135,6 +135,8 @@ AnyTLS 会在一条经过认证的 TCP/TLS 会话内承载多个逻辑流。路�
   同一 UoT 流更换目的地不得沿用错误出口；不支持的封装显式拒绝。
 - FR-009: 复用 Xray policy 超时；外层握手、逻辑流和会话资源均有有界控制。
 - FR-010: AnyTLS 内建复用与 Xray Mux 分离；不将逻辑流再次当作 Xray Mux 协议处理。
+  （2026-10-22）spec013 的 sing-mux 同样不在 AnyTLS 入站上启用：配置拒绝 `anytls` 上的 `singMux`。
+  `sagernet/sing` v0.8.14 现由本 spec 与 spec013（sing-mux v0.3.7）共用；升级 sing 须同时通过两者的测试。
 - FR-011: Sidecar 根据控制面入站类型创建 AnyTLS Account，沿用既有身份渲染和
   同步机制；不能把 SS-2022 Account 发给 AnyTLS。
 - FR-012: 正确关闭监听、TLS 连接、会话和逻辑流；服务停止后所有后台任务可退出。
