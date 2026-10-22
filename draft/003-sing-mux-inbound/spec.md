@@ -54,7 +54,7 @@ plain SS-2022 and Mux.Cool, decided per connection.
   require sing ≥ v0.9.5; v0.3.4–v0.3.7 require ≥ v0.7.14. Core pins v0.8.14, and
   sing's only runtime user is AnyTLS (`proxy/anytls`, `proxy/anytls/internal/engine`),
   which runs on 12 nodes, mostly relays and LA schedulers (xray-config, 2026-10-22).
-  - Option C (recommended): require sing-mux **v0.3.7** (2026-09-19) as a normal
+  - **Decided, Option C** (user, 2026-10-22): require sing-mux **v0.3.7** (2026-09-19) as a normal
     dependency. A probe module with sing v0.8.14 + sing-mux v0.3.7 passes `go mod tidy`
     (sing stays v0.8.14), `go build`, `go vet` and a `NewService` run (research §3).
     Against v0.3.9, the server path is identical: the only change is close callbacks
@@ -199,14 +199,28 @@ plain SS-2022 and Mux.Cool, decided per connection.
 
 ## Clarifications and Decisions
 
-- [NEEDS CLARIFICATION C1: dependency — sing-mux v0.3.7 on sing v0.8.14 (recommended:
-  no sing change, no copied code), vendoring, or a sing v0.9 bump?]
+- C1 decided 2026-10-22 (user: "用 sing-mux v0.3.7，不升级 sing 很合理"): sing-mux v0.3.7
+  on the pinned sing v0.8.14. A later sing bump is a separate Core change gated by the
+  spec008 AnyTLS suites and this spec's interop tests.
 - [NEEDS CLARIFICATION C2: per-inbound opt-in (recommended) or always-on like Mux.Cool?]
 - [NEEDS CLARIFICATION C3: per-carrier stream cap — 256 proposed.]
 - [NEEDS CLARIFICATION C4: Portal presentation now, or a dated non-goal with
   `/xray-debug` and Grafana only?]
 - [NEEDS CLARIFICATION C5: on `RemoveUser`, refuse new streams only (recommended,
   matches SS-2022) or also close the user's carriers?]
+
+## Placement
+
+This stays a feature of its own and is promoted to the next Core spec (013), not
+merged into spec008.
+
+- The two features differ in protocol, inbounds (entry SS-2022 vs relay AnyTLS),
+  rollout, rollback (per-inbound switch vs AnyTLS deployment) and consumer (Sidecar
+  draft001).
+- spec008 FR-010, which excludes AnyTLS, stays as is.
+- The shared `sagernet/sing` pin is recorded in both specs at promotion, so a later bump
+  runs both suites.
+- Dispatch and close contracts come from spec002, and revocation semantics from spec011.
 
 ## Authorization and Revision Record
 
