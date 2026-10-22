@@ -9,10 +9,11 @@ documents and record the mapping here; never keep two authoritative copies.
 | ID | Status | Proposal |
 |---|---|---|
 | 002 | Promoted 2026-10-14; ID reserved | [spec010: fixed-main upgrade](../spec/010-upstream-main-upgrade/spec.md) |
+| 003 | Draft, 2026-10-22 | [sing-mux inbound multiplexing](003-sing-mux-inbound/spec.md) for mihomo/sing-box clients; consumer [Sidecar draft001](../../xray-sidecar/draft/001-entry-multiplex/spec.md) |
 
 On 2026-10-05 the user explicitly assigned this proposal draft002 and requested
 its installation in the canonical Core repository, not a cache clone. The earlier
 [declarative node configuration draft001](../../xray-config/draft/001-declarative-node-config/spec.md)
 remains owned by xray-config; its documents are not copied here. This explicit
 allocation does not establish a shared cross-repository counter. Core draft001
-has no allocated proposal; the next Core draft is 003.
+has no allocated proposal; the next Core draft is 004.
