@@ -109,6 +109,38 @@ compiled or run. Core paths are relative to this repository; library aliases:
 - **v0.3.7 vs v0.3.9.** Only `client.go`, `error.go`, `server.go` and `session.go`
   differ (158 lines). The server change is struct-literal field names; the wrappers
   gain `onClose` close callbacks that only the client's idle-session tracking sets.
+- **Commits v0.3.5 → v0.3.9** (`gh api repos/sagernet/sing-mux/compare/v0.3.5...v0.3.9`).
+  All h2mux fixes are in `httpConn`'s late-setup path, which only the client uses (the
+  server builds `httpConn` with its reader set).
+
+  | Tag | Commit | Change | Side |
+  |---|---|---|---|
+  | v0.3.6 | `e57b3528` | CONNECT request gets `Header: make(http.Header)` ("Fix h2mux client with Go 1.27") | client |
+  | v0.3.7 | `cdfbf1fa` | Wrap h2mux setup errors with `baderror.WrapH2` | client (late setup) |
+  | v0.3.7 | `30dbac20` | Fix the data race between late setup and `Read`/`Close` | client (late setup) |
+  | v0.3.8 | `7e85abc8` | go.mod only: require sing v0.9.5 "for HTTP/2 error wrapping" | dependency |
+  | v0.3.9 | `0257b84c` | `SetKeepIdleConnections`, `CloseIdleConnections`, `ContextWithKeepSession` | client; server only renames struct-literal fields |
+
+  sing-box pins `baf887b9`, the same client feature committed directly on `7e85abc8`.
+- **What sing v0.9.5 changes.**
+  - `baderror.WrapH2` wraps errors containing `stream error:`, `connection error:` or
+    `http2: server sent GOAWAY` in a `protocolError`.
+  - Without it, an outer x/net or grpc-go HTTP/2 reader that reads directly from an
+    inner tunnel conn type-asserts `http2.StreamError`, keeps reading, and spins
+    (`sing@v0.9.5/common/baderror/baderror.go`).
+  - This requires HTTP/2 framing that reads from a conn returning another HTTP/2
+    layer's errors.
+  - On the server, only the h2mux framer reads, and it reads the carrier. Over SS-2022
+    raw TCP the carrier never returns HTTP/2 errors. Over an HTTP/2-based transport
+    (gRPC, h2, XHTTP) it could.
+- **mihomo's fork.** `metacubex/sing-mux` v0.3.10 fixes the late-setup race its own way
+  (`setupOnce`, `h2mux_conn.go:40-56`). Its `metacubex/sing` v0.5.8 has no
+  `protocolError`. mihomo uses x/net v0.35.0 (legacy HTTP/2) and builds releases with
+  Go 1.26 (`.github/workflows/build.yml:167`).
+- **Core's HTTP/2.** Core is `go 1.27` with x/net v0.61.0, whose `http2.Server` wraps
+  net/http's internal HTTP/2 (`x/net/http2/server_wrap.go`, `go1.27 && !http2legacy`).
+  An h2mux server in Core therefore runs on a different HTTP/2 implementation from the
+  mihomo client, whatever the sing-mux version.
 - **Licences.** sing-mux and sing: GPL-3.0-or-later. smux: MIT. yamux: MPL-2.0.
 
 ## 4. mihomo Client Behaviour

@@ -60,6 +60,14 @@ plain SS-2022 and Mux.Cool, decided per connection.
     Against v0.3.9, the server path is identical: the only change is close callbacks
     on stream wrappers, used by the client's idle tracking. AnyTLS stays unchanged and
     no foreign code is copied. Moving past v0.3.7 later reopens A as a separate change.
+    v0.3.8 changes only the sing requirement, and v0.3.9 adds only a client idle-session
+    feature, so v0.3.7 serves mihomo exactly as v0.3.9 does (research §3).
+    - The one runtime difference is sing v0.9.5's HTTP/2 error wrapping. It prevents a
+      spin when an HTTP/2 framer reads a carrier that returns another HTTP/2 layer's
+      errors.
+    - Over SS-2022 raw TCP that cannot happen. Inbounds on HTTP/2-based transports
+      (gRPC, h2, XHTTP) stay out of scope unless the same wrapper is added to Core's
+      carrier adapter.
   - Option A: bump sing to v0.9.x. The API breaks found (`CloseRead`/`CloseWrite`
     signatures, vectorised packet waiter aliases) are not used by AnyTLS. Buffer and
     copy behaviour changed, though, so every relay running AnyTLS gets new runtime
@@ -119,7 +127,10 @@ plain SS-2022 and Mux.Cool, decided per connection.
 - FR-008: Interop tests over real SS-2022 single- and multi-user inbounds:
   - clients: metacubex/sing-mux (mihomo pin) and sagernet/sing-mux (sing-box pin);
   - each protocol, with and without padding, plus a UDP PacketAddr case;
-  - a disabled inbound that rejects the session.
+  - a disabled inbound that rejects the session;
+  - h2mux against Core's Go 1.27 HTTP/2 wrapper, with a released mihomo client binary
+    (x/net v0.35 legacy HTTP/2): 200+ concurrent streams, large transfers, stream
+    cancellation, idle GOAWAY and carrier loss.
 - NFR-001: The non-mux path gains only one destination comparison. No secrets appear
   in logs or RPC output.
 
