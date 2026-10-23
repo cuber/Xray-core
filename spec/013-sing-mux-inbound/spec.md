@@ -3,7 +3,8 @@
 - Feature ID: 013-sing-mux-inbound (promoted from draft003, 2026-10-22; draft003 is reserved)
 - Created: 2026-10-22
 - Status: Implemented and verified locally. Rollout (node enablement, starting with
-  tgz.lite on 2026-10-22) is tracked in xray-config spec009.
+  tgz.lite on 2026-10-22) is tracked in xray-config spec009. Amended 2026-10-23: the
+  h2mux carrier-end race and the sing/sing-mux upgrade (Revision Record).
 - Baseline: Core `8d15534a` (develop)
 - Authorization (2026-10-22): "你先把实现做好，完整测试通过；并且要用 mihome 和 singbox
   测试", and "这个阶段portal 和订阅都先别做；只做core". This covers Core only. The rollout
@@ -106,6 +107,7 @@ Goal: an opt-in, per-inbound sing-mux server.
 | FR-006 | Bounds D8, with refusals counted | V-01 |
 | FR-007 | Control plane (below) | V-03 |
 | FR-008 | Interop with released mihomo and sing-box binaries; h2mux stress against Core's Go 1.27 HTTP/2 | V-04, V-05, V-07 |
+| FR-009 | A carrier ending as the SS-2022 inbound ends it (link interrupted while its context is cancelled) neither crashes the process nor leaves h2mux stream handlers behind | V-11, V-12 |
 | NFR-001 | The non-mux path adds one boolean check on disabled inbounds; no secrets in logs or RPC output | code review, V-08 |
 
 ## Control Plane
@@ -129,6 +131,8 @@ Goal: an opt-in, per-inbound sing-mux server.
   the same day in Sidecar spec010 D8: the `/xray-debug` `inbound_mux` section (an older
   Core is `unavailable`), the Portal 复用 tab and the acceptance `sing_mux` check.
   Prometheus gauges and the Grafana panel remain deferred.
+- **2026-10-23 amendment.** No new runtime state, RPC field or consumer change; CP-1–CP-8
+  are unaffected.
 
 ## Non-goals
 
@@ -184,3 +188,41 @@ Goal: an opt-in, per-inbound sing-mux server.
     - C3: default cap 256, configurable up to 4096.
     - C4: Portal is a dated non-goal.
     - C5: refuse new streams only.
+- 2026-10-23 amendment: h2mux carrier-end race, and sing/sing-mux upgrade. User:
+  "修它要改 Core … 合并到之前的spec里", "修复然后加上测试覆盖", "可以看看开源实现参考下",
+  "直接升级到最新版本；只要我们测试覆盖足够全面".
+  - **Symptom.** Sidecar `make check` (in-process Core) panicked once with "close of closed
+    channel" in sing-mux v0.3.7 `(*h2MuxServerSession).Close` (h2mux.go:88).
+  - **Cause.** The h2mux server session closes itself from two goroutines, after
+    `ServeConn` returns and in `Service.newConnection`'s cleanup, each with an unguarded
+    check-then-`close(done)`. Xray serves a carrier on the inbound connection's context
+    (`mux.Server.Dispatch` runs `Serve` on it); when the connection ends the SS-2022 inbound
+    interrupts the link while its worker cancels that context, which starts both at once.
+    A second defect in the same code: a stream arriving as its carrier ended blocked forever
+    in `ServeHTTP` handing itself to an Accept loop that had returned. V-11 and V-12
+    reproduce both against v0.3.7. Production boards had not restarted (NRestarts 0) and
+    showed no goroutine growth beyond the plain-SS2022 board by then.
+  - **References, latest sources on 2026-10-23.** sing-mux `main` `caf09fe` ("Fix protocol
+    input validation", untagged) guards the close with `sync.Once` and selects on `done`
+    before handing a stream over. sing-box v1.14.3 (stable, 2026-10-09) pins that sing-mux
+    commit with sing `0ad23b6`. mihomo v1.19.33 vendors metacubex/sing-mux v0.3.12, which
+    keeps the unguarded close, but hands the service `context.TODO()` and so never cancels
+    a carrier's context; sing-box passes its listener context, cancelled only at shutdown.
+  - **Decision.** Take the upstream fix at sing-box v1.14.3's pins: sing-mux
+    `v0.3.10-0.20260929204512-caf09fe32475` and sing `v0.9.7-0.20260929150544-0ad23b637bd4`
+    (v0.9.6 plus domain-matcher validation and a UDP read-waiter fix; sing-mux v0.3.8 and
+    later need sing v0.9.5). Xray keeps cancelling a connection's context when it ends; the
+    fixed library handles that, as it must for sing-box's shutdown.
+    - Not chosen: handing the service a non-cancellable context like mihomo. It removes
+      the panic trigger but not the stuck handlers, and stream cancellation on
+      `Server.Close` would have to be re-plumbed by hand.
+    - Not chosen: a private fork of sing-mux.
+  - **Scope.** sing is also used by AnyTLS (`proxy/anytls`), so every node that takes this
+    Core moves AnyTLS onto sing v0.9.7 as well. Between v0.8.14 and v0.9.6 the packages
+    Core uses changed buffer pool sizing, counters, half-close lookup and UDP batching;
+    no API change was needed.
+  - **Validation.** V-11 to V-14.
+  - **Rollout.** Core rebuild, then the entry boards one at a time through xray-config
+    spec009; tgz.lite also exercises AnyTLS. Other nodes take it with their next Core
+    upgrade.
+
