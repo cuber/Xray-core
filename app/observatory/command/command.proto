@@ -15,9 +15,19 @@ message GetOutboundStatusResponse {
   xray.core.app.observatory.ObservationResult status = 1;
 }
 
+message GetTrackRequest {
+}
+
+message GetTrackResponse {
+  // Track groups in configured order; empty without `track` (spec014).
+  repeated xray.core.app.observatory.TrackStatus groups = 1;
+}
+
 service ObservatoryService {
+  // Probed outbounds only: statuses tracked from a probe are reported by GetTrack.
   rpc GetOutboundStatus(GetOutboundStatusRequest)
       returns (GetOutboundStatusResponse) {}
+  rpc GetTrack(GetTrackRequest) returns (GetTrackResponse) {}
 }
 
 

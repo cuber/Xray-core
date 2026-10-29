@@ -21,6 +21,18 @@ message Config {
   // given outbound tag must belong to at most one group, otherwise config
   // load fails.
   repeated HealthPingGroup ping_groups = 4;
+
+  // Outbounds whose observation follows another outbound's probe (spec014):
+  // they are not probed, and the observation result reports them with their
+  // probe's status.
+  repeated TrackGroup track = 5;
+}
+
+message TrackGroup {
+  // A probed outbound tag.
+  string probe = 1;
+  // Exact outbound tags that follow it.
+  repeated string outbounds = 2;
 }
 
 message HealthPingGroup {

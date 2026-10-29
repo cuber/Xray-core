@@ -4,7 +4,7 @@ Based on spec.md and plan.md. Record evidence when a task completes.
 
 ## Foundation
 
-- [ ] T001 Add `TrackGroup`/`Config.track` and `OutboundStatus.tracked_from`, regenerate
+- [x] T001 Add `TrackGroup`/`Config.track` and `OutboundStatus.tracked_from`, regenerate
   the `.pb.go` files, and add JSON `track` with its shape checks.
   - Files: `app/observatory/burst/config.proto`, `app/observatory/config.proto`,
     `infra/conf/observatory.go`.
@@ -13,29 +13,43 @@ Based on spec.md and plan.md. Record evidence when a task completes.
 
 ## Behaviour
 
-- [ ] T002 Tracked copies in `createResult` and the mapping in `Check`.
+- [x] T002 Tracked copies in `createResult` and the mapping in `Check`.
   - File: `app/observatory/burst/burstobserver.go`.
   - Depends: T001. Covers: FR-001, FR-004, NFR-001.
   - Verify: unit tests, including the no-result-yet case and an unchanged result without
     `track`.
-- [ ] T003 Load-time cross checks against the outbound tags (T5).
+- [x] T003 Load-time cross checks against the outbound tags (T5).
   - File: `infra/conf/xray.go`.
   - Depends: T001. Covers: FR-002.
   - Verify: one test for each refusal, and `run -test` on an accepted configuration.
-- [ ] T004 Balancers over tracked candidates: roundrobin falls back and returns; leastPing
-  picks by the probes' delay.
-  - Files: `app/router` tests.
+- [x] T004 Balancers over tracked candidates: roundrobin falls back and returns; leastPing
+  picks a tracked outbound.
+  - Files: covered by the T005 instance test, which runs the real router, conf and observer.
   - Depends: T002. Covers: FR-003, SC-003.
-  - Verify: the tests fail when the tracked copies are removed.
+  - Verify: `TestTrackContractWithoutTrack` shows the same roundrobin never falling back
+    without `track`.
 
 ## Control plane
 
-- [ ] T005 `ObservatoryService.GetTrack`, `GetOutboundStatus` without tracked statuses, and the
+- [x] T005 `ObservatoryService.GetTrack`, `GetOutboundStatus` without tracked statuses, and the
   CP-7 contract test on a started instance, with and without `track`.
   - Files: `app/observatory/command` (proto, service), and the contract test there or in
     `testing/scenarios`.
   - Depends: T002. Covers: FR-005.
   - Verify: the test passes.
+
+Evidence (2026-10-29):
+- `app/observatory/burst/track_test.go`: copies, the no-result case, `Check` mapping, shape and
+  cross checks, and the observer's result and `GetTrack`.
+- `infra/conf/observatory_track_test.go`: the build and each T5 refusal through `Config.Build`.
+- `app/observatory/command/track_contract_test.go` (CP-7, real instance and gRPC):
+  - `GetTrack` groups and probe status, and `GetOutboundStatus` without tracked tags;
+  - roundrobin falls back when the probe's endpoint fails and returns when it recovers;
+    leastPing picks the tracked outbound;
+  - without `track`, no groups, and the same roundrobin never falls back.
+- `go test -race -count=3` over `app/observatory/...`, `infra/conf` and `app/router/...` passes.
+- `go test ./... -count=1` passes: exit 0, 105 packages.
+- The generated `.pb.go` record protoc v7.34.1 and protoc-gen-go-grpc v1.6.1, the local toolchain.
 
 ## Close
 

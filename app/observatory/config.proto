@@ -47,6 +47,19 @@ message OutboundStatus{
   int64 last_try_time = 6;
 
   HealthPingMeasurementResult health_ping = 7;
+
+  /* @Document Set when this status is not measured but copied from the probe
+     of a burst observatory track group (spec014): the probe's outbound tag.
+  */
+  string tracked_from = 8;
+}
+
+// A burst observatory track group as loaded, with its probe's current status
+// (absent before the probe's first result). Spec014.
+message TrackStatus {
+  string probe = 1;
+  repeated string outbounds = 2;
+  OutboundStatus probe_status = 3;
 }
 
 message ProbeResult{

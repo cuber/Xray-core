@@ -23,9 +23,34 @@ func (s *service) GetOutboundStatus(ctx context.Context, request *GetOutboundSta
 		return nil, err
 	}
 	retdata := resp.(*observatory.ObservationResult)
+	// Probed outbounds only: a tracked status copies its probe's (spec014), and
+	// GetTrack reports those.
+	probed := make([]*observatory.OutboundStatus, 0, len(retdata.Status))
+	for _, status := range retdata.Status {
+		if status.TrackedFrom == "" {
+			probed = append(probed, status)
+		}
+	}
 	return &GetOutboundStatusResponse{
-		Status: retdata,
+		Status: &observatory.ObservationResult{Status: probed},
 	}, nil
+}
+
+// tracker is an observatory that loads track groups: the burst observatory (spec014).
+type tracker interface {
+	GetTrack(ctx context.Context) ([]*observatory.TrackStatus, error)
+}
+
+func (s *service) GetTrack(ctx context.Context, request *GetTrackRequest) (*GetTrackResponse, error) {
+	t, ok := s.observatory.(tracker)
+	if !ok {
+		return &GetTrackResponse{}, nil
+	}
+	groups, err := t.GetTrack(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &GetTrackResponse{Groups: groups}, nil
 }
 
 func (s *service) Register(server *grpc.Server) {

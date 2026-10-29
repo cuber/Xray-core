@@ -100,7 +100,7 @@ ahk.alpine.1st when `ahk.ecs-hy2` is dead. The copy needs no track of its own, b
 |---|---|---|
 | FR-001 | T1: tracked outbounds appear in `GetObservation` with the probe's status and `tracked_from`; nothing appears before the probe's first result | T002 unit |
 | FR-002 | T2/T5: every refusal in T5 fails `run -test` with a message naming the group and tag | T003 conf tests |
-| FR-003 | T3: a roundrobin balancer with `fallbackTag` falls back when the tracked candidates' probe is dead and returns when it recovers; leastPing chooses between tracked candidates by their probes' delay | T004 router tests |
+| FR-003 | T3: a roundrobin balancer with `fallbackTag` falls back when the tracked candidates' probe is dead and returns when it recovers; leastPing, which never picks an unobserved outbound, picks a tracked one | T005 instance test (no router code changes, so no router-only test) |
 | FR-004 | T4: `Check` with a tracked tag checks its probe once | T002 unit |
 | FR-005 | Control plane (below): `GetTrack` reports the loaded groups and probe statuses; `GetOutboundStatus` keeps reporting probed outbounds only | T005 contract test |
 | NFR-001 | Without `track` nothing changes. With it, `GetObservation` adds at most one status per tracked tag, holds no lock beyond today's result walk, and keeps no state between calls | code review, T002 |

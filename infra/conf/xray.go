@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/xtls/xray-core/app/dispatcher"
+	"github.com/xtls/xray-core/app/observatory/burst"
 	"github.com/xtls/xray-core/app/proxyman"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/geodata"
@@ -729,6 +730,13 @@ func (c *Config) Build() (*core.Config, error) {
 	if c.BurstObservatory != nil {
 		r, err := c.BurstObservatory.Build()
 		if err != nil {
+			return nil, errors.New("failed to build burst observatory configuration").Base(err)
+		}
+		tags := make([]string, 0, len(c.OutboundConfigs))
+		for _, ob := range c.OutboundConfigs {
+			tags = append(tags, ob.Tag)
+		}
+		if err := burst.ValidateTrack(r.(*burst.Config), tags); err != nil {
 			return nil, errors.New("failed to build burst observatory configuration").Base(err)
 		}
 		config.App = append(config.App, serial.ToTypedMessage(r))

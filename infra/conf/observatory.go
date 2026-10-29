@@ -28,6 +28,14 @@ type BurstObservatoryConfig struct {
 	// Selectors across groups must NOT overlap (a tag must map to at most
 	// one group). Overlap is reported at config-load / `xray -test` time.
 	PingGroups []*pingGroupSettings `json:"pingGroups,omitempty"`
+	// Outbounds whose observation follows another outbound's probe (spec014).
+	Track []*trackGroupSettings `json:"track,omitempty"`
+}
+
+// trackGroupSettings mirrors burst.TrackGroup in JSON.
+type trackGroupSettings struct {
+	Probe     string   `json:"probe"`
+	Outbounds []string `json:"outbounds"`
 }
 
 // pingGroupSettings mirrors burst.HealthPingGroup in JSON.
@@ -58,6 +66,15 @@ func (g *pingGroupSettings) Build(groupIdx int) (*burst.HealthPingGroup, error) 
 
 func (b BurstObservatoryConfig) Build() (proto.Message, error) {
 	cfg := &burst.Config{}
+	for i, g := range b.Track {
+		if g == nil {
+			return nil, errors.New("burstObservatory.track[", i, "]: null entry")
+		}
+		cfg.Track = append(cfg.Track, &burst.TrackGroup{Probe: g.Probe, Outbounds: g.Outbounds})
+	}
+	if err := burst.ValidateTrackShape(cfg.Track); err != nil {
+		return nil, err
+	}
 
 	if len(b.PingGroups) > 0 {
 		// New-style: pingGroups overrides legacy fields. Accept but warn if

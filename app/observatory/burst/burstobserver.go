@@ -25,17 +25,31 @@ type Observer struct {
 	finished *done.Instance
 
 	ohm outbound.Manager
+
+	track trackIndex
 }
 
 func (o *Observer) GetObservation(ctx context.Context) (proto.Message, error) {
 	return &observatory.ObservationResult{Status: o.createResult()}, nil
 }
 
-func (o *Observer) Check(tag []string) {
-	_ = o.hpm.Check(tag)
+// GetTrack reports the track groups as loaded, each with its probe's current
+// status (spec014).
+func (o *Observer) GetTrack(ctx context.Context) ([]*observatory.TrackStatus, error) {
+	return o.track.statuses(o.probeResult()), nil
 }
 
+func (o *Observer) Check(tag []string) {
+	_ = o.hpm.Check(o.track.probes(tag))
+}
+
+// createResult is the probed statuses followed by the tracked copies.
 func (o *Observer) createResult() []*observatory.OutboundStatus {
+	result := o.probeResult()
+	return append(result, o.track.follow(result)...)
+}
+
+func (o *Observer) probeResult() []*observatory.OutboundStatus {
 	var result []*observatory.OutboundStatus
 	o.hpm.WalkResults(func(name string, stats HealthPingStats) {
 		status := observatory.OutboundStatus{
@@ -122,11 +136,15 @@ func New(ctx context.Context, config *Config) (*Observer, error) {
 	if err := ValidatePingGroups(groups); err != nil {
 		return nil, err
 	}
+	if err := ValidateTrackShape(config.GetTrack()); err != nil {
+		return nil, err
+	}
 	return &Observer{
 		config: config,
 		ctx:    ctx,
 		ohm:    outboundManager,
 		hpm:    NewManager(ctx, dispatcher, groups),
+		track:  newTrackIndex(config.GetTrack()),
 	}, nil
 }
 
