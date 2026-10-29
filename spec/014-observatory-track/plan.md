@@ -11,7 +11,7 @@ Based on [spec.md](spec.md). Baseline `cf979cbf`.
 | JSON | `infra/conf/observatory.go` | `BurstObservatoryConfig.Track []*trackGroupSettings` (`track`), built into `burst.Config.track`; shape checks (probe set, non-empty `outbounds`, no duplicate tag across groups, probe not tracked) |
 | Load check | `infra/conf/xray.go` (`Config.Build`) | With the outbound tags in hand: probe and tracked tags exist, the probe is selected by a subject selector (prefix match over tags, as the observer's `Select`), no tracked tag is selected |
 | Result | `app/observatory/burst/burstobserver.go` | `createResult` appends a copy of each probe's status per tracked tag with `OutboundTag` and `TrackedFrom` set; `Check` maps tracked tags to their probes, deduplicated |
-| Command | `app/observatory/command` | none: `GetOutboundStatus` returns `GetObservation`'s result |
+| Command | `app/observatory/command/command.proto`, `command.go` | `rpc GetTrack(GetTrackRequest) returns (GetTrackResponse)` with `TrackStatus`; `GetOutboundStatus` drops statuses with `tracked_from` set; the observer exposes its loaded groups to the service |
 
 The regenerated `*.pb.go` keep the header versions already in the tree (protoc-gen-go
 v1.36.11, protoc v6.33.5).
@@ -35,7 +35,8 @@ v1.36.11, protoc v6.33.5).
 - Router tests (`app/router`): roundrobin and leastPing balancers over tracked
   candidates, with a fake observatory that turns the probe dead and back alive.
 - CP-7 contract test: a started instance with `burstObservatory.track` and a real gRPC
-  `ObservatoryService`.
+  `ObservatoryService`: `GetTrack` groups and probe status, `GetOutboundStatus` without tracked tags,
+  and no groups without `track`.
 - Full suite: `go test ./... -count=1` with the geo data present.
 - Build: `./build.sh` (Darwin and Linux).
 - Stability gate: the `stability-check` skill selects suites by the code a change

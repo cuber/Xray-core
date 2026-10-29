@@ -13,8 +13,8 @@
   - The approach: "既然 balancer 要依赖 ob，那我们就把多个原本不存在的ob mapping到那一个ob上".
   - The decision: "用 track 更好一点，config.yaml 显示写出来吧，可以把 draft 升级为 spec 了".
 - Consumers: [xray-sidecar spec014](../../../xray-sidecar/spec/014-observatory-track/spec.md)
-  (`/metrics`, `/xray-debug`, Portal) and xray-config spec015 (asz.lite, generator checks,
-  acceptance).
+  (`/xray-debug` `observatory_track`, Portal) and xray-config spec015 (asz.lite, generator
+  checks, acceptance).
 
 ## Problem and Goal
 
@@ -102,34 +102,41 @@ ahk.alpine.1st when `ahk.ecs-hy2` is dead. The copy needs no track of its own, b
 | FR-002 | T2/T5: every refusal in T5 fails `run -test` with a message naming the group and tag | T003 conf tests |
 | FR-003 | T3: a roundrobin balancer with `fallbackTag` falls back when the tracked candidates' probe is dead and returns when it recovers; leastPing chooses between tracked candidates by their probes' delay | T004 router tests |
 | FR-004 | T4: `Check` with a tracked tag checks its probe once | T002 unit |
-| FR-005 | Control plane (below) | T005 contract test |
+| FR-005 | Control plane (below): `GetTrack` reports the loaded groups and probe statuses; `GetOutboundStatus` keeps reporting probed outbounds only | T005 contract test |
 | NFR-001 | Without `track` nothing changes. With it, `GetObservation` adds at most one status per tracked tag, holds no lock beyond today's result walk, and keeps no state between calls | code review, T002 |
 
 ## Control Plane
 
-- **Runtime state.** For each tracked outbound: its probe and the status it follows. Nothing
-  else is new: the tracked status is derived on every read and is never stored.
-- **RPC.** `ObservatoryService.GetOutboundStatus` (CP-4: the service that owns the feature) adds
-  the tracked statuses, marked by `tracked_from`.
-  - The field is additive, and no new RPC or service is added.
-  - Responses grow at most by the configured tracked tags and contain no secrets.
-  - Clients that ignore `tracked_from` would show a tracked outbound as probed. CP-2 requires
-    consumers to read the field (Sidecar spec014).
-- **Older Core.** It ignores `track` silently, because unknown JSON fields are ignored. It
-  reports no tracked statuses, so its balancers see the tracked tags as unobserved:
-  - roundrobin and random then never fall back, which is today's behaviour;
+- **Runtime state.** The track groups as loaded, and for each group its probe's current status,
+  which every outbound in the group follows. Nothing else is new: tracked statuses are derived
+  on every read and never stored.
+- **RPC.** A new read-only `ObservatoryService.GetTrack` (CP-4: the service that owns the feature).
+  - `GetTrackResponse.groups` lists `TrackStatus {probe = 1; outbounds = 2; probe_status = 3}` in
+    configured order. `probe_status` is the probe's `OutboundStatus` and is absent before its
+    first result. Without `track` the list is empty.
+  - The response is bounded by the configured groups and contains no secrets. It reads the same
+    result walk as `GetObservation`, under no further lock.
+- **`GetOutboundStatus` keeps its meaning.** It reports probed outbounds only: the command
+  service drops the statuses whose `tracked_from` is set. Existing consumers (Sidecar
+  `/metrics`, `/xray-debug` `observatory`, xray-tui) therefore see no change and need no release
+  order. `tracked_from` marks the copies inside `GetObservation`, where balancers read them.
+- **Older Core.** `GetTrack` answers `Unimplemented`, and consumers show track as unavailable
+  (CP-6). Such a Core also ignores `track` silently, because unknown JSON fields are ignored. Its
+  balancers then see the tracked tags as unobserved:
+  - roundrobin and random never fall back, which is today's behaviour;
   - leastPing never picks them and always falls back.
   
-  Rollout therefore checks the runtime result, not the config test (xray-config spec015). An
-  absent tracked status is shown as not observed, never as healthy (CP-6).
-- **Enablement.** asz.lite already lists `ObservatoryService` in `api.services`, so no service
-  is registered.
-- **Tests.** A contract test over a real gRPC server on a started instance covers two cases:
-  without `track` no status has `tracked_from`; with it the tracked statuses mirror the probe
-  (CP-7, T005).
-- **Consumers.** The Sidecar `/metrics`, the `/xray-debug` `observatory_tracked` field and the
-  Portal (a dated non-goal) are Sidecar spec014. The acceptance item `observatory_track` is
-  xray-config spec015.
+  Rollout therefore checks `GetTrack` at runtime, not the config test (xray-config spec015).
+- **Enablement.** `GetTrack` lives on `ObservatoryService`, which asz.lite already lists in
+  `api.services`. A node without that service answers `Unimplemented` for both RPCs, as it does
+  today.
+- **Tests.** The contract test uses a real gRPC server on a started instance (CP-7, T005):
+  - `GetTrack` returns no groups without `track`, and with it returns the groups with their
+    probe's status;
+  - `GetOutboundStatus` never contains a tracked tag.
+- **Consumers.** Sidecar spec014 owns the `/xray-debug` `observatory_track` field and the Portal
+  presentation: the Observatory and Balancers tabs (user: "最好能在portal上显示出 track").
+  xray-config spec015 owns the acceptance item `observatory_track`.
 
 ## Non-goals
 
@@ -183,3 +190,11 @@ Track keeps selection in balancers and changes only how observations are reporte
 
 - 2026-10-29: designed and approved as spec014 (Authorization). "alias" was renamed `track`:
   these are different outbounds whose health follows a probe, not names for the same outbound.
+- 2026-10-29: control plane revised before implementation (user: "控制面有考虑么？最好能在portal上
+  显示出 track").
+  - The first version marked tracked statuses with `tracked_from` inside `GetOutboundStatus` and
+    left the Portal out.
+  - That gave an older Core no `Unimplemented` to show as unavailable, and it made every
+    existing consumer filter them.
+  - `GetTrack` now reports track, `GetOutboundStatus` keeps probed outbounds only, and the Portal
+    shows track.

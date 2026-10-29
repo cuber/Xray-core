@@ -30,9 +30,10 @@ Based on spec.md and plan.md. Record evidence when a task completes.
 
 ## Control plane
 
-- [ ] T005 CP-7 contract test: `GetOutboundStatus` on a started instance, with and without
-  `track`.
-  - Files: `app/observatory/command` or `testing/scenarios`.
+- [ ] T005 `ObservatoryService.GetTrack`, `GetOutboundStatus` without tracked statuses, and the
+  CP-7 contract test on a started instance, with and without `track`.
+  - Files: `app/observatory/command` (proto, service), and the contract test there or in
+    `testing/scenarios`.
   - Depends: T002. Covers: FR-005.
   - Verify: the test passes.
 
