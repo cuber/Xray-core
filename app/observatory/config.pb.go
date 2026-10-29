@@ -173,9 +173,17 @@ type OutboundStatus struct {
 	HealthPing  *HealthPingMeasurementResult `protobuf:"bytes,7,opt,name=health_ping,json=healthPing,proto3" json:"health_ping,omitempty"`
 	// @Document Set when this status is not measured but copied from the probe
 	// of a burst observatory track group (spec014): the probe's outbound tag.
-	TrackedFrom   string `protobuf:"bytes,8,opt,name=tracked_from,json=trackedFrom,proto3" json:"tracked_from,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	TrackedFrom string `protobuf:"bytes,8,opt,name=tracked_from,json=trackedFrom,proto3" json:"tracked_from,omitempty"`
+	// @Document Set while the control plane holds this outbound out of selection
+	// (spec015): on a forced probe and on every status tracked from it. In
+	// GetObservation a forced status also reads alive = false; GetOutboundStatus
+	// and GetTrack keep the measured alive, delay and health ping.
+	ForceDown       bool   `protobuf:"varint,9,opt,name=force_down,json=forceDown,proto3" json:"force_down,omitempty"`
+	ForceDownReason string `protobuf:"bytes,10,opt,name=force_down_reason,json=forceDownReason,proto3" json:"force_down_reason,omitempty"`
+	// @Document Unix seconds when the probe entered the force-down set.
+	ForceDownSince int64 `protobuf:"varint,11,opt,name=force_down_since,json=forceDownSince,proto3" json:"force_down_since,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *OutboundStatus) Reset() {
@@ -262,6 +270,27 @@ func (x *OutboundStatus) GetTrackedFrom() string {
 		return x.TrackedFrom
 	}
 	return ""
+}
+
+func (x *OutboundStatus) GetForceDown() bool {
+	if x != nil {
+		return x.ForceDown
+	}
+	return false
+}
+
+func (x *OutboundStatus) GetForceDownReason() string {
+	if x != nil {
+		return x.ForceDownReason
+	}
+	return ""
+}
+
+func (x *OutboundStatus) GetForceDownSince() int64 {
+	if x != nil {
+		return x.ForceDownSince
+	}
+	return 0
 }
 
 // A burst observatory track group as loaded, with its probe's current status
@@ -521,7 +550,7 @@ const file_app_observatory_config_proto_rawDesc = "" +
 	"\tdeviation\x18\x03 \x01(\x03R\tdeviation\x12\x18\n" +
 	"\aaverage\x18\x04 \x01(\x03R\aaverage\x12\x10\n" +
 	"\x03max\x18\x05 \x01(\x03R\x03max\x12\x10\n" +
-	"\x03min\x18\x06 \x01(\x03R\x03min\"\xd1\x02\n" +
+	"\x03min\x18\x06 \x01(\x03R\x03min\"\xc6\x03\n" +
 	"\x0eOutboundStatus\x12\x14\n" +
 	"\x05alive\x18\x01 \x01(\bR\x05alive\x12\x14\n" +
 	"\x05delay\x18\x02 \x01(\x03R\x05delay\x12*\n" +
@@ -531,7 +560,12 @@ const file_app_observatory_config_proto_rawDesc = "" +
 	"\rlast_try_time\x18\x06 \x01(\x03R\vlastTryTime\x12W\n" +
 	"\vhealth_ping\x18\a \x01(\v26.xray.core.app.observatory.HealthPingMeasurementResultR\n" +
 	"healthPing\x12!\n" +
-	"\ftracked_from\x18\b \x01(\tR\vtrackedFrom\"\x8f\x01\n" +
+	"\ftracked_from\x18\b \x01(\tR\vtrackedFrom\x12\x1d\n" +
+	"\n" +
+	"force_down\x18\t \x01(\bR\tforceDown\x12*\n" +
+	"\x11force_down_reason\x18\n" +
+	" \x01(\tR\x0fforceDownReason\x12(\n" +
+	"\x10force_down_since\x18\v \x01(\x03R\x0eforceDownSince\"\x8f\x01\n" +
 	"\vTrackStatus\x12\x14\n" +
 	"\x05probe\x18\x01 \x01(\tR\x05probe\x12\x1c\n" +
 	"\toutbounds\x18\x02 \x03(\tR\toutbounds\x12L\n" +

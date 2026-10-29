@@ -27,25 +27,35 @@ type Observer struct {
 	ohm outbound.Manager
 
 	track trackIndex
+	force forceDownState
 }
 
+// GetObservation is the selection view that balancers read: a forced probe
+// (spec015) and its tracked copies are dead.
 func (o *Observer) GetObservation(ctx context.Context) (proto.Message, error) {
 	return &observatory.ObservationResult{Status: o.createResult()}, nil
 }
 
+// MeasuredObservation is the control-plane view: the probes' measurements, with
+// the force fields set on forced probes (spec015 F8), and no tracked copies.
+func (o *Observer) MeasuredObservation() []*observatory.OutboundStatus {
+	return o.force.load().apply(o.probeResult(), false)
+}
+
 // GetTrack reports the track groups as loaded, each with its probe's current
-// status (spec014).
+// measured status (spec014), force fields included (spec015).
 func (o *Observer) GetTrack(ctx context.Context) ([]*observatory.TrackStatus, error) {
-	return o.track.statuses(o.probeResult()), nil
+	return o.track.statuses(o.MeasuredObservation()), nil
 }
 
 func (o *Observer) Check(tag []string) {
 	_ = o.hpm.Check(o.track.probes(tag))
 }
 
-// createResult is the probed statuses followed by the tracked copies.
+// createResult is the probed statuses, forced ones dead, followed by the tracked
+// copies, which inherit that.
 func (o *Observer) createResult() []*observatory.OutboundStatus {
-	result := o.probeResult()
+	result := o.force.load().apply(o.probeResult(), true)
 	return append(result, o.track.follow(result)...)
 }
 

@@ -53,7 +53,13 @@ Evidence (2026-10-29):
 
 ## Close
 
-- [ ] T006 Full suite, commit, `./build.sh` (Darwin and Linux), and the stability gate
+- [x] T006 Full suite, commit, `./build.sh` (Darwin and Linux), and the stability gate
   (plan.md).
   - Depends: T003, T004, T005. Covers: SC-002, SC-003.
   - Verify: logs and the binary revision.
+
+Evidence (2026-10-29, recorded with the next Core change, spec015, so the gate and the deployment
+saw the same revision): `31ef26bd` built by `xrayctl build core` with `vcs.modified=false`; asz.lite's
+configuration passed `run -test` with the Darwin build; `switch upgrade asz.lite` (Core interruption
+198 ms) and `acceptance check --baseline` PASS with `observatory_track` `runtime ok: ahk.ecs-hy2<-8`
+(xray-config spec015 T005).

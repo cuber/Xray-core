@@ -21,6 +21,8 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	ObservatoryService_GetOutboundStatus_FullMethodName = "/xray.core.app.observatory.command.ObservatoryService/GetOutboundStatus"
 	ObservatoryService_GetTrack_FullMethodName          = "/xray.core.app.observatory.command.ObservatoryService/GetTrack"
+	ObservatoryService_GetForceDown_FullMethodName      = "/xray.core.app.observatory.command.ObservatoryService/GetForceDown"
+	ObservatoryService_SetForceDown_FullMethodName      = "/xray.core.app.observatory.command.ObservatoryService/SetForceDown"
 )
 
 // ObservatoryServiceClient is the client API for ObservatoryService service.
@@ -28,8 +30,11 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ObservatoryServiceClient interface {
 	// Probed outbounds only: statuses tracked from a probe are reported by GetTrack.
+	// The status is the measurement; force_down marks a forced probe (spec015).
 	GetOutboundStatus(ctx context.Context, in *GetOutboundStatusRequest, opts ...grpc.CallOption) (*GetOutboundStatusResponse, error)
 	GetTrack(ctx context.Context, in *GetTrackRequest, opts ...grpc.CallOption) (*GetTrackResponse, error)
+	GetForceDown(ctx context.Context, in *GetForceDownRequest, opts ...grpc.CallOption) (*GetForceDownResponse, error)
+	SetForceDown(ctx context.Context, in *SetForceDownRequest, opts ...grpc.CallOption) (*SetForceDownResponse, error)
 }
 
 type observatoryServiceClient struct {
@@ -60,13 +65,36 @@ func (c *observatoryServiceClient) GetTrack(ctx context.Context, in *GetTrackReq
 	return out, nil
 }
 
+func (c *observatoryServiceClient) GetForceDown(ctx context.Context, in *GetForceDownRequest, opts ...grpc.CallOption) (*GetForceDownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetForceDownResponse)
+	err := c.cc.Invoke(ctx, ObservatoryService_GetForceDown_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *observatoryServiceClient) SetForceDown(ctx context.Context, in *SetForceDownRequest, opts ...grpc.CallOption) (*SetForceDownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetForceDownResponse)
+	err := c.cc.Invoke(ctx, ObservatoryService_SetForceDown_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ObservatoryServiceServer is the server API for ObservatoryService service.
 // All implementations must embed UnimplementedObservatoryServiceServer
 // for forward compatibility.
 type ObservatoryServiceServer interface {
 	// Probed outbounds only: statuses tracked from a probe are reported by GetTrack.
+	// The status is the measurement; force_down marks a forced probe (spec015).
 	GetOutboundStatus(context.Context, *GetOutboundStatusRequest) (*GetOutboundStatusResponse, error)
 	GetTrack(context.Context, *GetTrackRequest) (*GetTrackResponse, error)
+	GetForceDown(context.Context, *GetForceDownRequest) (*GetForceDownResponse, error)
+	SetForceDown(context.Context, *SetForceDownRequest) (*SetForceDownResponse, error)
 	mustEmbedUnimplementedObservatoryServiceServer()
 }
 
@@ -82,6 +110,12 @@ func (UnimplementedObservatoryServiceServer) GetOutboundStatus(context.Context, 
 }
 func (UnimplementedObservatoryServiceServer) GetTrack(context.Context, *GetTrackRequest) (*GetTrackResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetTrack not implemented")
+}
+func (UnimplementedObservatoryServiceServer) GetForceDown(context.Context, *GetForceDownRequest) (*GetForceDownResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetForceDown not implemented")
+}
+func (UnimplementedObservatoryServiceServer) SetForceDown(context.Context, *SetForceDownRequest) (*SetForceDownResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetForceDown not implemented")
 }
 func (UnimplementedObservatoryServiceServer) mustEmbedUnimplementedObservatoryServiceServer() {}
 func (UnimplementedObservatoryServiceServer) testEmbeddedByValue()                            {}
@@ -140,6 +174,42 @@ func _ObservatoryService_GetTrack_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ObservatoryService_GetForceDown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetForceDownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ObservatoryServiceServer).GetForceDown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ObservatoryService_GetForceDown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ObservatoryServiceServer).GetForceDown(ctx, req.(*GetForceDownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ObservatoryService_SetForceDown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetForceDownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ObservatoryServiceServer).SetForceDown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ObservatoryService_SetForceDown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ObservatoryServiceServer).SetForceDown(ctx, req.(*SetForceDownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ObservatoryService_ServiceDesc is the grpc.ServiceDesc for ObservatoryService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -154,6 +224,14 @@ var ObservatoryService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTrack",
 			Handler:    _ObservatoryService_GetTrack_Handler,
+		},
+		{
+			MethodName: "GetForceDown",
+			Handler:    _ObservatoryService_GetForceDown_Handler,
+		},
+		{
+			MethodName: "SetForceDown",
+			Handler:    _ObservatoryService_SetForceDown_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

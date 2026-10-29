@@ -52,6 +52,16 @@ message OutboundStatus{
      of a burst observatory track group (spec014): the probe's outbound tag.
   */
   string tracked_from = 8;
+
+  /* @Document Set while the control plane holds this outbound out of selection
+     (spec015): on a forced probe and on every status tracked from it. In
+     GetObservation a forced status also reads alive = false; GetOutboundStatus
+     and GetTrack keep the measured alive, delay and health ping.
+  */
+  bool force_down = 9;
+  string force_down_reason = 10;
+  /* @Document Unix seconds when the probe entered the force-down set. */
+  int64 force_down_since = 11;
 }
 
 // A burst observatory track group as loaded, with its probe's current status

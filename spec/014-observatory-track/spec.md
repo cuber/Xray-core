@@ -3,9 +3,8 @@
 - Feature ID: 014-observatory-track (designed in conversation on 2026-10-29 and approved as a
   spec directly; no draft ID was allocated)
 - Created: 2026-10-29
-- Status: Approved; implementation not started. Rollout (asz.lite) is
-  [xray-config spec015](../../../xray-config/spec/015-observatory-track-rollout/spec.md) and
-  needs its own go-ahead.
+- Status: Implemented in `31ef26bd` (2026-10-29); deployed on asz.lite the same day through
+  [xray-config spec015](../../../xray-config/spec/015-observatory-track-rollout/spec.md) T005.
 - Baseline: Core `cf979cbf` (develop)
 - Authorization (2026-10-29):
   - The goal: "怎么能够在 asz.lite 里只 ob 两个节点", with the Core change made the sound way

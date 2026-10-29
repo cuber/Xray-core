@@ -32,6 +32,7 @@ reference sibling repositories as integration evidence, not implementation input
 | [012](012-dns-outbound-servers/spec.md) | DNS servers restricted to named outbounds for `targetStrategy` lookups; per-server caches, strict isolation; read-only `DNSService` |
 | [013](013-sing-mux-inbound/spec.md) | Opt-in per-inbound sing-mux server for mihomo/sing-box multiplexing; stream parity, bounds, revocation, read-only `GetInboundMuxStats` (promoted from draft003) |
 | [014](014-observatory-track/spec.md) | Burst observatory `track`: an outbound's observation follows another outbound's probe, so balancers fail over on one probe per path; read-only `ObservatoryService.GetTrack`, Portal display (approved 2026-10-29, no draft) |
+| [015](015-observatory-force-down/spec.md) | Burst observatory force down: a control-plane-owned runtime set of probes that balancers treat as dead (and their `track` followers); `OutboundStatus.force_down*`, `ObservatoryService.Get/SetForceDown`; probing and measured health unchanged (promoted from draft004, approved 2026-10-30) |
 
 The 2026-10-17 mainline review keeps feature boundaries stable rather than
 splitting AnyTLS inbound/outbound or merging traffic listeners003 with direct

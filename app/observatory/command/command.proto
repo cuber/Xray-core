@@ -23,11 +23,39 @@ message GetTrackResponse {
   repeated xray.core.app.observatory.TrackStatus groups = 1;
 }
 
+// A probe the control plane holds out of selection (spec015).
+message ForceDownEntry {
+  string outbound_tag = 1;
+  string reason = 2;
+  // Unix seconds when the tag entered the set; ignored in requests.
+  int64 since = 3;
+}
+
+message GetForceDownRequest {
+}
+
+message GetForceDownResponse {
+  repeated ForceDownEntry entries = 1;
+}
+
+// Replaces the whole set; no entries clears it.
+message SetForceDownRequest {
+  repeated ForceDownEntry entries = 1;
+}
+
+message SetForceDownResponse {
+  // The set as applied.
+  repeated ForceDownEntry entries = 1;
+}
+
 service ObservatoryService {
   // Probed outbounds only: statuses tracked from a probe are reported by GetTrack.
+  // The status is the measurement; force_down marks a forced probe (spec015).
   rpc GetOutboundStatus(GetOutboundStatusRequest)
       returns (GetOutboundStatusResponse) {}
   rpc GetTrack(GetTrackRequest) returns (GetTrackResponse) {}
+  rpc GetForceDown(GetForceDownRequest) returns (GetForceDownResponse) {}
+  rpc SetForceDown(SetForceDownRequest) returns (SetForceDownResponse) {}
 }
 
 

@@ -183,6 +183,238 @@ func (x *GetTrackResponse) GetGroups() []*observatory.TrackStatus {
 	return nil
 }
 
+// A probe the control plane holds out of selection (spec015).
+type ForceDownEntry struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	OutboundTag string                 `protobuf:"bytes,1,opt,name=outbound_tag,json=outboundTag,proto3" json:"outbound_tag,omitempty"`
+	Reason      string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	// Unix seconds when the tag entered the set; ignored in requests.
+	Since         int64 `protobuf:"varint,3,opt,name=since,proto3" json:"since,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ForceDownEntry) Reset() {
+	*x = ForceDownEntry{}
+	mi := &file_app_observatory_command_command_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ForceDownEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ForceDownEntry) ProtoMessage() {}
+
+func (x *ForceDownEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_app_observatory_command_command_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ForceDownEntry.ProtoReflect.Descriptor instead.
+func (*ForceDownEntry) Descriptor() ([]byte, []int) {
+	return file_app_observatory_command_command_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ForceDownEntry) GetOutboundTag() string {
+	if x != nil {
+		return x.OutboundTag
+	}
+	return ""
+}
+
+func (x *ForceDownEntry) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *ForceDownEntry) GetSince() int64 {
+	if x != nil {
+		return x.Since
+	}
+	return 0
+}
+
+type GetForceDownRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetForceDownRequest) Reset() {
+	*x = GetForceDownRequest{}
+	mi := &file_app_observatory_command_command_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetForceDownRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetForceDownRequest) ProtoMessage() {}
+
+func (x *GetForceDownRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_app_observatory_command_command_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetForceDownRequest.ProtoReflect.Descriptor instead.
+func (*GetForceDownRequest) Descriptor() ([]byte, []int) {
+	return file_app_observatory_command_command_proto_rawDescGZIP(), []int{5}
+}
+
+type GetForceDownResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Entries       []*ForceDownEntry      `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetForceDownResponse) Reset() {
+	*x = GetForceDownResponse{}
+	mi := &file_app_observatory_command_command_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetForceDownResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetForceDownResponse) ProtoMessage() {}
+
+func (x *GetForceDownResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_app_observatory_command_command_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetForceDownResponse.ProtoReflect.Descriptor instead.
+func (*GetForceDownResponse) Descriptor() ([]byte, []int) {
+	return file_app_observatory_command_command_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetForceDownResponse) GetEntries() []*ForceDownEntry {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+// Replaces the whole set; no entries clears it.
+type SetForceDownRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Entries       []*ForceDownEntry      `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetForceDownRequest) Reset() {
+	*x = SetForceDownRequest{}
+	mi := &file_app_observatory_command_command_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetForceDownRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetForceDownRequest) ProtoMessage() {}
+
+func (x *SetForceDownRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_app_observatory_command_command_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetForceDownRequest.ProtoReflect.Descriptor instead.
+func (*SetForceDownRequest) Descriptor() ([]byte, []int) {
+	return file_app_observatory_command_command_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *SetForceDownRequest) GetEntries() []*ForceDownEntry {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+type SetForceDownResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The set as applied.
+	Entries       []*ForceDownEntry `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetForceDownResponse) Reset() {
+	*x = SetForceDownResponse{}
+	mi := &file_app_observatory_command_command_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetForceDownResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetForceDownResponse) ProtoMessage() {}
+
+func (x *SetForceDownResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_app_observatory_command_command_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetForceDownResponse.ProtoReflect.Descriptor instead.
+func (*SetForceDownResponse) Descriptor() ([]byte, []int) {
+	return file_app_observatory_command_command_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SetForceDownResponse) GetEntries() []*ForceDownEntry {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
 type Config struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -191,7 +423,7 @@ type Config struct {
 
 func (x *Config) Reset() {
 	*x = Config{}
-	mi := &file_app_observatory_command_command_proto_msgTypes[4]
+	mi := &file_app_observatory_command_command_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -203,7 +435,7 @@ func (x *Config) String() string {
 func (*Config) ProtoMessage() {}
 
 func (x *Config) ProtoReflect() protoreflect.Message {
-	mi := &file_app_observatory_command_command_proto_msgTypes[4]
+	mi := &file_app_observatory_command_command_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -216,7 +448,7 @@ func (x *Config) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Config.ProtoReflect.Descriptor instead.
 func (*Config) Descriptor() ([]byte, []int) {
-	return file_app_observatory_command_command_proto_rawDescGZIP(), []int{4}
+	return file_app_observatory_command_command_proto_rawDescGZIP(), []int{9}
 }
 
 var File_app_observatory_command_command_proto protoreflect.FileDescriptor
@@ -229,11 +461,24 @@ const file_app_observatory_command_command_proto_rawDesc = "" +
 	"\x06status\x18\x01 \x01(\v2,.xray.core.app.observatory.ObservationResultR\x06status\"\x11\n" +
 	"\x0fGetTrackRequest\"R\n" +
 	"\x10GetTrackResponse\x12>\n" +
-	"\x06groups\x18\x01 \x03(\v2&.xray.core.app.observatory.TrackStatusR\x06groups\"\b\n" +
-	"\x06Config2\x9e\x02\n" +
+	"\x06groups\x18\x01 \x03(\v2&.xray.core.app.observatory.TrackStatusR\x06groups\"a\n" +
+	"\x0eForceDownEntry\x12!\n" +
+	"\foutbound_tag\x18\x01 \x01(\tR\voutboundTag\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x14\n" +
+	"\x05since\x18\x03 \x01(\x03R\x05since\"\x15\n" +
+	"\x13GetForceDownRequest\"c\n" +
+	"\x14GetForceDownResponse\x12K\n" +
+	"\aentries\x18\x01 \x03(\v21.xray.core.app.observatory.command.ForceDownEntryR\aentries\"b\n" +
+	"\x13SetForceDownRequest\x12K\n" +
+	"\aentries\x18\x01 \x03(\v21.xray.core.app.observatory.command.ForceDownEntryR\aentries\"c\n" +
+	"\x14SetForceDownResponse\x12K\n" +
+	"\aentries\x18\x01 \x03(\v21.xray.core.app.observatory.command.ForceDownEntryR\aentries\"\b\n" +
+	"\x06Config2\xa6\x04\n" +
 	"\x12ObservatoryService\x12\x90\x01\n" +
 	"\x11GetOutboundStatus\x12;.xray.core.app.observatory.command.GetOutboundStatusRequest\x1a<.xray.core.app.observatory.command.GetOutboundStatusResponse\"\x00\x12u\n" +
-	"\bGetTrack\x122.xray.core.app.observatory.command.GetTrackRequest\x1a3.xray.core.app.observatory.command.GetTrackResponse\"\x00B\x80\x01\n" +
+	"\bGetTrack\x122.xray.core.app.observatory.command.GetTrackRequest\x1a3.xray.core.app.observatory.command.GetTrackResponse\"\x00\x12\x81\x01\n" +
+	"\fGetForceDown\x126.xray.core.app.observatory.command.GetForceDownRequest\x1a7.xray.core.app.observatory.command.GetForceDownResponse\"\x00\x12\x81\x01\n" +
+	"\fSetForceDown\x126.xray.core.app.observatory.command.SetForceDownRequest\x1a7.xray.core.app.observatory.command.SetForceDownResponse\"\x00B\x80\x01\n" +
 	"%com.xray.core.app.observatory.commandP\x01Z1github.com/xtls/xray-core/app/observatory/command\xaa\x02!Xray.Core.App.Observatory.Commandb\x06proto3"
 
 var (
@@ -248,28 +493,40 @@ func file_app_observatory_command_command_proto_rawDescGZIP() []byte {
 	return file_app_observatory_command_command_proto_rawDescData
 }
 
-var file_app_observatory_command_command_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_app_observatory_command_command_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_app_observatory_command_command_proto_goTypes = []any{
 	(*GetOutboundStatusRequest)(nil),      // 0: xray.core.app.observatory.command.GetOutboundStatusRequest
 	(*GetOutboundStatusResponse)(nil),     // 1: xray.core.app.observatory.command.GetOutboundStatusResponse
 	(*GetTrackRequest)(nil),               // 2: xray.core.app.observatory.command.GetTrackRequest
 	(*GetTrackResponse)(nil),              // 3: xray.core.app.observatory.command.GetTrackResponse
-	(*Config)(nil),                        // 4: xray.core.app.observatory.command.Config
-	(*observatory.ObservationResult)(nil), // 5: xray.core.app.observatory.ObservationResult
-	(*observatory.TrackStatus)(nil),       // 6: xray.core.app.observatory.TrackStatus
+	(*ForceDownEntry)(nil),                // 4: xray.core.app.observatory.command.ForceDownEntry
+	(*GetForceDownRequest)(nil),           // 5: xray.core.app.observatory.command.GetForceDownRequest
+	(*GetForceDownResponse)(nil),          // 6: xray.core.app.observatory.command.GetForceDownResponse
+	(*SetForceDownRequest)(nil),           // 7: xray.core.app.observatory.command.SetForceDownRequest
+	(*SetForceDownResponse)(nil),          // 8: xray.core.app.observatory.command.SetForceDownResponse
+	(*Config)(nil),                        // 9: xray.core.app.observatory.command.Config
+	(*observatory.ObservationResult)(nil), // 10: xray.core.app.observatory.ObservationResult
+	(*observatory.TrackStatus)(nil),       // 11: xray.core.app.observatory.TrackStatus
 }
 var file_app_observatory_command_command_proto_depIdxs = []int32{
-	5, // 0: xray.core.app.observatory.command.GetOutboundStatusResponse.status:type_name -> xray.core.app.observatory.ObservationResult
-	6, // 1: xray.core.app.observatory.command.GetTrackResponse.groups:type_name -> xray.core.app.observatory.TrackStatus
-	0, // 2: xray.core.app.observatory.command.ObservatoryService.GetOutboundStatus:input_type -> xray.core.app.observatory.command.GetOutboundStatusRequest
-	2, // 3: xray.core.app.observatory.command.ObservatoryService.GetTrack:input_type -> xray.core.app.observatory.command.GetTrackRequest
-	1, // 4: xray.core.app.observatory.command.ObservatoryService.GetOutboundStatus:output_type -> xray.core.app.observatory.command.GetOutboundStatusResponse
-	3, // 5: xray.core.app.observatory.command.ObservatoryService.GetTrack:output_type -> xray.core.app.observatory.command.GetTrackResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	10, // 0: xray.core.app.observatory.command.GetOutboundStatusResponse.status:type_name -> xray.core.app.observatory.ObservationResult
+	11, // 1: xray.core.app.observatory.command.GetTrackResponse.groups:type_name -> xray.core.app.observatory.TrackStatus
+	4,  // 2: xray.core.app.observatory.command.GetForceDownResponse.entries:type_name -> xray.core.app.observatory.command.ForceDownEntry
+	4,  // 3: xray.core.app.observatory.command.SetForceDownRequest.entries:type_name -> xray.core.app.observatory.command.ForceDownEntry
+	4,  // 4: xray.core.app.observatory.command.SetForceDownResponse.entries:type_name -> xray.core.app.observatory.command.ForceDownEntry
+	0,  // 5: xray.core.app.observatory.command.ObservatoryService.GetOutboundStatus:input_type -> xray.core.app.observatory.command.GetOutboundStatusRequest
+	2,  // 6: xray.core.app.observatory.command.ObservatoryService.GetTrack:input_type -> xray.core.app.observatory.command.GetTrackRequest
+	5,  // 7: xray.core.app.observatory.command.ObservatoryService.GetForceDown:input_type -> xray.core.app.observatory.command.GetForceDownRequest
+	7,  // 8: xray.core.app.observatory.command.ObservatoryService.SetForceDown:input_type -> xray.core.app.observatory.command.SetForceDownRequest
+	1,  // 9: xray.core.app.observatory.command.ObservatoryService.GetOutboundStatus:output_type -> xray.core.app.observatory.command.GetOutboundStatusResponse
+	3,  // 10: xray.core.app.observatory.command.ObservatoryService.GetTrack:output_type -> xray.core.app.observatory.command.GetTrackResponse
+	6,  // 11: xray.core.app.observatory.command.ObservatoryService.GetForceDown:output_type -> xray.core.app.observatory.command.GetForceDownResponse
+	8,  // 12: xray.core.app.observatory.command.ObservatoryService.SetForceDown:output_type -> xray.core.app.observatory.command.SetForceDownResponse
+	9,  // [9:13] is the sub-list for method output_type
+	5,  // [5:9] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_app_observatory_command_command_proto_init() }
@@ -283,7 +540,7 @@ func file_app_observatory_command_command_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_app_observatory_command_command_proto_rawDesc), len(file_app_observatory_command_command_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
