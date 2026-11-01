@@ -73,9 +73,20 @@ message OverrideInfo {
   string target = 2;
 }
 
+// spec016: the balancer's fallbackTag and whether new picks end on it.
+message FallbackInfo {
+  // The fallbackTag as loaded; empty when the balancer has none.
+  string tag = 1;
+  // The strategy currently yields no candidate, so new picks use `tag` (an override still wins).
+  bool active = 2;
+  // The strategy reports `active` (weightedLeastPing); false for the others, whose `active` is unknown.
+  bool reported = 3;
+}
+
 message BalancerMsg {
   OverrideInfo override = 5;
   PrincipleTargetInfo principle_target = 6;
+  FallbackInfo fallback = 7;
 }
 
 message GetBalancerInfoRequest {

@@ -23,6 +23,10 @@ type weightedLeastPingNode struct {
 // WeightedLeastPingStrategy rotates across healthy nodes according to their
 // configured weights. RTT and failure rate only control pool membership.
 type WeightedLeastPingStrategy struct {
+	// FallbackTag is the balancer's: with one, a pool whose candidates are all
+	// measured and none alive yields no node, so the balancer uses it (spec016).
+	FallbackTag string
+
 	settings *StrategyWeightedLeastPingConfig
 	weights  *WeightManager
 	observer extension.Observatory
@@ -63,6 +67,12 @@ func (s *WeightedLeastPingStrategy) PickOutbound(candidates []string) string {
 	return s.pickWeighted(s.getNodes(candidates))
 }
 
+// FallbackActive implements BalancingFallbackState: spec016 W1 holds, so the
+// candidates yield no node and new picks use the balancer's fallbackTag.
+func (s *WeightedLeastPingStrategy) FallbackActive(candidates []string) bool {
+	return s.FallbackTag != "" && len(s.getNodes(candidates)) == 0
+}
+
 func (s *WeightedLeastPingStrategy) getNodes(candidates []string) []*weightedLeastPingNode {
 	if s.observer == nil {
 		errors.LogError(s.ctx, "observer is nil")
@@ -91,10 +101,12 @@ func (s *WeightedLeastPingStrategy) filterNodes(candidates []string, statuses []
 
 	maxRTT := time.Duration(s.settings.MaxRTT)
 	minSamples := int64(s.settings.MinSamples)
+	verdictSamples := max(minSamples, 1)
 	bestRTT := time.Duration(1<<63 - 1)
 	allNodes := make([]*weightedLeastPingNode, 0, len(candidates))
 	healthyNodes := make([]*weightedLeastPingNode, 0, len(candidates))
 	seen := make(map[string]struct{}, len(candidates))
+	measured, alive := 0, 0
 	for _, candidate := range candidates {
 		if _, ok := seen[candidate]; ok {
 			continue
@@ -108,9 +120,13 @@ func (s *WeightedLeastPingStrategy) filterNodes(candidates []string, statuses []
 		allNodes = append(allNodes, node)
 
 		status, ok := statusByTag[candidate]
+		if ok && (status.HealthPing == nil || status.HealthPing.All >= verdictSamples) {
+			measured++ // spec016 W3: the candidate has a verdict
+		}
 		if !ok || !status.Alive {
 			continue
 		}
+		alive++
 		averageRTT := time.Duration(status.Delay) * time.Millisecond
 		all := int64(1)
 		fail := int64(0)
@@ -148,6 +164,11 @@ func (s *WeightedLeastPingStrategy) filterNodes(candidates []string, statuses []
 		healthyNodes = filtered
 	}
 	if len(healthyNodes) == 0 {
+		// spec016 W1: every candidate measured and none alive is the balancer's
+		// fallback. Otherwise (W2, spec001 FR-006) every positive-weight candidate.
+		if s.FallbackTag != "" && len(allNodes) > 0 && measured == len(allNodes) && alive == 0 {
+			return nil
+		}
 		healthyNodes = allNodes
 	}
 	sort.Slice(healthyNodes, func(i, j int) bool {

@@ -20,6 +20,12 @@ type BalancingPrincipleTarget interface {
 	GetPrincipleTarget([]string) []string
 }
 
+// BalancingFallbackState is a strategy that knows when it yields no candidate,
+// so that the balancer falls back (spec016).
+type BalancingFallbackState interface {
+	FallbackActive([]string) bool
+}
+
 type RoundRobinStrategy struct {
 	FallbackTag string
 
@@ -147,6 +153,26 @@ func (r *Router) GetPrincipleTarget(tag string) ([]string, error) {
 		return nil, errors.New("unsupported GetPrincipleTarget")
 	}
 	return nil, errors.New("cannot find tag")
+}
+
+// GetFallback implements routing.BalancerFallback
+func (r *Router) GetFallback(tag string) (string, bool, bool, error) {
+	b, ok := (*r.balancers.Load())[tag]
+	if !ok {
+		return "", false, false, errors.New("cannot find tag")
+	}
+	s, ok := b.strategy.(BalancingFallbackState)
+	if !ok {
+		return b.fallbackTag, false, false, nil
+	}
+	candidates, err := b.SelectOutbounds()
+	if err != nil {
+		if b.fallbackTag != "" { // as PickOutbound
+			return b.fallbackTag, true, true, nil
+		}
+		return "", false, false, errors.New("unable to select outbounds").Base(err)
+	}
+	return b.fallbackTag, b.fallbackTag != "" && s.FallbackActive(candidates), true, nil
 }
 
 // SetOverrideTarget implements routing.BalancerOverrider

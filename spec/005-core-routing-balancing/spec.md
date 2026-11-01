@@ -23,6 +23,8 @@ Then 记录选择分布、规则状态及并发行为，不以测试文件存在
   JSON 继续拒绝零/负配置权重；原始 protobuf 可传非有限值，运行时排除。
 - Alive、minSamples、失败率 tolerance、maxRTT 和 rttTolerance 决定健康资格。
   maxRTT 相等排除；bestRTT + rttTolerance 相等保留；tolerance=0 关闭失败率过滤。
+- 健康池为空时回到所有正权重候选；balancer 有 `fallbackTag` 且每个候选都已测出、无一存活时
+  不选候选，改走 fallback，`GetBalancerInfo` 报告 `fallback`（[spec016](../016-weighted-least-ping-fallback/spec.md)，2026-11-02）。
 - Burst 使用 Average，无 HealthPing 则用 Delay 毫秒。存在健康候选不混入 dead；
   观测缺失/出错或全不健康时回到全部有限正权重候选，空池返回空。
 - 按 tag 稳定排序、平滑加权轮询、并发选择有锁；池外累计状态清理。

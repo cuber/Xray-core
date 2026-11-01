@@ -44,6 +44,15 @@ func (s *routingServer) GetBalancerInfo(ctx context.Context, request *GetBalance
 			}
 		}
 	}
+
+	if bf, ok := s.router.(routing.BalancerFallback); ok { // spec016
+		tag, active, reported, err := bf.GetFallback(request.GetTag())
+		if err != nil {
+			errors.LogInfoInner(ctx, err, "unable to obtain fallback")
+		} else {
+			ret.Balancer.Fallback = &FallbackInfo{Tag: tag, Active: active, Reported: reported}
+		}
+	}
 	return &ret, nil
 }
 
