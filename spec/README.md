@@ -34,6 +34,7 @@ reference sibling repositories as integration evidence, not implementation input
 | [014](014-observatory-track/spec.md) | Burst observatory `track`: an outbound's observation follows another outbound's probe, so balancers fail over on one probe per path; read-only `ObservatoryService.GetTrack`, Portal display (approved 2026-10-29, no draft) |
 | [015](015-observatory-force-down/spec.md) | Burst observatory force down: a control-plane-owned runtime set of probes that balancers treat as dead (and their `track` followers); `OutboundStatus.force_down*`, `ObservatoryService.Get/SetForceDown`; probing and measured health unchanged (promoted from draft004, approved 2026-10-30) |
 | [016](016-weighted-least-ping-fallback/spec.md) | weightedLeastPing fallback: with a `fallbackTag`, a balancer whose candidates are all measured and none alive uses it (W1); otherwise FR-006 unchanged; `GetBalancerInfo` reports `fallback` (approved 2026-11-02, hq la.aaitr.att) |
+| [017](017-balancer-fallback-chain/spec.md) | Balancer fallback chains: a `fallbackTag` may name a balancer, nested to any depth; the fallback graph must be acyclic (checked at every publish), each pick resolves on one map with a guard, a connection passes each loopback once; `ListBalancers`, `GetLoopGuards`, `FallbackInfo.chain` (approved 2026-11-05, asz.lite `hk-balancer` → `ahk-balancer`) |
 
 The 2026-10-17 mainline review keeps feature boundaries stable rather than
 splitting AnyTLS inbound/outbound or merging traffic listeners003 with direct
@@ -66,7 +67,7 @@ last in the original 001-008 reconstruction. Later features allocate new IDs.
 On 2026-09-27 the user authorized repository-local renumbering: old global
 005/006/007/008/009/010/011/012 map to local 001/002/003/004/005/006/007/008.
 Historical hashes, requirement IDs, test names and evidence filenames remain
-provenance, not allocations in the new sequence. Next spec: 017; next draft: 005.
+provenance, not allocations in the new sequence. Next spec: 018; next draft: 005.
 Core draft002 was promoted to [spec010](010-upstream-main-upgrade/spec.md)
 on 2026-10-14 following explicit implementation authorization.
 
