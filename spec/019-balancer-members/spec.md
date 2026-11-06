@@ -108,7 +108,8 @@ computed from the one below.
   would load a route without its members; xray-config spec021 gates deployment on this spec's commit, as spec019
   of xray-config does for spec017.
 - **Consumers (CP-8).** Sidecar `/xray-debug` and Portal: non-goal (2026-11-06), as for spec017 and spec018; the
-  Portal's Balancers tab keeps showing the configuration.
+  Portal's Balancers tab keeps showing the configuration. Superseded the same day by [spec020](../020-balancer-picks/spec.md), which the
+  Sidecar and the Portal read.
 
 ## Non-goals (2026-11-06)
 

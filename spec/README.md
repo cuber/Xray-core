@@ -37,6 +37,7 @@ reference sibling repositories as integration evidence, not implementation input
 | [017](017-balancer-fallback-chain/spec.md) | Balancer fallback chains: a `fallbackTag` may name a balancer, nested to any depth; the fallback graph must be acyclic (checked at every publish), each pick resolves on one map with a guard, a connection passes each loopback once; `ListBalancers`, `GetLoopGuards`, `FallbackInfo.chain` (approved 2026-11-05, implemented 2026-11-06; asz.lite `hk-balancer` → `ahk-balancer` → `ctc-balancer`) |
 | [018](018-startup-loop-checks/spec.md) | Loops refused before start: a `dialerProxy` cycle (S1) and a possible loop through a loopback (S2) fail `core.New` (`run -test` exit 23), and `AddRule`, `RemoveRule`, `OverrideBalancerTarget` and `AddOutbound` refuse a change that would create one; no new runtime state (approved 2026-11-06) |
 | [019](019-balancer-members/spec.md) | Balancers as members: a balancer lists member balancers (`balancers`), each level picks among its own candidates with its own weights, a member's availability and delay bubble up from its level and fallback; members need a fallbackTag and every outbound observed; one acyclic graph of member and fallback edges; `ListBalancers` flat with members and status (approved 2026-11-06) |
+| [020](020-balancer-picks/spec.md) | Balancer picks on the control plane: each candidate of a level carries its status as the level reads it and the share of the level's new picks it takes now (leastPing's pick, weightedLeastPing's weight over its pool, and so on), with the strategy's name; `xray api bi` lists every balancer with these rows; no pick path changes (approved 2026-11-06) |
 
 The 2026-10-17 mainline review keeps feature boundaries stable rather than
 splitting AnyTLS inbound/outbound or merging traffic listeners003 with direct
@@ -69,7 +70,7 @@ last in the original 001-008 reconstruction. Later features allocate new IDs.
 On 2026-09-27 the user authorized repository-local renumbering: old global
 005/006/007/008/009/010/011/012 map to local 001/002/003/004/005/006/007/008.
 Historical hashes, requirement IDs, test names and evidence filenames remain
-provenance, not allocations in the new sequence. Next spec: 020; next draft: 005.
+provenance, not allocations in the new sequence. Next spec: 021; next draft: 005.
 Core draft002 was promoted to [spec010](010-upstream-main-upgrade/spec.md)
 on 2026-10-14 following explicit implementation authorization.
 
