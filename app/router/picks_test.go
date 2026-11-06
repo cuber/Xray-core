@@ -190,3 +190,22 @@ func TestReadingSharesChangesNoPick(t *testing.T) {
 		})
 	}
 }
+
+// P2: a weight is reported at the float32 precision the configuration has, not widened.
+func TestWeightsAreReportedAsConfigured(t *testing.T) {
+	o := observedAs(map[string]time.Duration{"p": 30 * time.Millisecond, "q": 10 * time.Millisecond})
+	m := memberMap(t, o, level{
+		tag: "l", strategy: "weightedleastping", fallback: "block", selector: []string{"p", "q"},
+		weights: map[string]float32{"p": 0.1, "q": 0.8},
+	})
+	members, err := balancerView(m).members(m["l"], o.result.(*observatory.ObservationResult).Status)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if members[0].Weight != 0.1 || members[1].Weight != 0.8 {
+		t.Fatalf("weights %v %v", members[0].Weight, members[1].Weight)
+	}
+	if math.Abs(members[0].Share-1.0/9) > 1e-6 || math.Abs(members[1].Share-8.0/9) > 1e-6 {
+		t.Fatalf("shares %v %v", members[0].Share, members[1].Share)
+	}
+}

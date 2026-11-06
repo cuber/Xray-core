@@ -29,7 +29,8 @@ takes now, computed at read time from the same published map and observation the
   takes with the observation at read time:
   - leastPing: 1 for the candidate it picks;
   - weightedLeastPing: its weight over the pool's total for a candidate in the healthy pool (its smooth weighted
-    round robin gives exactly these fractions), 0 outside the pool; `weight` carries the weight;
+    round robin gives exactly these fractions), 0 outside the pool; `weight` carries the weight at the float32
+    precision the configuration has (0.1, not 0.10000000149011612);
   - roundrobin and random: equal over the candidates they pick from (not reported down);
   - leastLoad: equal over the nodes it selects;
   - an override target among the candidates takes 1 and the others 0; an override naming another outbound, and
@@ -41,8 +42,9 @@ takes now, computed at read time from the same published map and observation the
   round robin current weight. The pick path (`PickRoute`, `resolveChain`, `PickOutbound`) is unchanged.
 - **P5 CLI.** `xray api bi` without a tag lists every balancer (`ListBalancers`), with tags each one in turn; the
   text form prints the strategy, the level's status, override and fallback, and one row per candidate (kind,
-  status, delay, weight, share); `-json` prints the response as it is. With a Core before this spec, the text form
-  prints what the response has.
+  status, delay, weight, share; a live candidate the level leaves out now is `not picked`); the strategy's selects
+  only where no shares are reported. `-json` prints the response as it is. With a Core before this spec, the text
+  form prints what the response has.
 
 ## Functional Requirements
 
@@ -62,8 +64,8 @@ takes now, computed at read time from the same published map and observation the
   this spec and shows shares as unavailable.
 - **Consumers (CP-8).** Sidecar spec018 puts them in `/xray-debug`; the Portal's Balancers tab shows each balancer
   as a row with its candidates (status, delay, share) and links a member to its own row, still a flat list
-  (spec019 M10). Acceptance: xray-config spec022 checks hq's section after deployment. xray-tui keeps reading the
-  configuration (non-goal for now, its own Core pin).
+  (spec019 M10). Acceptance: xray-config spec022 checks hq's section after deployment. xray-tui shows the same
+  candidates, statuses and shares (its Core pin raised to this spec's T006 commit; user, 2026-11-06: "xray-tui 也一起改下").
 
 ## Non-goals (2026-11-06)
 

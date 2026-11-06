@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	"slices"
+	"strconv"
 
 	"google.golang.org/protobuf/proto"
 
@@ -199,7 +200,7 @@ func (v balancerView) members(b *Balancer, statuses []*observatory.OutboundStatu
 	for _, candidate := range candidates {
 		member := routing.BalancerMember{
 			Tag: candidate, Balancer: slices.Contains(b.members, candidate),
-			Weight: weights[candidate], Share: shares[candidate],
+			Weight: reportedWeight(weights[candidate]), Share: shares[candidate],
 		}
 		status := reader.observed[candidate]
 		if member.Balancer {
@@ -269,6 +270,16 @@ func observationOf(b *Balancer) []*observatory.OutboundStatus {
 		return nil
 	}
 	return observation.Status
+}
+
+// reportedWeight is a weight at the float32 precision the configuration gives it: 0.1, not
+// 0.10000000149011612 (spec020 P2). Picks keep using the weight as it is.
+func reportedWeight(w float64) float64 {
+	v, err := strconv.ParseFloat(strconv.FormatFloat(w, 'g', -1, 32), 64)
+	if err != nil {
+		return w
+	}
+	return v
 }
 
 func balancerStatus(status *observatory.OutboundStatus) routing.BalancerStatus {

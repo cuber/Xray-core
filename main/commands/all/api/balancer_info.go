@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	routerService "github.com/xtls/xray-core/app/router/command"
 	"github.com/xtls/xray-core/main/commands/base"
 )
 
-// TODO: support "-json" flag for json output
 var cmdBalancerInfo = &base.Command{
 	CustomFlags: true,
 	UsageLine:   "{{.Exec}} api bi [--server=127.0.0.1:8080] [balancer]...",
@@ -93,6 +93,11 @@ func writeBalancerInfo(w io.Writer, tag string, b *routerService.BalancerMsg) {
 		writeRow(sb, tableIndent, 1, []string{b.Override.Target}, nil)
 	}
 	// Candidates
+	picks := false
+	for _, m := range b.Members {
+		picks = picks || m.Share > 0
+	}
+	shares := false
 	if len(b.Members) > 0 {
 		width := len("candidate")
 		for _, m := range b.Members {
@@ -107,11 +112,16 @@ func writeBalancerInfo(w io.Writer, tag string, b *routerService.BalancerMsg) {
 				kind = "balancer"
 			}
 			if m.Status != nil {
+				shares = true
 				status = statusText(m.Status)
 				share = fmt.Sprintf("%.1f%%", m.Share*100)
+				if m.Share == 0 && m.Status.Alive && picks {
+					share = "not picked" // live, but the strategy leaves it out now
+				}
 			}
 			if m.Weight != 0 {
-				weight = fmt.Sprintf("%g", m.Weight)
+				// A weight is float32 in the configuration; spec020's first build reported it widened.
+				weight = strconv.FormatFloat(m.Weight, 'g', -1, 32)
 			}
 			writeRow(sb, tableIndent, i+1, []string{m.Tag, kind, status, weight, share}, formats)
 		}
@@ -124,7 +134,11 @@ func writeBalancerInfo(w io.Writer, tag string, b *routerService.BalancerMsg) {
 		}
 		sb.WriteString("  - Fallback: " + f.Tag + state + "\n")
 	}
-	// Selects
+	// Selects: the strategy's own list, which the shares already say when the Core reports them.
+	if shares {
+		io.WriteString(w, sb.String())
+		return
+	}
 	sb.WriteString("  - Selects:\n")
 	if b.PrincipleTarget != nil {
 		for i, o := range b.PrincipleTarget.Tag {

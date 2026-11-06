@@ -80,6 +80,8 @@ func TestBalancerInfoListsCandidatesAndShares(t *testing.T) {
 				{Tag: "x", Status: &routerService.BalancerStatus{}, Weight: 1},
 				{Tag: "a", Balancer: true, Status: alive(50), Weight: 2, Share: 2.0 / 3},
 				{Tag: "b", Balancer: true, Status: alive(30), Weight: 1, Share: 1.0 / 3},
+				// Live but outside the pool, with a float32 weight as spec020's first build widened it.
+				{Tag: "z", Status: alive(260), Weight: float64(float32(0.1)), Share: 0},
 			},
 			Fallback:        &routerService.FallbackInfo{Tag: "block"},
 			PrincipleTarget: &routerService.PrincipleTargetInfo{Tag: []string{"a", "b"}},
@@ -106,6 +108,7 @@ func TestBalancerInfoListsCandidatesAndShares(t *testing.T) {
 		"    1   x          outbound  unknown   1       0.0%\n",
 		"    2   a          balancer  50ms      2       66.7%\n",
 		"    3   b          balancer  30ms      1       33.3%\n",
+		"    4   z          outbound  260ms     0.1     not picked\n",
 		"    1   a-hy2      outbound  50ms      -       100.0%\n",
 		"    2   a-anytls   outbound  down      -       0.0%\n",
 		"  - Fallback: block\n",
@@ -117,6 +120,10 @@ func TestBalancerInfoListsCandidatesAndShares(t *testing.T) {
 	}
 	if old := all[strings.Index(all, "old\n"):strings.Index(all, "route  ")]; strings.Contains(old, "Candidates") || !strings.Contains(old, "    1   p") {
 		t.Errorf("an older Core's balancer:\n%s", old)
+	}
+	// With shares, the strategy's selects are not repeated.
+	if strings.Count(all, "Selects") != 1 {
+		t.Errorf("selects listed where shares are:\n%s", all)
 	}
 
 	two := runBalancerInfo(t, server, "route", "a")
