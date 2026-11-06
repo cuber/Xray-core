@@ -34,6 +34,14 @@ func (l *LeastPingStrategy) FallbackActive(candidates []string) bool {
 	return l.PickOutbound(candidates) == ""
 }
 
+// PickShares implements BalancingShares: every new pick goes to the one PickOutbound picks now.
+func (l *LeastPingStrategy) PickShares(candidates []string) (map[string]float64, map[string]float64) {
+	if pick := l.PickOutbound(candidates); pick != "" {
+		return map[string]float64{pick: 1}, nil
+	}
+	return nil, nil
+}
+
 func (l *LeastPingStrategy) PickOutbound(strings []string) string {
 	if l.observatory == nil {
 		errors.LogError(l.ctx, "observer is nil")

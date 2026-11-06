@@ -29,6 +29,23 @@ type BalancingFallbackState interface {
 	FallbackActive([]string) bool
 }
 
+// BalancingShares is a strategy that tells, without picking, the share of new picks each candidate
+// takes now, and each candidate's weight where it has weights (Core spec020 P2, P4). No share means
+// the picks use the fallback.
+type BalancingShares interface {
+	PickShares(candidates []string) (shares, weights map[string]float64)
+}
+
+// equalShares splits the picks evenly over tags, as roundrobin, random and leastLoad pick.
+func equalShares(tags []string) map[string]float64 {
+	unique := slices.Compact(slices.Sorted(slices.Values(tags)))
+	shares := make(map[string]float64, len(unique))
+	for _, tag := range unique {
+		shares[tag] = 1 / float64(len(unique))
+	}
+	return shares
+}
+
 type RoundRobinStrategy struct {
 	FallbackTag string
 	memberWrap
@@ -90,6 +107,12 @@ func aliveCandidates(ctx context.Context, o extension.Observatory, tags []string
 // advances the index.
 func (s *RoundRobinStrategy) FallbackActive(tags []string) bool {
 	return len(aliveCandidates(s.ctx, s.observatory, tags)) == 0
+}
+
+// PickShares implements BalancingShares: the turns go around the alive candidates. It never advances
+// the index.
+func (s *RoundRobinStrategy) PickShares(tags []string) (map[string]float64, map[string]float64) {
+	return equalShares(aliveCandidates(s.ctx, s.observatory, tags)), nil
 }
 
 func (s *RoundRobinStrategy) PickOutbound(tags []string) string {

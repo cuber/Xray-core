@@ -170,19 +170,43 @@ func (r *statusReader) blackhole(tag string) bool {
 	return h != nil && h.ProxySettings().GetType() == "xray.proxy.blackhole.Config"
 }
 
-// GetMembers implements routing.BalancerMembers (M10): the level's candidates in order.
+// GetMembers implements routing.BalancerMembers (M10): the level's candidates in order, each with its
+// status as the level reads it and its share of the level's new picks (spec020 P1, P2), from one
+// observation.
 func (v balancerView) GetMembers(tag string) ([]routing.BalancerMember, error) {
 	b, err := v.get(tag)
 	if err != nil {
 		return nil, err
 	}
+	return v.members(b, observationOf(b))
+}
+
+// members is GetMembers over the given observation.
+func (v balancerView) members(b *Balancer, statuses []*observatory.OutboundStatus) ([]routing.BalancerMember, error) {
 	candidates, err := b.SelectOutbounds()
 	if err != nil {
 		return nil, err
 	}
+	reader := newStatusReader(map[string]*Balancer(v), statuses, b.ohm)
+	var shares, weights map[string]float64
+	if s, ok := b.strategy.(BalancingShares); ok {
+		shares, weights = s.PickShares(candidates)
+	}
+	if target := b.override.Get(); target != "" {
+		shares = map[string]float64{target: 1} // an override takes every pick (Balancer.pick)
+	}
 	members := make([]routing.BalancerMember, 0, len(candidates))
 	for _, candidate := range candidates {
-		members = append(members, routing.BalancerMember{Tag: candidate, Balancer: slices.Contains(b.members, candidate)})
+		member := routing.BalancerMember{
+			Tag: candidate, Balancer: slices.Contains(b.members, candidate),
+			Weight: weights[candidate], Share: shares[candidate],
+		}
+		status := reader.observed[candidate]
+		if member.Balancer {
+			status = reader.balancer(candidate)
+		}
+		member.Status = balancerStatus(status)
+		members = append(members, member)
 	}
 	return members, nil
 }
@@ -194,30 +218,64 @@ func (v balancerView) GetStatus(tag string) (routing.BalancerStatus, error) {
 	if err != nil {
 		return routing.BalancerStatus{}, err
 	}
-	if b.ctx == nil {
+	statuses := observationOf(b)
+	if statuses == nil {
 		return routing.BalancerStatus{}, nil
+	}
+	return balancerStatus(newStatusReader(map[string]*Balancer(v), statuses, b.ohm).balancer(tag)), nil
+}
+
+// GetStrategy implements routing.BalancerMembers (spec020 P3).
+func (v balancerView) GetStrategy(tag string) (string, error) {
+	b, err := v.get(tag)
+	if err != nil {
+		return "", err
+	}
+	switch b.strategy.(type) {
+	case *LeastPingStrategy:
+		return "leastping", nil
+	case *WeightedLeastPingStrategy:
+		return "weightedleastping", nil
+	case *RoundRobinStrategy:
+		return "roundrobin", nil
+	case *RandomStrategy:
+		return "random", nil
+	case *LeastLoadStrategy:
+		return "leastload", nil
+	}
+	return "", nil
+}
+
+// observationOf is the instance's current observation as b's context reaches it; nil without an
+// observatory or an observation.
+func observationOf(b *Balancer) []*observatory.OutboundStatus {
+	if b.ctx == nil {
+		return nil
 	}
 	instance := core.FromContext(b.ctx)
 	if instance == nil {
-		return routing.BalancerStatus{}, nil
+		return nil
 	}
 	o, ok := instance.GetFeature(extension.ObservatoryType()).(extension.Observatory)
 	if !ok || o == nil {
-		return routing.BalancerStatus{}, nil
+		return nil
 	}
 	result, err := o.GetObservation(b.ctx)
 	if err != nil {
-		return routing.BalancerStatus{}, nil
+		return nil
 	}
 	observation, ok := result.(*observatory.ObservationResult)
 	if !ok {
-		return routing.BalancerStatus{}, nil
+		return nil
 	}
-	status := newStatusReader(map[string]*Balancer(v), observation.Status, b.ohm).balancer(tag)
+	return observation.Status
+}
+
+func balancerStatus(status *observatory.OutboundStatus) routing.BalancerStatus {
 	if status == nil {
-		return routing.BalancerStatus{}, nil
+		return routing.BalancerStatus{}
 	}
-	return routing.BalancerStatus{Known: true, Alive: status.Alive, Delay: status.Delay}, nil
+	return routing.BalancerStatus{Known: true, Alive: status.Alive, Delay: status.Delay}
 }
 
 // GetMembers implements routing.BalancerMembers on the current map.
@@ -228,4 +286,9 @@ func (r *Router) GetMembers(tag string) ([]routing.BalancerMember, error) {
 // GetStatus implements routing.BalancerMembers on the current map.
 func (r *Router) GetStatus(tag string) (routing.BalancerStatus, error) {
 	return balancerView(*r.balancers.Load()).GetStatus(tag)
+}
+
+// GetStrategy implements routing.BalancerMembers on the current map.
+func (r *Router) GetStrategy(tag string) (string, error) {
+	return balancerView(*r.balancers.Load()).GetStrategy(tag)
 }

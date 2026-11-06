@@ -64,6 +64,28 @@ func (s *WeightedLeastPingStrategy) GetPrincipleTarget(candidates []string) []st
 	return tags
 }
 
+// PickShares implements BalancingShares: smooth weighted round robin gives each node of the pool its
+// weight over the pool's total. It leaves the current weights alone.
+func (s *WeightedLeastPingStrategy) PickShares(candidates []string) (map[string]float64, map[string]float64) {
+	weights := make(map[string]float64, len(candidates))
+	for _, candidate := range candidates {
+		weights[candidate] = s.weightFor(candidate)
+	}
+	nodes := s.getNodes(candidates)
+	total := float64(0)
+	for _, node := range nodes {
+		total += node.Weight
+	}
+	if total <= 0 {
+		return nil, weights
+	}
+	shares := make(map[string]float64, len(nodes))
+	for _, node := range nodes {
+		shares[node.Tag] = node.Weight / total
+	}
+	return shares, weights
+}
+
 func (s *WeightedLeastPingStrategy) PickOutbound(candidates []string) string {
 	return s.pickWeighted(s.getNodes(candidates))
 }

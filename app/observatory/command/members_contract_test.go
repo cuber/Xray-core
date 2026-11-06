@@ -56,10 +56,12 @@ func newMembersFixture(t *testing.T) (*trackFixture, handlercmd.HandlerServiceCl
 				map[string]any{
 					"tag": "route", "selector": []string{"x"}, "balancers": []string{"a", "b"},
 					"strategy": map[string]any{"type": "weightedLeastPing", "settings": map[string]any{
+						// A weight matches by substring, the first that matches: x-main, which contains "a",
+						// comes first (spec020's shares showed it taking a's weight).
 						"minSamples": 1, "weights": []any{
+							map[string]any{"match": "x-main", "value": 1},
 							map[string]any{"match": "a", "value": 2},
 							map[string]any{"match": "b", "value": 1},
-							map[string]any{"match": "x-main", "value": 1},
 						},
 					}},
 					"fallbackTag": "block",
@@ -102,6 +104,25 @@ func members(msg *routercmd.BalancerMsg) string {
 	return strings.Join(out, " ")
 }
 
+// picks renders each candidate's status as the level reads it and its share (Core spec020 P1, P2).
+func picks(msg *routercmd.BalancerMsg) string {
+	var out []string
+	for _, m := range msg.Members {
+		status := "absent"
+		switch s := m.Status; {
+		case s == nil:
+		case !s.Known:
+			status = "unknown"
+		case s.Alive:
+			status = "alive"
+		default:
+			status = "down"
+		}
+		out = append(out, fmt.Sprintf("%s:%s:%.2f", m.Tag, status, m.Share))
+	}
+	return strings.Join(out, " ")
+}
+
 func memberStatus(msg *routercmd.BalancerMsg) string {
 	s := msg.Status
 	switch {
@@ -136,6 +157,14 @@ func TestBalancerMembersContract(t *testing.T) {
 	if got := members(f.balancer(t, "a")); got != "a-anytls:outbound a-hy2:outbound" {
 		t.Fatalf("a members = %s", got)
 	}
+	// spec020 P2, P3: weights 2, 1, 1 over a healthy pool.
+	route := f.balancer(t, "route")
+	if got := picks(route); got != "x-main:alive:0.25 a:alive:0.50 b:alive:0.25" || route.Strategy != "weightedleastping" {
+		t.Fatalf("route picks = %s (%s)", got, route.Strategy)
+	}
+	if weights := fmt.Sprint(route.Members[0].Weight, route.Members[1].Weight, route.Members[2].Weight); weights != "1 2 1" {
+		t.Fatalf("route weights = %s", weights)
+	}
 
 	seen := func(n int) []string {
 		var got []string
@@ -148,15 +177,28 @@ func TestBalancerMembersContract(t *testing.T) {
 		return got
 	}
 	for _, step := range []struct {
-		down              []string
-		a, route, without string
+		down               []string
+		a, route, without  string
+		aPicks, routePicks string
 	}{
 		// a's faster protocol is forced down: a stays up on its other one.
-		{[]string{"a-hy2"}, "alive", "alive", "a-hy2"},
+		{
+			[]string{"a-hy2"},
+			"alive", "alive", "a-hy2",
+			"a-anytls:alive:1.00 a-hy2:down:0.00", "x-main:alive:0.25 a:alive:0.50 b:alive:0.25",
+		},
 		// both of a's: a bubbles up as down and route stops picking it.
-		{[]string{"a-hy2", "a-anytls"}, "down", "alive", "a-"},
+		{
+			[]string{"a-hy2", "a-anytls"},
+			"down", "alive", "a-",
+			"a-anytls:down:0.00 a-hy2:down:0.00", "x-main:alive:0.50 a:down:0.00 b:alive:0.50",
+		},
 		// everything: route is down, its picks use its blackhole fallback.
-		{[]string{"a-hy2", "a-anytls", "b-hy2", "b-anytls", "x-main"}, "down", "down", "-"},
+		{
+			[]string{"a-hy2", "a-anytls", "b-hy2", "b-anytls", "x-main"},
+			"down", "down", "-",
+			"a-anytls:down:0.00 a-hy2:down:0.00", "x-main:down:0.00 a:down:0.00 b:down:0.00",
+		},
 	} {
 		if _, err := f.setForceDown(step.down...); err != nil {
 			t.Fatal(err)
@@ -166,6 +208,12 @@ func TestBalancerMembersContract(t *testing.T) {
 		}
 		if got := memberStatus(f.balancer(t, "route")); got != step.route {
 			t.Fatalf("forced %v: route is %s, want %s", step.down, got, step.route)
+		}
+		if got := picks(f.balancer(t, "a")); got != step.aPicks {
+			t.Fatalf("forced %v: a picks %s, want %s", step.down, got, step.aPicks)
+		}
+		if got := picks(f.balancer(t, "route")); got != step.routePicks {
+			t.Fatalf("forced %v: route picks %s, want %s", step.down, got, step.routePicks)
 		}
 		for _, tag := range seen(40) {
 			if strings.HasPrefix(tag, step.without) || step.route == "down" && tag != "block" {

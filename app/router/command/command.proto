@@ -105,6 +105,12 @@ message BalancerMember {
   string tag = 1;
   // `tag` names a member balancer (spec019 M1); false: an outbound the selector matched.
   bool balancer = 2;
+  // spec020 P1: the candidate's status as this level reads it; absent from a Core before spec020.
+  BalancerStatus status = 3;
+  // spec020 P2: its weight in a weighted strategy (0 otherwise), and the share of the level's new picks it takes
+  // now, 0 to 1.
+  double weight = 4;
+  double share = 5;
 }
 
 // spec019 M4: a balancer's availability and delay as the level above it reads them.
@@ -123,6 +129,8 @@ message BalancerMsg {
   // spec019 M10: the level's candidates, in order (the selector's outbounds, then the members).
   repeated BalancerMember members = 8;
   BalancerStatus status = 9;
+  // spec020 P3: the level's strategy as loaded (leastping, weightedleastping, roundrobin, random, leastload).
+  string strategy = 10;
 }
 
 message GetBalancerInfoRequest {

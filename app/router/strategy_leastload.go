@@ -74,6 +74,15 @@ func (s *LeastLoadStrategy) FallbackActive(candidates []string) bool {
 	return len(s.pickOutbounds(candidates)) == 0
 }
 
+// PickShares implements BalancingShares: an even die over the nodes it selects, never rolled here.
+func (s *LeastLoadStrategy) PickShares(candidates []string) (map[string]float64, map[string]float64) {
+	var tags []string
+	for _, n := range s.pickOutbounds(candidates) {
+		tags = append(tags, n.Tag)
+	}
+	return equalShares(tags), nil
+}
+
 func (s *LeastLoadStrategy) PickOutbound(candidates []string) string {
 	selects := s.pickOutbounds(candidates)
 	count := len(selects)

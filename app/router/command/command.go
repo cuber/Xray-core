@@ -62,11 +62,17 @@ func balancerMsg(ctx context.Context, r any, tag string) (*BalancerMsg, error) {
 			errors.LogInfoInner(ctx, err, "unable to obtain members")
 		} else {
 			for _, member := range members {
-				msg.Members = append(msg.Members, &BalancerMember{Tag: member.Tag, Balancer: member.Balancer})
+				msg.Members = append(msg.Members, &BalancerMember{
+					Tag: member.Tag, Balancer: member.Balancer, Weight: member.Weight, Share: member.Share, // spec020
+					Status: &BalancerStatus{Known: member.Status.Known, Alive: member.Status.Alive, Delay: member.Status.Delay},
+				})
 			}
 		}
 		if status, err := bm.GetStatus(tag); err == nil {
 			msg.Status = &BalancerStatus{Known: status.Known, Alive: status.Alive, Delay: status.Delay}
+		}
+		if strategy, err := bm.GetStrategy(tag); err == nil {
+			msg.Strategy = strategy // spec020 P3
 		}
 	}
 

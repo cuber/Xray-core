@@ -38,6 +38,11 @@ func (s *RandomStrategy) FallbackActive(candidates []string) bool {
 	return len(aliveCandidates(s.ctx, s.observatory, candidates)) == 0
 }
 
+// PickShares implements BalancingShares: an even die over the alive candidates, never rolled here.
+func (s *RandomStrategy) PickShares(candidates []string) (map[string]float64, map[string]float64) {
+	return equalShares(aliveCandidates(s.ctx, s.observatory, candidates)), nil
+}
+
 func (s *RandomStrategy) PickOutbound(candidates []string) string {
 	candidates = aliveCandidates(s.ctx, s.observatory, candidates)
 
