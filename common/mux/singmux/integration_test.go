@@ -1,6 +1,7 @@
 package singmux_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	"github.com/xtls/xray-core/common/protocol"
 	"github.com/xtls/xray-core/common/serial"
 	"github.com/xtls/xray-core/core"
+	"github.com/xtls/xray-core/features/routing"
 	_ "github.com/xtls/xray-core/main/distro/all"
 	"github.com/xtls/xray-core/proxy/shadowsocks_2022"
 	"golang.org/x/net/proxy"
@@ -102,6 +104,41 @@ func echoTCP(t *testing.T, marker string) string {
 	return l.Addr().String()
 }
 
+// probeEcho is echoTCP for the outbounds behind the alpha balancer: it answers their observatory's
+// probe with 204 and echoes anything else after its marker.
+func probeEcho(t *testing.T, marker string) string {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { l.Close() })
+	go func() {
+		for {
+			conn, err := l.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer conn.Close()
+				conn.SetDeadline(time.Now().Add(5 * time.Minute))
+				first := make([]byte, 32<<10)
+				n, err := conn.Read(first)
+				if err != nil {
+					return
+				}
+				if bytes.HasPrefix(first[:n], []byte("GET /generate_204 ")) || bytes.HasPrefix(first[:n], []byte("HEAD /generate_204 ")) {
+					conn.Write([]byte("HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n"))
+					return
+				}
+				conn.Write(append([]byte(marker), first[:n]...))
+				io.Copy(conn, conn)
+			}()
+		}
+	}()
+	return l.Addr().String()
+}
+
 func echoUDP(t *testing.T) string {
 	t.Helper()
 	c, err := net.ListenPacket("udp", "127.0.0.1:0")
@@ -159,6 +196,7 @@ func newFixture(t *testing.T) *fixture {
 		}
 		return in
 	}
+	alpha := probeEcho(t, "A")
 	logLevel := "error"
 	if os.Getenv("SINGMUX_TEST_DEBUG") != "" {
 		logLevel = "debug"
@@ -180,6 +218,14 @@ func newFixture(t *testing.T) *fixture {
 		"outbounds": []any{
 			freedom("a", echoTCP(t, "A")), freedom("b", echoTCP(t, "B")), freedom("udp", echoUDP(t)),
 			ssOut("loop-ss", f.ssPort, false), ssOut("loop-ss-mux", f.ssPort, true), ssOut("loop-ss-off", offPort, false),
+			freedom("alpha-x", alpha), freedom("alpha-n-1", alpha), freedom("alpha-n-2", alpha),
+		},
+		// alpha.test, the bulk streams' target, goes through hq's shape (Core spec019, xray-config spec021): a
+		// weightedLeastPing level over an outbound and a leastPing node balancer, so the gate's measurement of this
+		// workload (xrayctl gate plan) covers balancer picks.
+		"burstObservatory": map[string]any{
+			"subjectSelector": []string{"alpha-"},
+			"pingConfig":      map[string]any{"destination": "http://probe.test/generate_204", "interval": "1s", "sampling": 1, "timeout": "1s"},
 		},
 		"routing": map[string]any{"rules": []any{
 			map[string]any{"type": "field", "inboundTag": []string{"loop-in"}, "domain": []string{"full:cool.test"}, "outboundTag": "loop-ss-mux"},
@@ -188,6 +234,18 @@ func newFixture(t *testing.T) *fixture {
 			map[string]any{"type": "field", "network": "udp", "outboundTag": "udp"},
 			map[string]any{"type": "field", "user": []string{"mihomo", "singbox", "loop"}, "domain": []string{"full:user.test"}, "outboundTag": "b"},
 			map[string]any{"type": "field", "domain": []string{"full:beta.test", "full:sniff.test"}, "outboundTag": "b"},
+			map[string]any{"type": "field", "domain": []string{"full:alpha.test"}, "balancerTag": "alpha"},
+		}, "balancers": []any{
+			map[string]any{
+				"tag": "alpha", "selector": []string{"alpha-x"}, "balancers": []string{"alpha-n"},
+				"strategy": map[string]any{"type": "weightedLeastPing", "settings": map[string]any{
+					"minSamples": 1, "weights": []any{
+						map[string]any{"match": "alpha-n", "value": 2}, map[string]any{"match": "alpha-x", "value": 1},
+					},
+				}},
+				"fallbackTag": "alpha-x",
+			},
+			map[string]any{"tag": "alpha-n", "selector": []string{"alpha-n-"}, "strategy": map[string]any{"type": "leastPing"}, "fallbackTag": "alpha-n-1"},
 		}},
 	}
 	raw, err := json.Marshal(config)
@@ -199,6 +257,18 @@ func newFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { x.Close() })
+	// Picks reach the member once its level is measured.
+	balancers := x.GetFeature(routing.RouterType()).(routing.BalancerMembers)
+	for deadline := time.Now().Add(15 * time.Second); ; time.Sleep(50 * time.Millisecond) {
+		node, _ := balancers.GetStatus("alpha-n")
+		top, _ := balancers.GetStatus("alpha")
+		if node.Alive && top.Alive {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("the alpha balancers were not measured: alpha-n %+v, alpha %+v", node, top)
+		}
+	}
 	conn, err := grpc.NewClient(fmt.Sprintf("127.0.0.1:%d", apiPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatal(err)
