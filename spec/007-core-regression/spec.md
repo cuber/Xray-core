@@ -107,4 +107,18 @@ pool exists: a data race, and a nil pointer dereference in that goroutine, which
 Validation: `TestRoutingScriptBeforeStart`, `TestDNSScriptBeforeStart`; `go test -race -count=3 ./proxy/loopback`
 (spec018's routing-script loop) passes, and failed with two `DATA RACE` reports on `scriptEngine.pool` before.
 
+## FR-005 - The Classic Observatory Hands Out Copies
+
+Found 2026-11-06 by Core spec019's concurrent-reload test (FR-007), the first to pick through a
+balancer while the upstream classic `observatory` probes. `GetObservation` returned the observatory's
+own status slice, whose entries the prober updates in place under `statusLock`, which the reader never
+took: a data race for every balancer reading it. The fleet uses `burstObservatory`, which builds a new
+result per read.
+
+- `GetObservation` copies each status under `statusLock`; a reader changing its copy leaves the
+  observatory's untouched. What a status says is unchanged.
+
+Validation: `TestGetObservationCopiesUnderTheLock` (`-race`); spec019's `TestMembersUnderConcurrentReloads`
+reported `DATA RACE` in `updateStatusForResult` and `aliveCandidates` before, none after.
+
 [技术计划](plan.md) · [任务](tasks.md) · [测试](tests.md) · [检查清单](checklists/requirements.md)

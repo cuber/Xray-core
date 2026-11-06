@@ -38,8 +38,16 @@ type Observer struct {
 	dispatcher routing.Dispatcher
 }
 
+// GetObservation copies the statuses under the lock: the prober updates them in place (Core spec007
+// FR-005).
 func (o *Observer) GetObservation(ctx context.Context) (proto.Message, error) {
-	return &ObservationResult{Status: o.status}, nil
+	o.statusLock.Lock()
+	defer o.statusLock.Unlock()
+	statuses := make([]*OutboundStatus, 0, len(o.status))
+	for _, status := range o.status {
+		statuses = append(statuses, proto.Clone(status).(*OutboundStatus))
+	}
+	return &ObservationResult{Status: statuses}, nil
 }
 
 func (o *Observer) Type() interface{} {
