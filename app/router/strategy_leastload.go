@@ -17,6 +17,7 @@ import (
 
 // LeastLoadStrategy represents a least load balancing strategy
 type LeastLoadStrategy struct {
+	memberWrap
 	settings *StrategyLeastLoadConfig
 	costs    *WeightManager
 
@@ -62,7 +63,7 @@ type node struct {
 func (s *LeastLoadStrategy) InjectContext(ctx context.Context) {
 	s.ctx = ctx
 	common.Must(core.RequireFeatures(s.ctx, func(observatory extension.Observatory) error {
-		s.observer = observatory
+		s.observer = s.wrapped(observatory)
 		return nil
 	}))
 }

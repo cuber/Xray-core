@@ -9,6 +9,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/xtls/xray-core/common/errors"
+	"github.com/xtls/xray-core/core"
+	"github.com/xtls/xray-core/features/extension"
 	"github.com/xtls/xray-core/features/outbound"
 )
 
@@ -62,11 +64,15 @@ func (g *loopGraph) reach(h outbound.Handler, label string, out *[]loopEdge) {
 }
 
 // chain adds every outbound a rule's balancer may lead to: at each level of its fallback chain the
-// candidates its selectors match, its override target, and after the last level its fallback
-// outbound, or the default outbound when it has none (spec017 B4).
+// candidates its selectors match, every level of its member balancers (Core spec019 M9), its
+// override target, and after the last level its fallback outbound, or the default outbound when it
+// has none (spec017 B4).
 func (g *loopGraph) chain(b *Balancer, label string, out *[]loopEdge) {
-	level := label + ", balancer " + b.tag
-	for seen := map[string]bool{}; b != nil && !seen[b.tag]; {
+	g.level(b, label+", balancer "+b.tag, out, map[string]bool{})
+}
+
+func (g *loopGraph) level(b *Balancer, level string, out *[]loopEdge, seen map[string]bool) {
+	for b != nil && !seen[b.tag] {
 		seen[b.tag] = true
 		for _, tag := range g.tags {
 			for _, selector := range b.selectors {
@@ -74,6 +80,11 @@ func (g *loopGraph) chain(b *Balancer, label string, out *[]loopEdge) {
 					g.reach(g.byTag[tag], level, out)
 					break
 				}
+			}
+		}
+		for _, member := range b.members {
+			if inner, ok := g.balancers[member]; ok {
+				g.level(inner, level+" member "+member, out, seen)
 			}
 		}
 		target, set := g.override[b.tag]
@@ -247,9 +258,15 @@ func shortestCycle(edges map[string][]loopEdge, component []string) string {
 }
 
 // CheckLoopbackLoops implements outbound.LoopChecker on the published rules and balancers (S3.1,
-// S3.3).
+// S3.3), with Core spec019 M6. The first call is the start check: from then on a routing change
+// runs M6 too, when the handlers and the observatory are in place.
 func (r *Router) CheckLoopbackLoops(handlers []outbound.Handler, def outbound.Handler) error {
-	return r.checkLoopbacks(*r.rules.Load(), *r.balancers.Load(), nil, handlers, def)
+	balancers := *r.balancers.Load()
+	if err := r.checkMemberObservation(balancers, handlers); err != nil {
+		return err
+	}
+	r.started.Store(true)
+	return r.checkLoopbacks(*r.rules.Load(), balancers, nil, handlers, def)
 }
 
 // checkLoopbacks is S2 over the given routing. A routing script, which replaces the rules, is not
@@ -263,13 +280,87 @@ func (r *Router) checkLoopbacks(rules []*Rule, balancers map[string]*Balancer, o
 	return loopbackLoops(&loopGraph{rules: rules, balancers: balancers, override: override, def: def}, handlers)
 }
 
+// checkMemberObservation is Core spec019 M6: every balancer with members, and every balancer reached
+// from one through members or fallbacks, has every outbound candidate and outbound fallback observed;
+// a blackhole fallback needs none.
+func (r *Router) checkMemberObservation(m map[string]*Balancer, handlers []outbound.Handler) error {
+	reached := map[string]bool{}
+	var reach func(string)
+	reach = func(tag string) {
+		b, ok := m[tag]
+		if !ok || reached[tag] {
+			return
+		}
+		reached[tag] = true
+		for _, member := range b.members {
+			reach(member)
+		}
+		reach(b.fallbackTag)
+	}
+	for _, tag := range slices.Sorted(maps.Keys(m)) {
+		if len(m[tag].members) > 0 {
+			reach(tag)
+		}
+	}
+	if len(reached) == 0 {
+		return nil
+	}
+	observes := r.observes()
+	byTag := make(map[string]outbound.Handler, len(handlers))
+	for _, h := range handlers {
+		byTag[h.Tag()] = h
+	}
+	for _, tag := range slices.Sorted(maps.Keys(reached)) {
+		b := m[tag]
+		var outbounds []string
+		for _, h := range slices.Sorted(maps.Keys(byTag)) {
+			for _, selector := range b.selectors {
+				if strings.HasPrefix(h, selector) {
+					outbounds = append(outbounds, h)
+					break
+				}
+			}
+		}
+		if _, isBalancer := m[b.fallbackTag]; !isBalancer && b.fallbackTag != "" {
+			if h := byTag[b.fallbackTag]; h == nil || h.ProxySettings().GetType() != "xray.proxy.blackhole.Config" {
+				outbounds = append(outbounds, b.fallbackTag)
+			}
+		}
+		for _, outboundTag := range outbounds {
+			if !observes(outboundTag) {
+				return errors.New("balancer ", tag, ": outbound ", outboundTag,
+					" is not observed (balancer members need every outbound observed)")
+			}
+		}
+	}
+	return nil
+}
+
+// observes reads the instance's observatory (spec019 M6); without one nothing is observed.
+func (r *Router) observes() func(string) bool {
+	if r.ctx != nil {
+		if instance := core.FromContext(r.ctx); instance != nil {
+			if observed, ok := instance.GetFeature(extension.ObservatoryType()).(extension.ObservedOutbounds); ok {
+				return observed.Observes
+			}
+		}
+	}
+	return func(string) bool { return false }
+}
+
 // guardRouting runs S2 on a routing change about to be published, against the current handlers
 // (S3.2). A router over a manager that is no outbound.GraphGuard (a test's mock) is not checked.
 func (r *Router) guardRouting(rules []*Rule, balancers map[string]*Balancer, override map[string]string) error {
 	if _, ok := r.ohm.(outbound.GraphGuard); !ok {
 		return nil
 	}
-	return r.checkLoopbacks(rules, balancers, override, r.ohm.ListHandlers(r.ctx), r.ohm.GetDefaultHandler())
+	handlers := r.ohm.ListHandlers(r.ctx)
+	if r.started.Load() { // before the start check, handlers are still being added (spec019 M6)
+		if err := r.checkMemberObservation(balancers, handlers); err != nil {
+			return err
+		}
+	}
+	return r.checkLoopbacks(rules, balancers, override, handlers, r.ohm.GetDefaultHandler())
 }
 
 // lockGraph serialises a routing change and its check with handler changes (S3.4). It is taken

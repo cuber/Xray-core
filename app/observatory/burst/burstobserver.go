@@ -2,6 +2,8 @@ package burst
 
 import (
 	"context"
+	"slices"
+	"strings"
 	"sync"
 
 	"github.com/xtls/xray-core/app/observatory"
@@ -46,6 +48,27 @@ func (o *Observer) MeasuredObservation() []*observatory.OutboundStatus {
 // measured status (spec014), force fields included (spec015).
 func (o *Observer) GetTrack(ctx context.Context) ([]*observatory.TrackStatus, error) {
 	return o.track.statuses(o.MeasuredObservation()), nil
+}
+
+// Observes implements extension.ObservedOutbounds (Core spec019 M6): a subject selector of the
+// observatory or of a ping group matches it as a prefix, or it follows a probe (track, spec014).
+func (o *Observer) Observes(tag string) bool {
+	if _, follows := o.track.probeOf[tag]; follows {
+		return true
+	}
+	if o.config == nil {
+		return false
+	}
+	selectors := slices.Clone(o.config.SubjectSelector)
+	for _, group := range o.config.PingGroups {
+		selectors = append(selectors, group.SubjectSelector...)
+	}
+	for _, selector := range selectors {
+		if strings.HasPrefix(tag, selector) {
+			return true
+		}
+	}
+	return false
 }
 
 func (o *Observer) Check(tag []string) {

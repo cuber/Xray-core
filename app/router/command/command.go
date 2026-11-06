@@ -57,6 +57,19 @@ func balancerMsg(ctx context.Context, r any, tag string) (*BalancerMsg, error) {
 		}
 	}
 
+	if bm, ok := r.(routing.BalancerMembers); ok { // Core spec019 M10
+		if members, err := bm.GetMembers(tag); err != nil {
+			errors.LogInfoInner(ctx, err, "unable to obtain members")
+		} else {
+			for _, member := range members {
+				msg.Members = append(msg.Members, &BalancerMember{Tag: member.Tag, Balancer: member.Balancer})
+			}
+		}
+		if status, err := bm.GetStatus(tag); err == nil {
+			msg.Status = &BalancerStatus{Known: status.Known, Alive: status.Alive, Delay: status.Delay}
+		}
+	}
+
 	if bf, ok := r.(routing.BalancerFallback); ok { // spec016
 		fallbackTag, active, reported, err := bf.GetFallback(tag)
 		if err != nil {

@@ -34,6 +34,8 @@ type Router struct {
 	// spec017 L8: connections the loop guards stopped since start.
 	fallbackChainGuard   atomic.Uint64
 	loopbackReentryGuard atomic.Uint64
+	// started is set by the start check (Core spec018 S3.1); routing changes run spec019 M6 after it.
+	started atomic.Bool
 }
 
 // Route is an implementation of routing.Route.
@@ -189,9 +191,9 @@ func (r *Router) reloadRules(config *Config, shouldAppend bool, newWebhook func(
 		newRules = append(newRules, rr)
 	}
 
-	// spec017 L2, L5: the only check point of the fallback graph, on the map about to be published
+	// spec017 L2, L5, Core spec019 M7: the only check point of the balancer graph, on the map about to be published
 	// (in append mode the old balancers with the new).
-	if err := checkFallbackCycles(newBalancers); err != nil {
+	if err := checkBalancerGraph(newBalancers); err != nil {
 		return err
 	}
 	// Core spec018 S3.2: nor a loop through a loopback, against the current handlers.

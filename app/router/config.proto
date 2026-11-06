@@ -73,6 +73,8 @@ message BalancingRule {
   string strategy = 3;
   xray.common.serial.TypedMessage strategy_settings = 4;
   string fallback_tag = 5;
+  // Core spec019 M1: member balancers, by exact tag; candidates after the selector's outbounds.
+  repeated string balancers = 6;
 }
 
 message StrategyWeight {

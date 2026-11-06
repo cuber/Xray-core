@@ -1,7 +1,7 @@
 # Plan: Balancers As Members
 
 - Spec: [spec.md](spec.md)
-- Status: approved 2026-11-06; not implemented.
+- Status: implemented 2026-11-06 (T002–T006, as below); gate T007 open.
 
 ## Code
 
@@ -16,15 +16,18 @@
   - `resolveChain` continues when a level's pick is a member balancer, as when it is a fallback naming one,
     within the same len(map)+1 guard (M3, M8).
 - `app/router/member_status.go` (new), M4 and M5:
-  - `status(b, m, observation)`: memoised over one read, override first, then the level, then the fallback;
-  - `memberObserver` wraps the observatory a strategy reads for a balancer with members: `GetObservation` returns
-    the observatory's result plus one `OutboundStatus` per member (tag, alive, delay), computed on the balancer's
-    `peers` map. `InjectContext` hands it to the strategy in place of the observatory, so the strategies are
-    unchanged.
-- M6: `features/extension` gains an internal `ObservationSubjects` (the subject selectors and the `track`
-  followers), implemented by `app/observatory` and `app/observatory/burst`. The router's start check
-  (`CheckLoopbackLoops`'s caller, spec018) and `reloadRules`/`AddHandler` check every outbound under a balancer
-  with members against them.
+  - `statusReader.balancer`: memoised over one read, override first, then the level, then the fallback. The
+    status it bubbles up is the measurement of the candidate it comes from (the best available one, else the
+    first down one), under the balancer's tag, so weightedLeastPing's sample counts carry over;
+  - `memberObservatory` wraps the observatory a strategy reads for a balancer with members: `GetObservation`
+    returns the observatory's result plus one `OutboundStatus` per known member, computed on the balancer's
+    `peers` map. Every strategy embeds `memberWrap`, which `Balancer.InjectContext` sets before the strategy takes
+    its observatory, so the strategies' decisions are unchanged; roundrobin and random read the observatory when
+    their level has members even without a fallbackTag.
+- M6: `features/extension.ObservedOutbounds` (`Observes(tag)`: a subject selector's prefix, a ping group's, or a
+  `track` follower), implemented by `app/observatory` and `app/observatory/burst`. `Router.CheckLoopbackLoops`
+  (spec018's start check and every `AddOutbound`) runs it and marks the router started; `guardRouting` (`AddRule`,
+  `RemoveRule`, overrides) runs it after that, since at Init the outbounds are not added yet.
 - spec018 S2 (`app/router/loops.go`): `loopGraph.chain` adds each member's level recursively.
 - Control plane: `BalancerMsg.members` (`MemberInfo{tag, balancer}`) and `BalancerMsg.status`
   (`MemberStatus{alive, delay, reported}`), additive fields; `command.go` fills them from the one map a read loads.

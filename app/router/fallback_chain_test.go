@@ -229,13 +229,13 @@ func TestFallbackCycleCheck(t *testing.T) {
 		{"two cycles", []string{"d>c", "c>d", "b>a", "a>b", "e>out"}, "a -> b -> a; c -> d -> c"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			err := checkFallbackCycles(balancers(c.edges...))
+			err := checkBalancerGraph(balancers(c.edges...))
 			if err == nil || !strings.HasSuffix(err.Error(), "balancer fallback cycle: "+c.want) {
-				t.Fatalf("checkFallbackCycles = %v, want %q", err, c.want)
+				t.Fatalf("checkBalancerGraph = %v, want %q", err, c.want)
 			}
 		})
 	}
-	if err := checkFallbackCycles(balancers("a>b", "b>out", "c>", "d>b")); err != nil {
+	if err := checkBalancerGraph(balancers("a>b", "b>out", "c>", "d>b")); err != nil {
 		t.Fatalf("acyclic map rejected: %v", err)
 	}
 
@@ -250,7 +250,7 @@ func TestFallbackCycleCheck(t *testing.T) {
 		observe(b, o)
 		m[b.tag] = b
 	}
-	if err := checkFallbackCycles(m); err != nil {
+	if err := checkBalancerGraph(m); err != nil {
 		t.Fatalf("64 levels rejected: %v", err)
 	}
 	if got := pickFrom(t, routerWith(m), "l00"); got != "end" {

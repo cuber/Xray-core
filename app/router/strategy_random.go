@@ -12,6 +12,7 @@ import (
 // RandomStrategy represents a random balancing strategy
 type RandomStrategy struct {
 	FallbackTag string
+	memberWrap
 
 	ctx         context.Context
 	observatory extension.Observatory
@@ -19,9 +20,9 @@ type RandomStrategy struct {
 
 func (s *RandomStrategy) InjectContext(ctx context.Context) {
 	s.ctx = ctx
-	if len(s.FallbackTag) > 0 {
+	if len(s.FallbackTag) > 0 || s.observes() {
 		common.Must(core.RequireFeatures(s.ctx, func(observatory extension.Observatory) error {
-			s.observatory = observatory
+			s.observatory = s.wrapped(observatory)
 			return nil
 		}))
 	}

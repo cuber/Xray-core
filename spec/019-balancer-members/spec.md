@@ -2,7 +2,8 @@
 
 - Feature ID: 019-balancer-members
 - Created: 2026-11-06
-- Status: Approved (2026-11-06; user after review: "可以，开始吧"); not implemented.
+- Status: Approved (2026-11-06; user after review: "可以，开始吧"); implemented 2026-11-06 (T002–T006);
+  gate T007 open.
 - Baseline: Core `1d3186e0` (develop, spec018)
 - Origin (user, 2026-11-06):
   - "现在 hq 和 xray local 有些是有两种协议的，给节点粒度加一个 balancer 用 leastPing 然后我们不是支持嵌套 balancer
@@ -34,8 +35,8 @@ computed from the one below.
 
 - **M1 Declaration.** A balancer gains `balancers`, a list of balancer tags (exact, never prefixes, so a route
   balancer cannot match itself or a sibling by a shared prefix). `selector` keeps matching outbounds only.
-- **M2 Candidates.** A level's candidates are the outbounds its `selector` matches, then its `balancers`, in their
-  order. A tag in `balancers` that names no balancer of the map is an error at publish (`balancer a: member b is
+- **M2 Candidates.** A level's candidates are the outbounds its `selector` matches (in the outbound manager's
+  order, by tag, as today), then its `balancers`, in their order. A tag in `balancers` that names no balancer of the map is an error at publish (`balancer a: member b is
   no balancer`), as is a tag listed twice. A member balancer has a `fallbackTag` (an outbound, a balancer or a
   blackhole), so a pick inside a member never ends at the default outbound (spec017 B4 holds only at the level a
   rule names): `balancer b is a member and has no fallbackTag`.

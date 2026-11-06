@@ -35,6 +35,27 @@ type BalancerFallbackChain interface {
 	GetFallbackChain(tag string) ([]FallbackHop, error)
 }
 
+// BalancerMember is one candidate of a balancer's level (Core spec019 M10).
+type BalancerMember struct {
+	Tag string
+	// Balancer: a member balancer; false: an outbound the selector matched.
+	Balancer bool
+}
+
+// BalancerStatus is a balancer's availability and delay as the level above reads them (Core spec019
+// M4); Known is false at a fresh start, before an observation below it.
+type BalancerStatus struct {
+	Known bool
+	Alive bool
+	Delay int64
+}
+
+// BalancerMembers reports a balancer's candidates and its bubbled-up status (Core spec019).
+type BalancerMembers interface {
+	GetMembers(tag string) ([]BalancerMember, error)
+	GetStatus(tag string) (BalancerStatus, error)
+}
+
 // BalancerView reads balancers from one published balancer map, so a chain never mixes two maps
 // (spec017 L-E).
 type BalancerView interface {
@@ -44,6 +65,7 @@ type BalancerView interface {
 	BalancerPrincipleTarget
 	BalancerFallback
 	BalancerFallbackChain
+	BalancerMembers
 }
 
 // BalancerLister gives a view of the current balancer map (spec017).

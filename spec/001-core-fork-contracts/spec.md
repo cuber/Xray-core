@@ -86,6 +86,8 @@ Then 记录实际通过、失败和跳过；不能把未启用公网测试算成
   同日起，单份配置能判定的环在启动前拒绝：出站 `dialerProxy` 成环，以及规则、balancer 或默认出站可能把 loopback
   送回的流量再送进 loopback（保守判定，比上游严格；`AddRule`、`RemoveRule`、`OverrideBalancerTarget`、
   `AddOutbound` 同样拒绝；[spec018](../018-startup-loop-checks/spec.md)）。
+  同日起 balancer 可以有成员 balancer（`balancers`）：每层按自己的策略和权重选，成员的可用性与延迟逐层冒泡，
+  成员必须有兜底，嵌套时所有出站都要被观测，成员边与兜底边同图无环（[spec019](../019-balancer-members/spec.md)）。
 - FR-007: user-domain 匹配及 ListRule 详细规则支持静态/动态配置，返回对象不得改写内部状态。
 - FR-008: DomainTraffic 可选开启，用户×域名、字节口径、LRU、窗口、cursor 和饱和计数保持。
 - FR-009: 与 Sidecar 的十分钟聚合、快照恢复、跨 boot 合并及匿名历史保持兼容。

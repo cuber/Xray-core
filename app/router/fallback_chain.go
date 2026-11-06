@@ -7,27 +7,160 @@ import (
 	"strings"
 
 	"github.com/xtls/xray-core/common/errors"
-	"github.com/xtls/xray-core/common/loopcheck"
 	"github.com/xtls/xray-core/features/routing"
 )
 
 // spec017: a fallbackTag that names a balancer of the map continues the pick there (B1), and a
 // published map has no fallback cycle (L1).
 
-// checkFallbackCycles rejects a balancer map whose fallback graph has a cycle, a self-reference
-// included (L1, L4). Each balancer has at most one edge, its fallbackTag; a tag that is no balancer
-// of the map ends a walk.
-func checkFallbackCycles(m map[string]*Balancer) error {
-	next := make(map[string]string, len(m))
-	for tag, b := range m {
-		if b.fallbackTag != "" {
-			next[tag] = b.fallbackTag
+// checkBalancerGraph rejects a balancer map whose graph has a cycle (L1, Core spec019 M7): an edge
+// leads from a balancer to each member and to its fallbackTag when that names a balancer, a
+// self-reference included. It also rejects a member that names no balancer or is listed twice, and a
+// member without a fallbackTag (spec019 M2). A cycle of fallback edges alone keeps L4's text; one
+// with a member edge names each edge. One cycle is printed per strongly connected set of balancers,
+// the shortest through its smallest tag, the sets in tag order.
+func checkBalancerGraph(m map[string]*Balancer) error {
+	tags := slices.Sorted(maps.Keys(m))
+	isMember := map[string]bool{}
+	edges := make(map[string][]graphEdge, len(m))
+	for _, tag := range tags {
+		b := m[tag]
+		listed := map[string]bool{}
+		for _, member := range b.members {
+			if _, ok := m[member]; !ok {
+				return errors.New("balancer ", tag, ": member ", member, " is no balancer")
+			}
+			if listed[member] {
+				return errors.New("balancer ", tag, ": member ", member, " is listed twice")
+			}
+			listed[member], isMember[member] = true, true
+			edges[tag] = append(edges[tag], graphEdge{to: member, member: true})
+		}
+		if _, ok := m[b.fallbackTag]; ok {
+			edges[tag] = append(edges[tag], graphEdge{to: b.fallbackTag})
 		}
 	}
-	if cycles := loopcheck.Functional(next); len(cycles) > 0 {
+	for _, tag := range slices.Sorted(maps.Keys(isMember)) {
+		if m[tag].fallbackTag == "" {
+			return errors.New("balancer ", tag, " is a member and has no fallbackTag")
+		}
+	}
+	var cycles []string
+	members := false
+	for _, component := range components(tags, edges) {
+		cycle, withMember := shortestBalancerCycle(component, edges)
+		if cycle != "" {
+			cycles = append(cycles, cycle)
+			members = members || withMember
+		}
+	}
+	if len(cycles) == 0 {
+		return nil
+	}
+	slices.Sort(cycles)
+	if !members {
 		return errors.New("balancer fallback cycle: ", strings.Join(cycles, "; "))
 	}
-	return nil
+	return errors.New("balancer cycle: ", strings.Join(cycles, "; "))
+}
+
+type graphEdge struct {
+	to     string
+	member bool
+}
+
+// components is Tarjan's strongly connected components of the balancer graph, each sorted.
+func components(tags []string, edges map[string][]graphEdge) [][]string {
+	index, low, onStack := map[string]int{}, map[string]int{}, map[string]bool{}
+	var stack []string
+	var out [][]string
+	var visit func(string)
+	visit = func(v string) {
+		index[v], low[v] = len(index), len(index)
+		stack = append(stack, v)
+		onStack[v] = true
+		for _, e := range edges[v] {
+			if _, seen := index[e.to]; !seen {
+				visit(e.to)
+				low[v] = min(low[v], low[e.to])
+			} else if onStack[e.to] {
+				low[v] = min(low[v], index[e.to])
+			}
+		}
+		if low[v] == index[v] {
+			var component []string
+			for {
+				w := stack[len(stack)-1]
+				stack = stack[:len(stack)-1]
+				onStack[w] = false
+				component = append(component, w)
+				if w == v {
+					break
+				}
+			}
+			slices.Sort(component)
+			out = append(out, component)
+		}
+	}
+	for _, tag := range tags {
+		if _, seen := index[tag]; !seen {
+			visit(tag)
+		}
+	}
+	return out
+}
+
+// shortestBalancerCycle prints the shortest cycle through a component's smallest balancer, "" for a
+// single balancer without an edge to itself, and says whether a member edge is on it.
+func shortestBalancerCycle(component []string, edges map[string][]graphEdge) (string, bool) {
+	start, in := component[0], map[string]bool{}
+	for _, v := range component {
+		in[v] = true
+	}
+	type step struct {
+		from string
+		edge graphEdge
+	}
+	parent := map[string]step{}
+	for queue := []string{start}; len(queue) > 0; queue = queue[1:] {
+		v := queue[0]
+		for _, e := range edges[v] {
+			if !in[e.to] {
+				continue
+			}
+			if e.to == start {
+				path := []graphEdge{e}
+				for at := v; at != start; at = parent[at].from {
+					path = append(path, parent[at].edge)
+				}
+				slices.Reverse(path)
+				return formatBalancerCycle(start, path)
+			}
+			if _, seen := parent[e.to]; !seen {
+				parent[e.to] = step{from: v, edge: e}
+				queue = append(queue, e.to)
+			}
+		}
+	}
+	return "", false
+}
+
+func formatBalancerCycle(start string, path []graphEdge) (string, bool) {
+	withMember := slices.ContainsFunc(path, func(e graphEdge) bool { return e.member })
+	var b strings.Builder
+	b.WriteString(start)
+	for _, e := range path {
+		switch {
+		case !withMember:
+			b.WriteString(" -> ")
+		case e.member:
+			b.WriteString(" -[member]-> ")
+		default:
+			b.WriteString(" -[fallback]-> ")
+		}
+		b.WriteString(e.to)
+	}
+	return b.String(), withMember
 }
 
 // pickTag is a rule's outbound tag: its own, or its balancer's pick with the fallback chain resolved
@@ -45,14 +178,14 @@ func (r *Router) pickTag(rule *Rule) (string, error) {
 }
 
 // resolveChain picks through first and then, while a level's result is its fallbackTag naming a
-// balancer of m, through that balancer (B1-B4). Every published map passed L1, so more than len(m)+1
-// levels is a Core defect: the pick is counted, logged and dropped, never sent to the default
-// outbound (L6).
+// balancer of m (B1-B4) or one of its member balancers (Core spec019 M3), through that balancer.
+// Every published map passed L1 (spec019 M7), so more than len(m)+1 levels is a Core defect: the
+// pick is counted, logged and dropped, never sent to the default outbound (L6, spec019 M8).
 func (r *Router) resolveChain(first *Balancer, m map[string]*Balancer) (string, error) {
 	b := first
 	for range len(m) + 1 {
 		tag, fallback, err := b.pick()
-		if err != nil || !fallback {
+		if err != nil || !fallback && !slices.Contains(b.members, tag) {
 			return tag, err
 		}
 		next, ok := m[tag]

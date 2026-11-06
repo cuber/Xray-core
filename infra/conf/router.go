@@ -3,6 +3,7 @@ package conf
 import (
 	"encoding/json"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/xtls/xray-core/app/router"
@@ -22,6 +23,7 @@ type StrategyConfig struct {
 type BalancingRule struct {
 	Tag         string         `json:"tag"`
 	Selectors   StringList     `json:"selector"`
+	Balancers   StringList     `json:"balancers"` // Core spec019 M1: member balancers, by exact tag
 	Strategy    StrategyConfig `json:"strategy"`
 	FallbackTag string         `json:"fallbackTag"`
 }
@@ -31,8 +33,15 @@ func (r *BalancingRule) Build() (*router.BalancingRule, error) {
 	if r.Tag == "" {
 		return nil, errors.New("empty balancer tag")
 	}
-	if len(r.Selectors) == 0 {
+	if len(r.Selectors) == 0 && len(r.Balancers) == 0 {
 		return nil, errors.New("empty selector list")
+	}
+	listed := make(map[string]bool, len(r.Balancers))
+	for _, member := range r.Balancers {
+		if member == "" || listed[member] {
+			return nil, errors.New("balancer ", r.Tag, ": member ", strconv.Quote(member), " is empty or listed twice")
+		}
+		listed[member] = true
 	}
 
 	r.Strategy.Type = strings.ToLower(r.Strategy.Type)
@@ -65,12 +74,15 @@ func (r *BalancingRule) Build() (*router.BalancingRule, error) {
 		StrategySettings: serial.ToTypedMessage(ts),
 		FallbackTag:      r.FallbackTag,
 		OutboundSelector: r.Selectors,
+		Balancers:        r.Balancers,
 		Tag:              r.Tag,
 	}, nil
 }
 
 // checkFallbackCollision rejects a fallbackTag that names both an outbound and a balancer (Core
-// spec017 L9): the router, which does not see the outbounds at Init, would take the balancer.
+// spec017 L9): the router, which does not see the outbounds at Init, would take the balancer. A
+// member balancer may not share its tag with an outbound either (Core spec019): the level above
+// reads the member's status under that tag.
 func checkFallbackCollision(balancers []*BalancingRule, outboundTags []string) error {
 	isBalancer := make(map[string]bool, len(balancers))
 	for _, b := range balancers {
@@ -79,6 +91,11 @@ func checkFallbackCollision(balancers []*BalancingRule, outboundTags []string) e
 	for _, b := range balancers {
 		if isBalancer[b.FallbackTag] && slices.Contains(outboundTags, b.FallbackTag) {
 			return errors.New("fallbackTag ", b.FallbackTag, " names both an outbound and a balancer")
+		}
+		for _, member := range b.Balancers {
+			if slices.Contains(outboundTags, member) {
+				return errors.New("balancer member ", member, " names both an outbound and a balancer")
+			}
 		}
 	}
 	return nil

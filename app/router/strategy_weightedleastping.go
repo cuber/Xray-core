@@ -27,6 +27,7 @@ type WeightedLeastPingStrategy struct {
 	// measured and none alive yields no node, so the balancer uses it (spec016).
 	FallbackTag string
 
+	memberWrap
 	settings *StrategyWeightedLeastPingConfig
 	weights  *WeightManager
 	observer extension.Observatory
@@ -49,7 +50,7 @@ func NewWeightedLeastPingStrategy(settings *StrategyWeightedLeastPingConfig) *We
 func (s *WeightedLeastPingStrategy) InjectContext(ctx context.Context) {
 	s.ctx = ctx
 	common.Must(core.RequireFeatures(s.ctx, func(observer extension.Observatory) error {
-		s.observer = observer
+		s.observer = s.wrapped(observer)
 		return nil
 	}))
 }

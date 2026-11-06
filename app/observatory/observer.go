@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -48,6 +49,19 @@ func (o *Observer) GetObservation(ctx context.Context) (proto.Message, error) {
 		statuses = append(statuses, proto.Clone(status).(*OutboundStatus))
 	}
 	return &ObservationResult{Status: statuses}, nil
+}
+
+// Observes implements extension.ObservedOutbounds (Core spec019 M6): a subject selector matches it as a prefix.
+func (o *Observer) Observes(tag string) bool {
+	if o.config == nil {
+		return false
+	}
+	for _, selector := range o.config.SubjectSelector {
+		if strings.HasPrefix(tag, selector) {
+			return true
+		}
+	}
+	return false
 }
 
 func (o *Observer) Type() interface{} {

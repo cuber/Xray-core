@@ -100,10 +100,29 @@ message FallbackInfo {
   repeated FallbackHop chain = 5;
 }
 
+// spec019 M10: one candidate of a balancer's level.
+message BalancerMember {
+  string tag = 1;
+  // `tag` names a member balancer (spec019 M1); false: an outbound the selector matched.
+  bool balancer = 2;
+}
+
+// spec019 M4: a balancer's availability and delay as the level above it reads them.
+message BalancerStatus {
+  // false: unknown, a fresh start with no observation below it yet.
+  bool known = 1;
+  bool alive = 2;
+  // Milliseconds; 0 when not alive.
+  int64 delay = 3;
+}
+
 message BalancerMsg {
   OverrideInfo override = 5;
   PrincipleTargetInfo principle_target = 6;
   FallbackInfo fallback = 7;
+  // spec019 M10: the level's candidates, in order (the selector's outbounds, then the members).
+  repeated BalancerMember members = 8;
+  BalancerStatus status = 9;
 }
 
 message GetBalancerInfoRequest {

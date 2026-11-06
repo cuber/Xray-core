@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/xtls/xray-core/common/errors"
@@ -126,6 +127,15 @@ func (rr *RoutingRule) BuildCondition() (Condition, error) {
 
 // Build builds the balancing rule
 func (br *BalancingRule) Build(ohm outbound.Manager, dispatcher routing.Dispatcher) (*Balancer, error) {
+	b, err := br.build(ohm, dispatcher)
+	if err != nil {
+		return nil, err
+	}
+	b.members = slices.Clone(br.Balancers) // Core spec019 M1
+	return b, nil
+}
+
+func (br *BalancingRule) build(ohm outbound.Manager, dispatcher routing.Dispatcher) (*Balancer, error) {
 	switch strings.ToLower(br.Strategy) {
 	case "leastping":
 		return &Balancer{

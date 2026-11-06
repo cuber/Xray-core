@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	"slices"
 	sync "sync"
 	"sync/atomic"
 
@@ -30,6 +31,7 @@ type BalancingFallbackState interface {
 
 type RoundRobinStrategy struct {
 	FallbackTag string
+	memberWrap
 
 	ctx         context.Context
 	observatory extension.Observatory
@@ -39,9 +41,9 @@ type RoundRobinStrategy struct {
 
 func (s *RoundRobinStrategy) InjectContext(ctx context.Context) {
 	s.ctx = ctx
-	if len(s.FallbackTag) > 0 {
+	if len(s.FallbackTag) > 0 || s.observes() {
 		common.Must(core.RequireFeatures(s.ctx, func(observatory extension.Observatory) error {
-			s.observatory = observatory
+			s.observatory = s.wrapped(observatory)
 			return nil
 		}))
 	}
@@ -112,6 +114,10 @@ type Balancer struct {
 	strategy    BalancingStrategy
 	ohm         outbound.Manager
 	fallbackTag string
+	// members are member balancers by tag, candidates after the selector's outbounds (Core spec019 M1, M2).
+	members []string
+	// ctx is the instance context InjectContext received; the control plane reads the observatory through it.
+	ctx context.Context
 
 	override override
 	// peers is the newest published balancer map that contains this balancer (spec017 L6).
@@ -169,19 +175,30 @@ func (b *Balancer) fallbackState() (active bool, reported bool) {
 }
 
 func (b *Balancer) InjectContext(ctx context.Context) {
+	b.ctx = ctx
+	// Core spec019 M5: a level with members reads their status in its observation.
+	if receiver, ok := b.strategy.(memberObserving); ok && len(b.members) > 0 {
+		receiver.observeMembers(func(o extension.Observatory) extension.Observatory {
+			return &memberObservatory{Observatory: o, balancer: b}
+		})
+	}
 	if contextReceiver, ok := b.strategy.(extension.ContextReceiver); ok {
 		contextReceiver.InjectContext(ctx)
 	}
 }
 
-// SelectOutbounds select outbounds with selectors of the Balancer
+// SelectOutbounds is the level's candidates: the outbounds its selectors match, then its member
+// balancers (Core spec019 M2).
 func (b *Balancer) SelectOutbounds() ([]string, error) {
-	hs, ok := b.ohm.(outbound.HandlerSelector)
-	if !ok {
-		return nil, errors.New("outbound.Manager is not a HandlerSelector")
+	var tags []string
+	if len(b.selectors) > 0 {
+		hs, ok := b.ohm.(outbound.HandlerSelector)
+		if !ok {
+			return nil, errors.New("outbound.Manager is not a HandlerSelector")
+		}
+		tags = hs.Select(b.selectors)
 	}
-	tags := hs.Select(b.selectors)
-	return tags, nil
+	return append(slices.Clone(tags), b.members...), nil
 }
 
 // GetPrincipleTarget implements routing.BalancerPrincipleTarget
@@ -203,6 +220,10 @@ func (r *Router) GetFallbackChain(tag string) ([]routing.FallbackHop, error) {
 func (r *Router) SetOverrideTarget(tag, target string) error {
 	defer r.lockGraph()()
 	if b, ok := (*r.balancers.Load())[tag]; ok {
+		// spec017 B5: a target is an outbound; a balancer's tag would be read as a member (Core spec019).
+		if _, isBalancer := (*r.balancers.Load())[target]; isBalancer {
+			return errors.New("override target ", target, " is a balancer")
+		}
 		// Core spec018 S3.2: a target may name any outbound, a loopback included; clearing one
 		// only removes an edge.
 		if target != "" {
