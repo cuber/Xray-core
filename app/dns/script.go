@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/xtls/xray-core/common/errors"
@@ -16,7 +17,9 @@ const scriptExecutionTimeout = 6 * time.Second
 
 type scriptEngine struct {
 	program *xlua.Program
-	pool    *xlua.Pool
+	// pool is published by start, which runs with the DNS feature's Start, possibly after a query
+	// already arrived (Core spec007 FR-004).
+	pool atomic.Pointer[xlua.Pool]
 }
 
 func newScriptEngine(script string) (*scriptEngine, error) {
@@ -45,19 +48,23 @@ func (e *scriptEngine) start(server *DNS) error {
 		return err
 	}
 
-	e.pool = pool
+	e.pool.Store(pool)
 	errors.LogInfo(server.ctx, "DNS script initialized")
 	return nil
 }
 
 func (e *scriptEngine) close() {
-	if e.pool != nil {
-		e.pool.Close()
+	if pool := e.pool.Load(); pool != nil {
+		pool.Close()
 	}
 }
 
 func (e *scriptEngine) query(domain string, option dns.IPOption) (ips []net.IP, ttl uint32, queryErr error) {
-	if err := e.pool.WithState(nil, 0, func(L *lua.LState) error {
+	pool := e.pool.Load()
+	if pool == nil {
+		return nil, 0, errors.New("DNS script is not started yet")
+	}
+	if err := pool.WithState(nil, 0, func(L *lua.LState) error {
 		if err := callLuaQuery(L, domain, option); err != nil {
 			return err
 		}

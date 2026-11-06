@@ -92,4 +92,19 @@ least-loaded preference or fallback when all remaining workers are draining.
 The baseline-failing concurrency regression and exact control-message/selection
 oracles are recorded in [upgrade evidence](reverse-drain-upgrade-20261015.md).
 
+## FR-004 - Lua Script Engines Publish Their Pool
+
+Found 2026-11-06 by Core spec018's FR-007 test, the first to route real traffic through a routing script
+under `-race`. The upstream routing and DNS scripts (`routing.script`, `dns.script`) create their Lua pool in
+the feature's `Start`, but inbounds may start first, so a connection or query can call the engine before the
+pool exists: a data race, and a nil pointer dereference in that goroutine, which ends the process.
+
+- The pool is an `atomic.Pointer`, stored by `start` and loaded by each call and by `close`.
+- A routing pick before start returns `ErrRouteDropped` (wrapped with the reason): the dispatcher closes the
+  connection rather than sending it to the default outbound. A DNS query before start returns an error.
+- Behavior after start is unchanged.
+
+Validation: `TestRoutingScriptBeforeStart`, `TestDNSScriptBeforeStart`; `go test -race -count=3 ./proxy/loopback`
+(spec018's routing-script loop) passes, and failed with two `DATA RACE` reports on `scriptEngine.pool` before.
+
 [技术计划](plan.md) · [任务](tasks.md) · [测试](tests.md) · [检查清单](checklists/requirements.md)

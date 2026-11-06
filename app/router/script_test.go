@@ -94,7 +94,7 @@ func TestRouterScriptStartup(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer r.Close()
-			if r.script.program == nil || r.script.pool != nil {
+			if r.script.program == nil || r.script.pool.Load() != nil {
 				t.Fatal("Init did not compile the script without starting its pool")
 			}
 			if err := r.Close(); err != nil {
@@ -103,7 +103,7 @@ func TestRouterScriptStartup(t *testing.T) {
 			if err := r.Start(); err == nil {
 				t.Fatal("Start accepted an invalid routing script")
 			}
-			if r.script.pool != nil {
+			if r.script.pool.Load() != nil {
 				t.Fatal("Start retained a script pool after failure")
 			}
 		})

@@ -247,7 +247,7 @@ func TestDNSScriptRejectsInvalidStartup(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer server.Close()
-			if server.script.program == nil || server.script.pool != nil {
+			if server.script.program == nil || server.script.pool.Load() != nil {
 				t.Fatal("New did not compile the script without starting its pool")
 			}
 			if err := server.Close(); err != nil {
@@ -256,7 +256,7 @@ func TestDNSScriptRejectsInvalidStartup(t *testing.T) {
 			if err := server.Start(); err == nil {
 				t.Fatal("Start accepted an invalid DNS script")
 			}
-			if server.script.pool != nil {
+			if server.script.pool.Load() != nil {
 				t.Fatal("Start retained a script pool after failure")
 			}
 		})

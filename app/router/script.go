@@ -1,6 +1,7 @@
 package router
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/xtls/xray-core/app/dns"
@@ -17,7 +18,9 @@ const scriptExecutionTimeout = 6 * time.Second
 
 type scriptEngine struct {
 	program *xlua.Program
-	pool    *xlua.Pool
+	// pool is published by start, which runs with the router's Start, possibly after inbounds already
+	// route connections (Core spec007 FR-004).
+	pool atomic.Pointer[xlua.Pool]
 }
 
 func newScriptEngine(script string) (*scriptEngine, error) {
@@ -47,14 +50,14 @@ func (e *scriptEngine) start(router *Router) error {
 		return err
 	}
 
-	e.pool = pool
+	e.pool.Store(pool)
 	errors.LogInfo(router.ctx, "routing script initialized")
 	return nil
 }
 
 func (e *scriptEngine) close() {
-	if e.pool != nil {
-		e.pool.Close()
+	if pool := e.pool.Load(); pool != nil {
+		pool.Close()
 	}
 }
 
@@ -62,7 +65,12 @@ func (e *scriptEngine) pickRoute(ctx routing.Context) (routing.Route, error) {
 	var outboundTag, ruleTag string
 	var routeErr error
 
-	if err := e.pool.WithState(nil, 0, func(L *lua.LState) error {
+	pool := e.pool.Load()
+	if pool == nil {
+		// Not started yet: close the connection rather than send it to the default outbound.
+		return nil, errors.New("routing script is not started yet").Base(routing.ErrRouteDropped)
+	}
+	if err := pool.WithState(nil, 0, func(L *lua.LState) error {
 		if err := callLuaRoute(L, ctx); err != nil {
 			return err
 		}
