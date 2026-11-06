@@ -28,6 +28,7 @@ const (
 	mitmServerNameKey         ctx.SessionKey = 12 // used by TLS dialer
 
 	streamSettingsKey ctx.SessionKey = 13
+	loopbacksKey      ctx.SessionKey = 14 // loopback outbounds the connection has passed (Core spec017 L7)
 )
 
 func ContextWithInbound(ctx context.Context, inbound *Inbound) context.Context {
@@ -201,4 +202,17 @@ func ContextWithStreamSettings(ctx context.Context, streamSettings any) context.
 
 func StreamSettingsFromContext(ctx context.Context) any {
 	return ctx.Value(streamSettingsKey)
+}
+
+// ContextWithLoopbacks records the loopback outbound tags a connection has passed, in order.
+func ContextWithLoopbacks(ctx context.Context, tags []string) context.Context {
+	return context.WithValue(ctx, loopbacksKey, tags)
+}
+
+// LoopbacksFromContext is the loopback outbound tags the connection has passed.
+func LoopbacksFromContext(ctx context.Context) []string {
+	if val, ok := ctx.Value(loopbacksKey).([]string); ok {
+		return val
+	}
+	return nil
 }

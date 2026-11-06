@@ -35,13 +35,14 @@ func (r *Router) RegisterLua(L *lua.LState) {
 				L.ArgError(1, "balancer tag must be a string")
 				return 0
 			}
-			balancer, found := (*r.balancers.Load())[string(tag)]
+			balancers := *r.balancers.Load()
+			balancer, found := balancers[string(tag)]
 			if !found {
 				xlua.PushNil(L)
 				xlua.PushError(L, errors.New("balancer ", tag, " not found"))
 				return 2
 			}
-			outboundTag, err := balancer.PickOutbound()
+			outboundTag, err := r.resolveChain(balancer, balancers) // spec017 B7
 			xlua.PushString(L, outboundTag)
 			xlua.PushError(L, err)
 			return 2

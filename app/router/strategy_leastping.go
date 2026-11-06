@@ -27,6 +27,12 @@ func (l *LeastPingStrategy) InjectContext(ctx context.Context) {
 	}))
 }
 
+// FallbackActive implements BalancingFallbackState (spec017): the same decision as PickOutbound, which
+// changes no state.
+func (l *LeastPingStrategy) FallbackActive(candidates []string) bool {
+	return l.PickOutbound(candidates) == ""
+}
+
 func (l *LeastPingStrategy) PickOutbound(strings []string) string {
 	if l.observatory == nil {
 		errors.LogError(l.ctx, "observer is nil")

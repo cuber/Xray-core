@@ -2,7 +2,8 @@
 
 - Feature ID: 017-balancer-fallback-chain
 - Created: 2026-11-05
-- Status: Approved (2026-11-05) for specification; implementation not started (T001 only).
+- Status: Approved (2026-11-05); implemented 2026-11-06 (T002–T006, T007 tests); build, stability-check gate and
+  deployment pending. L6 resolves on the map of the rule's balancer (amended at implementation, 2026-11-06).
 - Baseline: Core `ee030ff5` (develop, spec016)
 - Origin (user, 2026-11-05): asz.lite's monitoring root `hk-balancer` (Mini and VGD FCC, fallback CTC FCC) lost all
   three FCC paths together on 2026-11-05, 14:12–14:36 +08:00, while both AHK forwarders stayed alive (xray-config
@@ -90,11 +91,14 @@ The paths that can loop through a balancer fallback, and what closes each:
 - **L5 Cycles closed by an append.** An append can close a cycle that neither configuration contains alone. An
   existing X whose `fallbackTag` is `N` (an outbound, or nothing, when X was loaded) and an appended balancer `N`
   that falls back to X form X → N → X. L2 checks the merged map, so this is rejected.
-- **L6 One map per pick.** A pick loads the balancer map once and resolves every further level in it. Its first
-  level can be a rule's balancer from an earlier map (an append keeps old rules; a replace can race with the pick).
-  From the first fallback on, the walk stays inside the loaded map, which L1 keeps acyclic. Guard: more than
-  len(map)+1 levels can only be a Core defect. The pick then logs the path at error level, counts it (L8), and the
-  dispatcher closes the connection; it does not take the default outbound.
+- **L6 One map per pick.** A pick resolves every level on one map: the newest published map that contains its first
+  balancer. Each publish records itself on every balancer it holds, so a rule read just before a replacing reload
+  finishes on the map it was published with (never its old balancer's fallback looked up in the new map, where the
+  tag may be gone), and after an append old rules see the merged map. Every published map passed L1. Guard: more
+  than len(map)+1 levels can only be a Core defect. The pick then logs the path at error level, counts it (L8), and
+  the dispatcher closes the connection; it does not take the default outbound. (Amended 2026-11-06: the approved
+  text loaded the router's current map, which mixes two maps when a replace races with the pick; the concurrent
+  reload test found it.)
 - **L7 Loopback re-entry.** A connection passes each loopback outbound at most once. The loopback outbound records
   its tag in the session context before dispatching. If its tag is already there, it closes the link, logs the
   path at error level and counts it (L8). Any loop through loopbacks repeats one of them, so every such loop ends
@@ -118,7 +122,8 @@ message FallbackHop {
   string tag = 1;
   // `tag` names a balancer of this router (B1); false: an outbound tag, which ends the chain.
   bool balancer = 2;
-  // For a balancer hop: its own pick currently ends on its fallback.
+  // For a balancer hop: its strategy yields no candidate now, so its picks use its own fallback (an override on
+  // that hop still wins), as FallbackInfo.active.
   bool active = 3;
   // The hop's strategy reports `active`.
   bool reported = 4;
@@ -190,6 +195,7 @@ round-robin index or rolls a die.
   cycle no published map contained; it never needs to.
 - **Compatibility (CP-6).** An older Core leaves `balancer` false and `chain` empty: a non-empty `tag` with an empty
   `chain` means an older Core, shown as unavailable. `ListBalancers` and `GetLoopGuards` answer `Unimplemented`.
+  A Core without a `routing` section has no router of its own; both answer `unsupported router implementation`.
   An older Core cannot resolve a balancer fallback at all (B1 fails and the connection is closed); xray-config
   spec019 therefore gates deployment on the installed revision.
 - **Tests (CP-7).** A started instance through a real gRPC server: a default configuration without fallbacks; a

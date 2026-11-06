@@ -688,6 +688,13 @@ func (c *Config) Build() (*core.Config, error) {
 		if err != nil {
 			return nil, errors.New("failed to build routing configuration").Base(err)
 		}
+		tags := make([]string, 0, len(c.OutboundConfigs))
+		for _, ob := range c.OutboundConfigs {
+			tags = append(tags, ob.Tag)
+		}
+		if err := checkFallbackCollision(c.RouterConfig.Balancers, tags); err != nil {
+			return nil, errors.New("failed to build routing configuration").Base(err)
+		}
 		config.App = append(config.App, serial.ToTypedMessage(routerConfig))
 	}
 

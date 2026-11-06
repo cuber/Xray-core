@@ -2,6 +2,8 @@ package loopback
 
 import (
 	"context"
+	"slices"
+	"strings"
 
 	proxyman "github.com/xtls/xray-core/app/proxyman"
 	"github.com/xtls/xray-core/common"
@@ -17,6 +19,7 @@ type Loopback struct {
 	inboundTag         string
 	sniffingRequest    session.SniffingRequest
 	dispatcherInstance routing.Dispatcher
+	loopGuard          routing.LoopGuard
 }
 
 func (l *Loopback) Process(ctx context.Context, link *transport.Link, _ internet.Dialer) error {
@@ -27,6 +30,18 @@ func (l *Loopback) Process(ctx context.Context, link *transport.Link, _ internet
 	}
 	ob.Name = "loopback"
 	destination := ob.Target
+
+	// Core spec017 L7: a connection passes each loopback outbound at most once, so every loop through
+	// loopbacks ends within their number, whatever rules, Lua or fallback lead back here.
+	passed := session.LoopbacksFromContext(ctx)
+	if slices.Contains(passed, ob.Tag) {
+		errors.LogError(ctx, "loopback re-entry: ", strings.Join(append(slices.Clone(passed), ob.Tag), " -> "))
+		if l.loopGuard != nil {
+			l.loopGuard.RecordLoopbackReentry()
+		}
+		return routing.ErrRouteDropped
+	}
+	ctx = session.ContextWithLoopbacks(ctx, append(slices.Clone(passed), ob.Tag))
 
 	errors.LogInfo(ctx, "opening connection to ", destination)
 	content := new(session.Content)
@@ -50,8 +65,9 @@ func (l *Loopback) Process(ctx context.Context, link *transport.Link, _ internet
 	return nil
 }
 
-func (l *Loopback) init(config *Config, dispatcherInstance routing.Dispatcher) error {
+func (l *Loopback) init(config *Config, dispatcherInstance routing.Dispatcher, router routing.Router) error {
 	l.dispatcherInstance = dispatcherInstance
+	l.loopGuard, _ = router.(routing.LoopGuard)
 	l.inboundTag = config.InboundTag
 	if config.Sniffing.GetEnabled() {
 		request, err := proxyman.BuildSniffingRequest(config.Sniffing)
@@ -66,8 +82,8 @@ func (l *Loopback) init(config *Config, dispatcherInstance routing.Dispatcher) e
 func init() {
 	common.Must(common.RegisterConfig((*Config)(nil), func(ctx context.Context, config interface{}) (interface{}, error) {
 		l := new(Loopback)
-		err := core.RequireFeatures(ctx, func(dispatcherInstance routing.Dispatcher) error {
-			return l.init(config.(*Config), dispatcherInstance)
+		err := core.RequireFeatures(ctx, func(dispatcherInstance routing.Dispatcher, router routing.Router) error {
+			return l.init(config.(*Config), dispatcherInstance, router)
 		})
 		return l, err
 	}))

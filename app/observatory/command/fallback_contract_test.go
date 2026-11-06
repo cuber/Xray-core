@@ -121,22 +121,28 @@ func assertFallback(t *testing.T, got *routercmd.BalancerMsg, want *routercmd.Fa
 	}
 }
 
+// toFB is the fallback to the outbound fb: since Core spec017 its chain is that one outbound hop.
+func toFB(active bool) *routercmd.FallbackInfo {
+	return &routercmd.FallbackInfo{Tag: "fb", Active: active, Reported: true, Chain: []*routercmd.FallbackHop{{Tag: "fb"}}}
+}
+
 // CP-7 (spec016 FR-004, FR-005): GetBalancerInfo's fallback through a real gRPC server on a started
 // instance, in the default healthy state, with every probe failing and with every candidate forced down.
+// Core spec017 adds the chain and reports roundrobin as well.
 func TestWeightedLeastPingFallbackContract(t *testing.T) {
 	f := newFallbackFixture(t)
 	eventually(t, "both candidates measured healthy", 15*time.Second, func() bool {
 		return f.picks("fb.test", 22) == "[c1 c2]"
 	})
-	assertFallback(t, f.balancer(t, "wlp-fb"), &routercmd.FallbackInfo{Tag: "fb", Reported: true}, "c1", "c2")
+	assertFallback(t, f.balancer(t, "wlp-fb"), toFB(false), "c1", "c2")
 	assertFallback(t, f.balancer(t, "wlp"), &routercmd.FallbackInfo{Reported: true}, "c1", "c2")
-	assertFallback(t, f.balancer(t, "rr"), &routercmd.FallbackInfo{Tag: "fb"}, "c1", "c2")
+	assertFallback(t, f.balancer(t, "rr"), toFB(false), "c1", "c2")
 
 	// W1: every candidate measured and failing.
 	f.healthy.Store(false)
 	eventually(t, "the fallback", 15*time.Second, func() bool { return f.picks("fb.test", 22) == "[fb]" })
-	assertFallback(t, f.balancer(t, "wlp-fb"), &routercmd.FallbackInfo{Tag: "fb", Active: true, Reported: true})
-	// W2: without a fallbackTag the candidates stay; roundrobin falls back on its own, unreported.
+	assertFallback(t, f.balancer(t, "wlp-fb"), toFB(true))
+	// W2: without a fallbackTag the candidates stay; roundrobin falls back on its own, reported since spec017.
 	if got := f.picks("wlp.test", 22); got != "[c1 c2]" {
 		t.Fatalf("wlp without a fallbackTag picks %s, want [c1 c2]", got)
 	}
@@ -144,11 +150,11 @@ func TestWeightedLeastPingFallbackContract(t *testing.T) {
 	if got := f.picks("rr.test", 4); got != "[fb]" {
 		t.Fatalf("rr picks %s, want [fb]", got)
 	}
-	assertFallback(t, f.balancer(t, "rr"), &routercmd.FallbackInfo{Tag: "fb"}, "c1", "c2")
+	assertFallback(t, f.balancer(t, "rr"), toFB(true), "c1", "c2")
 
 	f.healthy.Store(true)
 	eventually(t, "the candidates again", 15*time.Second, func() bool { return f.picks("fb.test", 22) == "[c1 c2]" })
-	assertFallback(t, f.balancer(t, "wlp-fb"), &routercmd.FallbackInfo{Tag: "fb", Reported: true}, "c1", "c2")
+	assertFallback(t, f.balancer(t, "wlp-fb"), toFB(false), "c1", "c2")
 
 	// W4: forcing every candidate down (spec015) reaches the fallback; releasing returns.
 	if _, err := f.setForceDown("c1", "c2"); err != nil {
@@ -157,7 +163,7 @@ func TestWeightedLeastPingFallbackContract(t *testing.T) {
 	if got := f.picks("fb.test", 22); got != "[fb]" {
 		t.Fatalf("forced-down picks %s, want [fb]", got)
 	}
-	assertFallback(t, f.balancer(t, "wlp-fb"), &routercmd.FallbackInfo{Tag: "fb", Active: true, Reported: true})
+	assertFallback(t, f.balancer(t, "wlp-fb"), toFB(true))
 	if _, err := f.setForceDown(); err != nil {
 		t.Fatal(err)
 	}

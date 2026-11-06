@@ -82,6 +82,7 @@ Then 记录实际通过、失败和跳过；不能把未启用公网测试算成
 - FR-006: weightedLeastPing 按健康池执行平滑加权选择；全不健康回到所有正权重候选；
   权重约束的是选路次数，不是传输字节。leastLoad tolerance 另行保持。
   2026-11-02 起有 `fallbackTag` 时，每个候选都已测出且无一存活则改走 fallback（[spec016](../016-weighted-least-ping-fallback/spec.md)）。
+  2026-11-06 起 `fallbackTag` 可以写另一个 balancer，兜底图必须无环（[spec017](../017-balancer-fallback-chain/spec.md)）。
 - FR-007: user-domain 匹配及 ListRule 详细规则支持静态/动态配置，返回对象不得改写内部状态。
 - FR-008: DomainTraffic 可选开启，用户×域名、字节口径、LRU、窗口、cursor 和饱和计数保持。
 - FR-009: 与 Sidecar 的十分钟聚合、快照恢复、跨 boot 合并及匿名历史保持兼容。

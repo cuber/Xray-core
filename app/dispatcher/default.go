@@ -2,6 +2,7 @@ package dispatcher
 
 import (
 	"context"
+	goerrors "errors"
 	"strings"
 	"sync"
 	"time"
@@ -489,6 +490,12 @@ func (d *DefaultDispatcher) routedDispatch(ctx context.Context, link *transport.
 				common.Interrupt(link.Reader)
 				return // DO NOT CHANGE: the traffic shouldn't be processed by default outbound if the specified outbound tag doesn't exist (yet), e.g., VLESS Reverse Proxy
 			}
+		} else if goerrors.Is(err, routing.ErrRouteDropped) {
+			// Core spec017 L6: a loop guard stopped the pick, which never takes the default outbound.
+			errors.LogWarning(ctx, "route dropped for ", destination)
+			common.Close(link.Writer)
+			common.Interrupt(link.Reader)
+			return
 		} else {
 			if err != common.ErrNoClue {
 				errors.LogErrorInner(ctx, err, "failed to pick route for ", destination)

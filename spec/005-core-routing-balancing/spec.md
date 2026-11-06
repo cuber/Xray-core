@@ -25,6 +25,9 @@ Then 记录选择分布、规则状态及并发行为，不以测试文件存在
   maxRTT 相等排除；bestRTT + rttTolerance 相等保留；tolerance=0 关闭失败率过滤。
 - 健康池为空时回到所有正权重候选；balancer 有 `fallbackTag` 且每个候选都已测出、无一存活时
   不选候选，改走 fallback，`GetBalancerInfo` 报告 `fallback`（[spec016](../016-weighted-least-ping-fallback/spec.md)，2026-11-02）。
+- 2026-11-06 起 `fallbackTag` 可以写 balancer，逐级嵌套；发布前检查兜底图无环（Init 与 AddRule，追加时查合并后的表），
+  每次选路在规则所属 balancer 的那张表上解析并有层数守卫；连接经过每个 loopback 至多一次；每种策略都报告
+  `fallback`，另有 `fallback.chain`、`ListBalancers`、`GetLoopGuards`（[spec017](../017-balancer-fallback-chain/spec.md)）。
 - Burst 使用 Average，无 HealthPing 则用 Delay 毫秒。存在健康候选不混入 dead；
   观测缺失/出错或全不健康时回到全部有限正权重候选，空池返回空。
 - 按 tag 稳定排序、平滑加权轮询、并发选择有锁；池外累计状态清理。

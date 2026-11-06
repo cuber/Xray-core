@@ -30,6 +30,10 @@ type Router struct {
 	ohm        outbound.Manager
 	dispatcher routing.Dispatcher
 	mu         sync.Mutex
+
+	// spec017 L8: connections the loop guards stopped since start.
+	fallbackChainGuard   atomic.Uint64
+	loopbackReentryGuard atomic.Uint64
 }
 
 // Route is an implementation of routing.Route.
@@ -80,7 +84,7 @@ func (r *Router) PickRoute(ctx routing.Context) (routing.Route, error) {
 	if err != nil {
 		return nil, err
 	}
-	tag, err := rule.GetTag()
+	tag, err := r.pickTag(rule)
 	if err != nil {
 		return nil, err
 	}
@@ -177,9 +181,18 @@ func (r *Router) reloadRules(config *Config, shouldAppend bool, newWebhook func(
 		newRules = append(newRules, rr)
 	}
 
+	// spec017 L2, L5: the only check point of the fallback graph, on the map about to be published
+	// (in append mode the old balancers with the new).
+	if err := checkFallbackCycles(newBalancers); err != nil {
+		return err
+	}
+
 	// Register feature dependencies only after every rule has validated.
 	for _, rule := range config.BalancingRule {
 		newBalancers[rule.Tag].InjectContext(r.ctx)
+	}
+	for _, balancer := range newBalancers {
+		balancer.peers.Store(&newBalancers)
 	}
 	r.balancers.Store(&newBalancers)
 	r.rules.Store(&newRules)

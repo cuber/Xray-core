@@ -129,8 +129,8 @@ func TestWeightedLeastPingBalancerPicksItsFallback(t *testing.T) {
 	}
 }
 
-// Strategies without the state report it as unknown, not inactive.
-func TestGetFallbackIsUnreportedForOtherStrategies(t *testing.T) {
+// Since Core spec017 every strategy reports the state (spec016 reported weightedLeastPing only).
+func TestGetFallbackIsReportedForEveryStrategy(t *testing.T) {
 	balancer, err := (&BalancingRule{OutboundSelector: []string{"a"}, Strategy: "roundrobin", FallbackTag: "fb"}).Build(&luaRouteOutboundManager{}, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -138,7 +138,7 @@ func TestGetFallbackIsUnreportedForOtherStrategies(t *testing.T) {
 	router := &Router{}
 	router.balancers.Store(&map[string]*Balancer{"rr": balancer})
 	tag, active, reported, err := router.GetFallback("rr")
-	if err != nil || tag != "fb" || active || reported {
+	if err != nil || tag != "fb" || active || !reported {
 		t.Fatalf("roundrobin GetFallback = %q %v %v %v", tag, active, reported, err)
 	}
 	if _, _, _, err := router.GetFallback("nope"); err == nil {

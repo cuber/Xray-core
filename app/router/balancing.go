@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	sync "sync"
+	"sync/atomic"
 
 	"github.com/xtls/xray-core/app/observatory"
 	"github.com/xtls/xray-core/common"
@@ -10,6 +11,7 @@ import (
 	"github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/features/extension"
 	"github.com/xtls/xray-core/features/outbound"
+	"github.com/xtls/xray-core/features/routing"
 )
 
 type BalancingStrategy interface {
@@ -49,31 +51,47 @@ func (s *RoundRobinStrategy) GetPrincipleTarget(strings []string) []string {
 	return strings
 }
 
-func (s *RoundRobinStrategy) PickOutbound(tags []string) string {
-	if s.observatory != nil {
-		observeReport, err := s.observatory.GetObservation(s.ctx)
-		if err == nil {
-			aliveTags := make([]string, 0)
-			if result, ok := observeReport.(*observatory.ObservationResult); ok {
-				status := result.Status
-				statusMap := make(map[string]*observatory.OutboundStatus)
-				for _, outboundStatus := range status {
-					statusMap[outboundStatus.OutboundTag] = outboundStatus
-				}
-				for _, candidate := range tags {
-					if outboundStatus, found := statusMap[candidate]; found {
-						if outboundStatus.Alive {
-							aliveTags = append(aliveTags, candidate)
-						}
-					} else {
-						// unfound candidate is considered alive
-						aliveTags = append(aliveTags, candidate)
-					}
-				}
-				tags = aliveTags
+// aliveCandidates keeps the candidates the observatory does not report down; without an observatory
+// or an observation it keeps them all. roundrobin and random pick from it and fall back when it is
+// empty (spec017 B2).
+func aliveCandidates(ctx context.Context, o extension.Observatory, tags []string) []string {
+	if o == nil {
+		return tags
+	}
+	observeReport, err := o.GetObservation(ctx)
+	if err != nil {
+		return tags
+	}
+	result, ok := observeReport.(*observatory.ObservationResult)
+	if !ok {
+		return tags
+	}
+	statusMap := make(map[string]*observatory.OutboundStatus)
+	for _, outboundStatus := range result.Status {
+		statusMap[outboundStatus.OutboundTag] = outboundStatus
+	}
+	aliveTags := make([]string, 0)
+	for _, candidate := range tags {
+		if outboundStatus, found := statusMap[candidate]; found {
+			if outboundStatus.Alive {
+				aliveTags = append(aliveTags, candidate)
 			}
+		} else {
+			// unfound candidate is considered alive
+			aliveTags = append(aliveTags, candidate)
 		}
 	}
+	return aliveTags
+}
+
+// FallbackActive implements BalancingFallbackState (spec017): no candidate is alive. It never
+// advances the index.
+func (s *RoundRobinStrategy) FallbackActive(tags []string) bool {
+	return len(aliveCandidates(s.ctx, s.observatory, tags)) == 0
+}
+
+func (s *RoundRobinStrategy) PickOutbound(tags []string) string {
+	tags = aliveCandidates(s.ctx, s.observatory, tags)
 
 	n := len(tags)
 	if n == 0 {
@@ -89,23 +107,34 @@ func (s *RoundRobinStrategy) PickOutbound(tags []string) string {
 }
 
 type Balancer struct {
+	tag         string
 	selectors   []string
 	strategy    BalancingStrategy
 	ohm         outbound.Manager
 	fallbackTag string
 
 	override override
+	// peers is the newest published balancer map that contains this balancer (spec017 L6).
+	peers atomic.Pointer[map[string]*Balancer]
 }
 
-// PickOutbound picks the tag of a outbound
+// PickOutbound picks the tag of a outbound at this level only; a fallback that names a balancer is
+// returned as it is. Routing resolves the whole chain (spec017, resolveChain).
 func (b *Balancer) PickOutbound() (string, error) {
+	tag, _, err := b.pick()
+	return tag, err
+}
+
+// pick is one level of a pick: the tag, and whether it is the fallbackTag (spec017 B3: only a
+// fallback result goes on to another balancer).
+func (b *Balancer) pick() (string, bool, error) {
 	candidates, err := b.SelectOutbounds()
 	if err != nil {
 		if b.fallbackTag != "" {
 			errors.LogInfo(context.Background(), "fallback to [", b.fallbackTag, "], due to error: ", err)
-			return b.fallbackTag, nil
+			return b.fallbackTag, true, nil
 		}
-		return "", err
+		return "", false, err
 	}
 	var tag string
 	if o := b.override.Get(); o != "" {
@@ -116,12 +145,27 @@ func (b *Balancer) PickOutbound() (string, error) {
 	if tag == "" {
 		if b.fallbackTag != "" {
 			errors.LogInfo(context.Background(), "fallback to [", b.fallbackTag, "], due to empty tag returned")
-			return b.fallbackTag, nil
+			return b.fallbackTag, true, nil
 		}
 		// will use default handler
-		return "", errors.New("balancing strategy returns empty tag")
+		return "", false, errors.New("balancing strategy returns empty tag")
 	}
-	return tag, nil
+	return tag, false, nil
+}
+
+// fallbackState says whether this level's strategy yields no candidate now, so that its picks use
+// its fallback, and whether the strategy can tell (spec016, spec017). It ignores an override, which
+// still wins in pick and is reported on its own.
+func (b *Balancer) fallbackState() (active bool, reported bool) {
+	s, ok := b.strategy.(BalancingFallbackState)
+	if !ok {
+		return false, false
+	}
+	candidates, err := b.SelectOutbounds()
+	if err != nil {
+		return b.fallbackTag != "", true // as pick
+	}
+	return b.fallbackTag != "" && s.FallbackActive(candidates), true
 }
 
 func (b *Balancer) InjectContext(ctx context.Context) {
@@ -142,37 +186,17 @@ func (b *Balancer) SelectOutbounds() ([]string, error) {
 
 // GetPrincipleTarget implements routing.BalancerPrincipleTarget
 func (r *Router) GetPrincipleTarget(tag string) ([]string, error) {
-	if b, ok := (*r.balancers.Load())[tag]; ok {
-		if s, ok := b.strategy.(BalancingPrincipleTarget); ok {
-			candidates, err := b.SelectOutbounds()
-			if err != nil {
-				return nil, errors.New("unable to select outbounds").Base(err)
-			}
-			return s.GetPrincipleTarget(candidates), nil
-		}
-		return nil, errors.New("unsupported GetPrincipleTarget")
-	}
-	return nil, errors.New("cannot find tag")
+	return balancerView(*r.balancers.Load()).GetPrincipleTarget(tag)
 }
 
 // GetFallback implements routing.BalancerFallback
 func (r *Router) GetFallback(tag string) (string, bool, bool, error) {
-	b, ok := (*r.balancers.Load())[tag]
-	if !ok {
-		return "", false, false, errors.New("cannot find tag")
-	}
-	s, ok := b.strategy.(BalancingFallbackState)
-	if !ok {
-		return b.fallbackTag, false, false, nil
-	}
-	candidates, err := b.SelectOutbounds()
-	if err != nil {
-		if b.fallbackTag != "" { // as PickOutbound
-			return b.fallbackTag, true, true, nil
-		}
-		return "", false, false, errors.New("unable to select outbounds").Base(err)
-	}
-	return b.fallbackTag, b.fallbackTag != "" && s.FallbackActive(candidates), true, nil
+	return balancerView(*r.balancers.Load()).GetFallback(tag)
+}
+
+// GetFallbackChain implements routing.BalancerFallbackChain (spec017).
+func (r *Router) GetFallbackChain(tag string) ([]routing.FallbackHop, error) {
+	return balancerView(*r.balancers.Load()).GetFallbackChain(tag)
 }
 
 // SetOverrideTarget implements routing.BalancerOverrider
@@ -186,8 +210,5 @@ func (r *Router) SetOverrideTarget(tag, target string) error {
 
 // GetOverrideTarget implements routing.BalancerOverrider
 func (r *Router) GetOverrideTarget(tag string) (string, error) {
-	if b, ok := (*r.balancers.Load())[tag]; ok {
-		return b.override.Get(), nil
-	}
-	return "", errors.New("cannot find tag")
+	return balancerView(*r.balancers.Load()).GetOverrideTarget(tag)
 }

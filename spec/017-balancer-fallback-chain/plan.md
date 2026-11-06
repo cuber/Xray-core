@@ -1,7 +1,7 @@
 # Plan: Balancer Fallback Chains
 
 - Spec: [spec.md](spec.md)
-- Status: not started (2026-11-05).
+- Status: implemented 2026-11-06 (T002–T006); gate T007 and consumers T008 open.
 
 ## Code
 
@@ -20,8 +20,9 @@
   - `reloadRules` calls `checkFallbackCycles(newBalancers)` after the rule loop and before `InjectContext` and
     `r.balancers.Store` (L2, L5). A failure returns before anything is published; the deferred `closeWebhooks`
     already covers created rules (L3).
-  - `PickRoute` resolves a rule's balancer through `resolveChain(rule.Balancer, *r.balancers.Load())`, loading
-    the map once per pick (L6). `Rule.GetTag` keeps the non-balancer path.
+  - `PickRoute` resolves a rule's balancer through `resolveChain`, on the map recorded on that balancer
+    (`Balancer.peers`, stored for every balancer of a map right before the map is published; L6 as amended).
+    `Rule.GetTag` keeps the single-level pick.
   - The guard counters live on the `Router` as two atomics; an internal `routing.LoopGuard` interface
     (`features/routing`) lets the loopback outbound record a re-entry.
 - `app/router/lua.go`: `PickOutbound(tag)` loads the map once and calls `resolveChain` (B7).

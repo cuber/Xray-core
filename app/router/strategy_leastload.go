@@ -67,6 +67,12 @@ func (s *LeastLoadStrategy) InjectContext(ctx context.Context) {
 	}))
 }
 
+// FallbackActive implements BalancingFallbackState (spec017): no node is selected, the same decision
+// as PickOutbound without its die.
+func (s *LeastLoadStrategy) FallbackActive(candidates []string) bool {
+	return len(s.pickOutbounds(candidates)) == 0
+}
+
 func (s *LeastLoadStrategy) PickOutbound(candidates []string) string {
 	selects := s.pickOutbounds(candidates)
 	count := len(selects)

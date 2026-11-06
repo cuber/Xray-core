@@ -20,40 +20,93 @@ type routingServer struct {
 }
 
 func (s *routingServer) GetBalancerInfo(ctx context.Context, request *GetBalancerInfoRequest) (*GetBalancerInfoResponse, error) {
-	var ret GetBalancerInfoResponse
-	ret.Balancer = &BalancerMsg{}
-	if bo, ok := s.router.(routing.BalancerOverrider); ok {
-		{
-			res, err := bo.GetOverrideTarget(request.GetTag())
-			if err != nil {
-				return nil, err
-			}
-			ret.Balancer.Override = &OverrideInfo{
-				Target: res,
-			}
+	// spec017 L-E: one balancer map for every field, the whole fallback chain included.
+	var balancers any = s.router
+	if bl, ok := s.router.(routing.BalancerLister); ok {
+		balancers = bl.Balancers()
+	}
+	msg, err := balancerMsg(ctx, balancers, request.GetTag())
+	if err != nil {
+		return nil, err
+	}
+	return &GetBalancerInfoResponse{Balancer: msg}, nil
+}
+
+// balancerMsg reads one balancer through whichever balancer interfaces r implements: a router, or
+// one balancer map of it (spec017).
+func balancerMsg(ctx context.Context, r any, tag string) (*BalancerMsg, error) {
+	msg := &BalancerMsg{}
+	if bo, ok := r.(interface {
+		GetOverrideTarget(tag string) (string, error)
+	}); ok {
+		res, err := bo.GetOverrideTarget(tag)
+		if err != nil {
+			return nil, err
+		}
+		msg.Override = &OverrideInfo{
+			Target: res,
 		}
 	}
 
-	if pt, ok := s.router.(routing.BalancerPrincipleTarget); ok {
-		{
-			res, err := pt.GetPrincipleTarget(request.GetTag())
-			if err != nil {
-				errors.LogInfoInner(ctx, err, "unable to obtain principle target")
-			} else {
-				ret.Balancer.PrincipleTarget = &PrincipleTargetInfo{Tag: res}
-			}
+	if pt, ok := r.(routing.BalancerPrincipleTarget); ok {
+		res, err := pt.GetPrincipleTarget(tag)
+		if err != nil {
+			errors.LogInfoInner(ctx, err, "unable to obtain principle target")
+		} else {
+			msg.PrincipleTarget = &PrincipleTargetInfo{Tag: res}
 		}
 	}
 
-	if bf, ok := s.router.(routing.BalancerFallback); ok { // spec016
-		tag, active, reported, err := bf.GetFallback(request.GetTag())
+	if bf, ok := r.(routing.BalancerFallback); ok { // spec016
+		fallbackTag, active, reported, err := bf.GetFallback(tag)
 		if err != nil {
 			errors.LogInfoInner(ctx, err, "unable to obtain fallback")
-		} else {
-			ret.Balancer.Fallback = &FallbackInfo{Tag: tag, Active: active, Reported: reported}
+			return msg, nil
+		}
+		msg.Fallback = &FallbackInfo{Tag: fallbackTag, Active: active, Reported: reported}
+		if fc, ok := r.(routing.BalancerFallbackChain); ok { // spec017
+			chain, err := fc.GetFallbackChain(tag)
+			if err != nil {
+				errors.LogInfoInner(ctx, err, "unable to obtain fallback chain")
+				return msg, nil
+			}
+			for _, hop := range chain {
+				msg.Fallback.Chain = append(msg.Fallback.Chain, &FallbackHop{
+					Tag: hop.Tag, Balancer: hop.Balancer, Active: hop.Active, Reported: hop.Reported,
+				})
+			}
+			msg.Fallback.Balancer = len(chain) > 0 && chain[0].Balancer
 		}
 	}
-	return &ret, nil
+	return msg, nil
+}
+
+// ListBalancers returns every balancer of one balancer map (spec017).
+func (s *routingServer) ListBalancers(ctx context.Context, request *ListBalancersRequest) (*ListBalancersResponse, error) {
+	bl, ok := s.router.(routing.BalancerLister)
+	if !ok {
+		return nil, errors.New("unsupported router implementation")
+	}
+	balancers := bl.Balancers()
+	response := &ListBalancersResponse{}
+	for _, tag := range balancers.Tags() {
+		msg, err := balancerMsg(ctx, balancers, tag)
+		if err != nil {
+			return nil, err
+		}
+		response.Balancers = append(response.Balancers, &BalancerItem{Tag: tag, Balancer: msg})
+	}
+	return response, nil
+}
+
+// GetLoopGuards returns the loop guard counters (spec017 L8).
+func (s *routingServer) GetLoopGuards(ctx context.Context, request *GetLoopGuardsRequest) (*GetLoopGuardsResponse, error) {
+	g, ok := s.router.(routing.LoopGuard)
+	if !ok {
+		return nil, errors.New("unsupported router implementation")
+	}
+	fallbackChain, loopbackReentry := g.LoopGuards()
+	return &GetLoopGuardsResponse{FallbackChain: fallbackChain, LoopbackReentry: loopbackReentry}, nil
 }
 
 func (s *routingServer) OverrideBalancerTarget(ctx context.Context, request *OverrideBalancerTargetRequest) (*OverrideBalancerTargetResponse, error) {

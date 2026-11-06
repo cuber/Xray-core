@@ -73,14 +73,31 @@ message OverrideInfo {
   string target = 2;
 }
 
+// spec017: one level of a balancer's fallback chain.
+message FallbackHop {
+  string tag = 1;
+  // `tag` names a balancer of this router; false: an outbound tag, which ends the chain.
+  bool balancer = 2;
+  // For a balancer hop: its strategy yields no candidate now, so its picks use its own fallback (an
+  // override on that hop still wins), as FallbackInfo.active.
+  bool active = 3;
+  // The hop's strategy reports `active`.
+  bool reported = 4;
+}
+
 // spec016: the balancer's fallbackTag and whether new picks end on it.
 message FallbackInfo {
   // The fallbackTag as loaded; empty when the balancer has none.
   string tag = 1;
   // The strategy currently yields no candidate, so new picks use `tag` (an override still wins).
   bool active = 2;
-  // The strategy reports `active` (weightedLeastPing); false for the others, whose `active` is unknown.
+  // The strategy reports `active`: every strategy since spec017 (weightedLeastPing only in spec016).
   bool reported = 3;
+  // spec017: `tag` names a balancer, whose pick continues the chain.
+  bool balancer = 4;
+  // spec017: the chain after this balancer, resolved on one balancer map. chain[0] is `tag`; the last hop is an
+  // outbound, or a balancer without a fallbackTag. Empty when the balancer has no fallbackTag.
+  repeated FallbackHop chain = 5;
 }
 
 message BalancerMsg {
@@ -95,6 +112,28 @@ message GetBalancerInfoRequest {
 
 message GetBalancerInfoResponse {
   BalancerMsg balancer = 1;
+}
+
+// spec017: every balancer, from one balancer map, in tag order.
+message ListBalancersRequest {}
+
+message BalancerItem {
+  string tag = 1;
+  BalancerMsg balancer = 2;
+}
+
+message ListBalancersResponse {
+  repeated BalancerItem balancers = 1;
+}
+
+// spec017 L8: what the routing loop guards stopped since start.
+message GetLoopGuardsRequest {}
+
+message GetLoopGuardsResponse {
+  // Picks whose fallback chain exceeded the balancer map (a Core defect; expected to stay zero).
+  uint64 fallback_chain = 1;
+  // Connections that came back to a loopback outbound they had passed.
+  uint64 loopback_reentry = 2;
 }
 
 message OverrideBalancerTargetRequest {
@@ -135,6 +174,9 @@ service RoutingService {
 
   rpc GetBalancerInfo(GetBalancerInfoRequest) returns (GetBalancerInfoResponse){}
   rpc OverrideBalancerTarget(OverrideBalancerTargetRequest) returns (OverrideBalancerTargetResponse) {}
+  // spec017
+  rpc ListBalancers(ListBalancersRequest) returns (ListBalancersResponse) {}
+  rpc GetLoopGuards(GetLoopGuardsRequest) returns (GetLoopGuardsResponse) {}
   
   rpc AddRule(AddRuleRequest) returns (AddRuleResponse) {}
   rpc RemoveRule(RemoveRuleRequest) returns (RemoveRuleResponse) {}

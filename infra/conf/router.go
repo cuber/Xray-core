@@ -2,6 +2,7 @@ package conf
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 
 	"github.com/xtls/xray-core/app/router"
@@ -66,6 +67,21 @@ func (r *BalancingRule) Build() (*router.BalancingRule, error) {
 		OutboundSelector: r.Selectors,
 		Tag:              r.Tag,
 	}, nil
+}
+
+// checkFallbackCollision rejects a fallbackTag that names both an outbound and a balancer (Core
+// spec017 L9): the router, which does not see the outbounds at Init, would take the balancer.
+func checkFallbackCollision(balancers []*BalancingRule, outboundTags []string) error {
+	isBalancer := make(map[string]bool, len(balancers))
+	for _, b := range balancers {
+		isBalancer[b.Tag] = true
+	}
+	for _, b := range balancers {
+		if isBalancer[b.FallbackTag] && slices.Contains(outboundTags, b.FallbackTag) {
+			return errors.New("fallbackTag ", b.FallbackTag, " names both an outbound and a balancer")
+		}
+	}
+	return nil
 }
 
 type RouterConfig struct {

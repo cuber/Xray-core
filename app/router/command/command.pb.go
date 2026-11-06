@@ -400,6 +400,79 @@ func (x *OverrideInfo) GetTarget() string {
 	return ""
 }
 
+// spec017: one level of a balancer's fallback chain.
+type FallbackHop struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Tag   string                 `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	// `tag` names a balancer of this router; false: an outbound tag, which ends the chain.
+	Balancer bool `protobuf:"varint,2,opt,name=balancer,proto3" json:"balancer,omitempty"`
+	// For a balancer hop: its strategy yields no candidate now, so its picks use its own fallback (an
+	// override on that hop still wins), as FallbackInfo.active.
+	Active bool `protobuf:"varint,3,opt,name=active,proto3" json:"active,omitempty"`
+	// The hop's strategy reports `active`.
+	Reported      bool `protobuf:"varint,4,opt,name=reported,proto3" json:"reported,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FallbackHop) Reset() {
+	*x = FallbackHop{}
+	mi := &file_app_router_command_command_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FallbackHop) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FallbackHop) ProtoMessage() {}
+
+func (x *FallbackHop) ProtoReflect() protoreflect.Message {
+	mi := &file_app_router_command_command_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FallbackHop.ProtoReflect.Descriptor instead.
+func (*FallbackHop) Descriptor() ([]byte, []int) {
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *FallbackHop) GetTag() string {
+	if x != nil {
+		return x.Tag
+	}
+	return ""
+}
+
+func (x *FallbackHop) GetBalancer() bool {
+	if x != nil {
+		return x.Balancer
+	}
+	return false
+}
+
+func (x *FallbackHop) GetActive() bool {
+	if x != nil {
+		return x.Active
+	}
+	return false
+}
+
+func (x *FallbackHop) GetReported() bool {
+	if x != nil {
+		return x.Reported
+	}
+	return false
+}
+
 // spec016: the balancer's fallbackTag and whether new picks end on it.
 type FallbackInfo struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -407,15 +480,20 @@ type FallbackInfo struct {
 	Tag string `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
 	// The strategy currently yields no candidate, so new picks use `tag` (an override still wins).
 	Active bool `protobuf:"varint,2,opt,name=active,proto3" json:"active,omitempty"`
-	// The strategy reports `active` (weightedLeastPing); false for the others, whose `active` is unknown.
-	Reported      bool `protobuf:"varint,3,opt,name=reported,proto3" json:"reported,omitempty"`
+	// The strategy reports `active`: every strategy since spec017 (weightedLeastPing only in spec016).
+	Reported bool `protobuf:"varint,3,opt,name=reported,proto3" json:"reported,omitempty"`
+	// spec017: `tag` names a balancer, whose pick continues the chain.
+	Balancer bool `protobuf:"varint,4,opt,name=balancer,proto3" json:"balancer,omitempty"`
+	// spec017: the chain after this balancer, resolved on one balancer map. chain[0] is `tag`; the last hop is an
+	// outbound, or a balancer without a fallbackTag. Empty when the balancer has no fallbackTag.
+	Chain         []*FallbackHop `protobuf:"bytes,5,rep,name=chain,proto3" json:"chain,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FallbackInfo) Reset() {
 	*x = FallbackInfo{}
-	mi := &file_app_router_command_command_proto_msgTypes[5]
+	mi := &file_app_router_command_command_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -427,7 +505,7 @@ func (x *FallbackInfo) String() string {
 func (*FallbackInfo) ProtoMessage() {}
 
 func (x *FallbackInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_app_router_command_command_proto_msgTypes[5]
+	mi := &file_app_router_command_command_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -440,7 +518,7 @@ func (x *FallbackInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FallbackInfo.ProtoReflect.Descriptor instead.
 func (*FallbackInfo) Descriptor() ([]byte, []int) {
-	return file_app_router_command_command_proto_rawDescGZIP(), []int{5}
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *FallbackInfo) GetTag() string {
@@ -464,6 +542,20 @@ func (x *FallbackInfo) GetReported() bool {
 	return false
 }
 
+func (x *FallbackInfo) GetBalancer() bool {
+	if x != nil {
+		return x.Balancer
+	}
+	return false
+}
+
+func (x *FallbackInfo) GetChain() []*FallbackHop {
+	if x != nil {
+		return x.Chain
+	}
+	return nil
+}
+
 type BalancerMsg struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Override        *OverrideInfo          `protobuf:"bytes,5,opt,name=override,proto3" json:"override,omitempty"`
@@ -475,7 +567,7 @@ type BalancerMsg struct {
 
 func (x *BalancerMsg) Reset() {
 	*x = BalancerMsg{}
-	mi := &file_app_router_command_command_proto_msgTypes[6]
+	mi := &file_app_router_command_command_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -487,7 +579,7 @@ func (x *BalancerMsg) String() string {
 func (*BalancerMsg) ProtoMessage() {}
 
 func (x *BalancerMsg) ProtoReflect() protoreflect.Message {
-	mi := &file_app_router_command_command_proto_msgTypes[6]
+	mi := &file_app_router_command_command_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -500,7 +592,7 @@ func (x *BalancerMsg) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BalancerMsg.ProtoReflect.Descriptor instead.
 func (*BalancerMsg) Descriptor() ([]byte, []int) {
-	return file_app_router_command_command_proto_rawDescGZIP(), []int{6}
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *BalancerMsg) GetOverride() *OverrideInfo {
@@ -533,7 +625,7 @@ type GetBalancerInfoRequest struct {
 
 func (x *GetBalancerInfoRequest) Reset() {
 	*x = GetBalancerInfoRequest{}
-	mi := &file_app_router_command_command_proto_msgTypes[7]
+	mi := &file_app_router_command_command_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -545,7 +637,7 @@ func (x *GetBalancerInfoRequest) String() string {
 func (*GetBalancerInfoRequest) ProtoMessage() {}
 
 func (x *GetBalancerInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_app_router_command_command_proto_msgTypes[7]
+	mi := &file_app_router_command_command_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -558,7 +650,7 @@ func (x *GetBalancerInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBalancerInfoRequest.ProtoReflect.Descriptor instead.
 func (*GetBalancerInfoRequest) Descriptor() ([]byte, []int) {
-	return file_app_router_command_command_proto_rawDescGZIP(), []int{7}
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetBalancerInfoRequest) GetTag() string {
@@ -577,7 +669,7 @@ type GetBalancerInfoResponse struct {
 
 func (x *GetBalancerInfoResponse) Reset() {
 	*x = GetBalancerInfoResponse{}
-	mi := &file_app_router_command_command_proto_msgTypes[8]
+	mi := &file_app_router_command_command_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -589,7 +681,7 @@ func (x *GetBalancerInfoResponse) String() string {
 func (*GetBalancerInfoResponse) ProtoMessage() {}
 
 func (x *GetBalancerInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_app_router_command_command_proto_msgTypes[8]
+	mi := &file_app_router_command_command_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -602,7 +694,7 @@ func (x *GetBalancerInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBalancerInfoResponse.ProtoReflect.Descriptor instead.
 func (*GetBalancerInfoResponse) Descriptor() ([]byte, []int) {
-	return file_app_router_command_command_proto_rawDescGZIP(), []int{8}
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetBalancerInfoResponse) GetBalancer() *BalancerMsg {
@@ -610,6 +702,230 @@ func (x *GetBalancerInfoResponse) GetBalancer() *BalancerMsg {
 		return x.Balancer
 	}
 	return nil
+}
+
+// spec017: every balancer, from one balancer map, in tag order.
+type ListBalancersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListBalancersRequest) Reset() {
+	*x = ListBalancersRequest{}
+	mi := &file_app_router_command_command_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListBalancersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListBalancersRequest) ProtoMessage() {}
+
+func (x *ListBalancersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_app_router_command_command_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListBalancersRequest.ProtoReflect.Descriptor instead.
+func (*ListBalancersRequest) Descriptor() ([]byte, []int) {
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{10}
+}
+
+type BalancerItem struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tag           string                 `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	Balancer      *BalancerMsg           `protobuf:"bytes,2,opt,name=balancer,proto3" json:"balancer,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BalancerItem) Reset() {
+	*x = BalancerItem{}
+	mi := &file_app_router_command_command_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BalancerItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BalancerItem) ProtoMessage() {}
+
+func (x *BalancerItem) ProtoReflect() protoreflect.Message {
+	mi := &file_app_router_command_command_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BalancerItem.ProtoReflect.Descriptor instead.
+func (*BalancerItem) Descriptor() ([]byte, []int) {
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *BalancerItem) GetTag() string {
+	if x != nil {
+		return x.Tag
+	}
+	return ""
+}
+
+func (x *BalancerItem) GetBalancer() *BalancerMsg {
+	if x != nil {
+		return x.Balancer
+	}
+	return nil
+}
+
+type ListBalancersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Balancers     []*BalancerItem        `protobuf:"bytes,1,rep,name=balancers,proto3" json:"balancers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListBalancersResponse) Reset() {
+	*x = ListBalancersResponse{}
+	mi := &file_app_router_command_command_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListBalancersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListBalancersResponse) ProtoMessage() {}
+
+func (x *ListBalancersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_app_router_command_command_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListBalancersResponse.ProtoReflect.Descriptor instead.
+func (*ListBalancersResponse) Descriptor() ([]byte, []int) {
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ListBalancersResponse) GetBalancers() []*BalancerItem {
+	if x != nil {
+		return x.Balancers
+	}
+	return nil
+}
+
+// spec017 L8: what the routing loop guards stopped since start.
+type GetLoopGuardsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetLoopGuardsRequest) Reset() {
+	*x = GetLoopGuardsRequest{}
+	mi := &file_app_router_command_command_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetLoopGuardsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLoopGuardsRequest) ProtoMessage() {}
+
+func (x *GetLoopGuardsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_app_router_command_command_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetLoopGuardsRequest.ProtoReflect.Descriptor instead.
+func (*GetLoopGuardsRequest) Descriptor() ([]byte, []int) {
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{13}
+}
+
+type GetLoopGuardsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Picks whose fallback chain exceeded the balancer map (a Core defect; expected to stay zero).
+	FallbackChain uint64 `protobuf:"varint,1,opt,name=fallback_chain,json=fallbackChain,proto3" json:"fallback_chain,omitempty"`
+	// Connections that came back to a loopback outbound they had passed.
+	LoopbackReentry uint64 `protobuf:"varint,2,opt,name=loopback_reentry,json=loopbackReentry,proto3" json:"loopback_reentry,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetLoopGuardsResponse) Reset() {
+	*x = GetLoopGuardsResponse{}
+	mi := &file_app_router_command_command_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetLoopGuardsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLoopGuardsResponse) ProtoMessage() {}
+
+func (x *GetLoopGuardsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_app_router_command_command_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetLoopGuardsResponse.ProtoReflect.Descriptor instead.
+func (*GetLoopGuardsResponse) Descriptor() ([]byte, []int) {
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *GetLoopGuardsResponse) GetFallbackChain() uint64 {
+	if x != nil {
+		return x.FallbackChain
+	}
+	return 0
+}
+
+func (x *GetLoopGuardsResponse) GetLoopbackReentry() uint64 {
+	if x != nil {
+		return x.LoopbackReentry
+	}
+	return 0
 }
 
 type OverrideBalancerTargetRequest struct {
@@ -622,7 +938,7 @@ type OverrideBalancerTargetRequest struct {
 
 func (x *OverrideBalancerTargetRequest) Reset() {
 	*x = OverrideBalancerTargetRequest{}
-	mi := &file_app_router_command_command_proto_msgTypes[9]
+	mi := &file_app_router_command_command_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -634,7 +950,7 @@ func (x *OverrideBalancerTargetRequest) String() string {
 func (*OverrideBalancerTargetRequest) ProtoMessage() {}
 
 func (x *OverrideBalancerTargetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_app_router_command_command_proto_msgTypes[9]
+	mi := &file_app_router_command_command_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -647,7 +963,7 @@ func (x *OverrideBalancerTargetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OverrideBalancerTargetRequest.ProtoReflect.Descriptor instead.
 func (*OverrideBalancerTargetRequest) Descriptor() ([]byte, []int) {
-	return file_app_router_command_command_proto_rawDescGZIP(), []int{9}
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *OverrideBalancerTargetRequest) GetBalancerTag() string {
@@ -672,7 +988,7 @@ type OverrideBalancerTargetResponse struct {
 
 func (x *OverrideBalancerTargetResponse) Reset() {
 	*x = OverrideBalancerTargetResponse{}
-	mi := &file_app_router_command_command_proto_msgTypes[10]
+	mi := &file_app_router_command_command_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -684,7 +1000,7 @@ func (x *OverrideBalancerTargetResponse) String() string {
 func (*OverrideBalancerTargetResponse) ProtoMessage() {}
 
 func (x *OverrideBalancerTargetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_app_router_command_command_proto_msgTypes[10]
+	mi := &file_app_router_command_command_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -697,7 +1013,7 @@ func (x *OverrideBalancerTargetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OverrideBalancerTargetResponse.ProtoReflect.Descriptor instead.
 func (*OverrideBalancerTargetResponse) Descriptor() ([]byte, []int) {
-	return file_app_router_command_command_proto_rawDescGZIP(), []int{10}
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{16}
 }
 
 type AddRuleRequest struct {
@@ -710,7 +1026,7 @@ type AddRuleRequest struct {
 
 func (x *AddRuleRequest) Reset() {
 	*x = AddRuleRequest{}
-	mi := &file_app_router_command_command_proto_msgTypes[11]
+	mi := &file_app_router_command_command_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -722,7 +1038,7 @@ func (x *AddRuleRequest) String() string {
 func (*AddRuleRequest) ProtoMessage() {}
 
 func (x *AddRuleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_app_router_command_command_proto_msgTypes[11]
+	mi := &file_app_router_command_command_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -735,7 +1051,7 @@ func (x *AddRuleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddRuleRequest.ProtoReflect.Descriptor instead.
 func (*AddRuleRequest) Descriptor() ([]byte, []int) {
-	return file_app_router_command_command_proto_rawDescGZIP(), []int{11}
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *AddRuleRequest) GetConfig() *serial.TypedMessage {
@@ -760,7 +1076,7 @@ type AddRuleResponse struct {
 
 func (x *AddRuleResponse) Reset() {
 	*x = AddRuleResponse{}
-	mi := &file_app_router_command_command_proto_msgTypes[12]
+	mi := &file_app_router_command_command_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -772,7 +1088,7 @@ func (x *AddRuleResponse) String() string {
 func (*AddRuleResponse) ProtoMessage() {}
 
 func (x *AddRuleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_app_router_command_command_proto_msgTypes[12]
+	mi := &file_app_router_command_command_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -785,7 +1101,7 @@ func (x *AddRuleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddRuleResponse.ProtoReflect.Descriptor instead.
 func (*AddRuleResponse) Descriptor() ([]byte, []int) {
-	return file_app_router_command_command_proto_rawDescGZIP(), []int{12}
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{18}
 }
 
 type RemoveRuleRequest struct {
@@ -797,7 +1113,7 @@ type RemoveRuleRequest struct {
 
 func (x *RemoveRuleRequest) Reset() {
 	*x = RemoveRuleRequest{}
-	mi := &file_app_router_command_command_proto_msgTypes[13]
+	mi := &file_app_router_command_command_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -809,7 +1125,7 @@ func (x *RemoveRuleRequest) String() string {
 func (*RemoveRuleRequest) ProtoMessage() {}
 
 func (x *RemoveRuleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_app_router_command_command_proto_msgTypes[13]
+	mi := &file_app_router_command_command_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -822,7 +1138,7 @@ func (x *RemoveRuleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveRuleRequest.ProtoReflect.Descriptor instead.
 func (*RemoveRuleRequest) Descriptor() ([]byte, []int) {
-	return file_app_router_command_command_proto_rawDescGZIP(), []int{13}
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *RemoveRuleRequest) GetRuleTag() string {
@@ -840,7 +1156,7 @@ type RemoveRuleResponse struct {
 
 func (x *RemoveRuleResponse) Reset() {
 	*x = RemoveRuleResponse{}
-	mi := &file_app_router_command_command_proto_msgTypes[14]
+	mi := &file_app_router_command_command_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -852,7 +1168,7 @@ func (x *RemoveRuleResponse) String() string {
 func (*RemoveRuleResponse) ProtoMessage() {}
 
 func (x *RemoveRuleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_app_router_command_command_proto_msgTypes[14]
+	mi := &file_app_router_command_command_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -865,7 +1181,7 @@ func (x *RemoveRuleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveRuleResponse.ProtoReflect.Descriptor instead.
 func (*RemoveRuleResponse) Descriptor() ([]byte, []int) {
-	return file_app_router_command_command_proto_rawDescGZIP(), []int{14}
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{20}
 }
 
 type ListRuleRequest struct {
@@ -876,7 +1192,7 @@ type ListRuleRequest struct {
 
 func (x *ListRuleRequest) Reset() {
 	*x = ListRuleRequest{}
-	mi := &file_app_router_command_command_proto_msgTypes[15]
+	mi := &file_app_router_command_command_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -888,7 +1204,7 @@ func (x *ListRuleRequest) String() string {
 func (*ListRuleRequest) ProtoMessage() {}
 
 func (x *ListRuleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_app_router_command_command_proto_msgTypes[15]
+	mi := &file_app_router_command_command_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -901,7 +1217,7 @@ func (x *ListRuleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRuleRequest.ProtoReflect.Descriptor instead.
 func (*ListRuleRequest) Descriptor() ([]byte, []int) {
-	return file_app_router_command_command_proto_rawDescGZIP(), []int{15}
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{21}
 }
 
 type ListRuleItem struct {
@@ -915,7 +1231,7 @@ type ListRuleItem struct {
 
 func (x *ListRuleItem) Reset() {
 	*x = ListRuleItem{}
-	mi := &file_app_router_command_command_proto_msgTypes[16]
+	mi := &file_app_router_command_command_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -927,7 +1243,7 @@ func (x *ListRuleItem) String() string {
 func (*ListRuleItem) ProtoMessage() {}
 
 func (x *ListRuleItem) ProtoReflect() protoreflect.Message {
-	mi := &file_app_router_command_command_proto_msgTypes[16]
+	mi := &file_app_router_command_command_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -940,7 +1256,7 @@ func (x *ListRuleItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRuleItem.ProtoReflect.Descriptor instead.
 func (*ListRuleItem) Descriptor() ([]byte, []int) {
-	return file_app_router_command_command_proto_rawDescGZIP(), []int{16}
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ListRuleItem) GetTag() string {
@@ -973,7 +1289,7 @@ type ListRuleResponse struct {
 
 func (x *ListRuleResponse) Reset() {
 	*x = ListRuleResponse{}
-	mi := &file_app_router_command_command_proto_msgTypes[17]
+	mi := &file_app_router_command_command_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -985,7 +1301,7 @@ func (x *ListRuleResponse) String() string {
 func (*ListRuleResponse) ProtoMessage() {}
 
 func (x *ListRuleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_app_router_command_command_proto_msgTypes[17]
+	mi := &file_app_router_command_command_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -998,7 +1314,7 @@ func (x *ListRuleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRuleResponse.ProtoReflect.Descriptor instead.
 func (*ListRuleResponse) Descriptor() ([]byte, []int) {
-	return file_app_router_command_command_proto_rawDescGZIP(), []int{17}
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ListRuleResponse) GetRules() []*ListRuleItem {
@@ -1016,7 +1332,7 @@ type Config struct {
 
 func (x *Config) Reset() {
 	*x = Config{}
-	mi := &file_app_router_command_command_proto_msgTypes[18]
+	mi := &file_app_router_command_command_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1028,7 +1344,7 @@ func (x *Config) String() string {
 func (*Config) ProtoMessage() {}
 
 func (x *Config) ProtoReflect() protoreflect.Message {
-	mi := &file_app_router_command_command_proto_msgTypes[18]
+	mi := &file_app_router_command_command_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1041,7 +1357,7 @@ func (x *Config) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Config.ProtoReflect.Descriptor instead.
 func (*Config) Descriptor() ([]byte, []int) {
-	return file_app_router_command_command_proto_rawDescGZIP(), []int{18}
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{24}
 }
 
 var File_app_router_command_command_proto protoreflect.FileDescriptor
@@ -1088,11 +1404,18 @@ const file_app_router_command_command_proto_rawDesc = "" +
 	"\x13PrincipleTargetInfo\x12\x10\n" +
 	"\x03tag\x18\x01 \x03(\tR\x03tag\"&\n" +
 	"\fOverrideInfo\x12\x16\n" +
-	"\x06target\x18\x02 \x01(\tR\x06target\"T\n" +
+	"\x06target\x18\x02 \x01(\tR\x06target\"o\n" +
+	"\vFallbackHop\x12\x10\n" +
+	"\x03tag\x18\x01 \x01(\tR\x03tag\x12\x1a\n" +
+	"\bbalancer\x18\x02 \x01(\bR\bbalancer\x12\x16\n" +
+	"\x06active\x18\x03 \x01(\bR\x06active\x12\x1a\n" +
+	"\breported\x18\x04 \x01(\bR\breported\"\xac\x01\n" +
 	"\fFallbackInfo\x12\x10\n" +
 	"\x03tag\x18\x01 \x01(\tR\x03tag\x12\x16\n" +
 	"\x06active\x18\x02 \x01(\bR\x06active\x12\x1a\n" +
-	"\breported\x18\x03 \x01(\bR\breported\"\xec\x01\n" +
+	"\breported\x18\x03 \x01(\bR\breported\x12\x1a\n" +
+	"\bbalancer\x18\x04 \x01(\bR\bbalancer\x12:\n" +
+	"\x05chain\x18\x05 \x03(\v2$.xray.app.router.command.FallbackHopR\x05chain\"\xec\x01\n" +
 	"\vBalancerMsg\x12A\n" +
 	"\boverride\x18\x05 \x01(\v2%.xray.app.router.command.OverrideInfoR\boverride\x12W\n" +
 	"\x10principle_target\x18\x06 \x01(\v2,.xray.app.router.command.PrincipleTargetInfoR\x0fprincipleTarget\x12A\n" +
@@ -1100,7 +1423,17 @@ const file_app_router_command_command_proto_rawDesc = "" +
 	"\x16GetBalancerInfoRequest\x12\x10\n" +
 	"\x03tag\x18\x01 \x01(\tR\x03tag\"[\n" +
 	"\x17GetBalancerInfoResponse\x12@\n" +
-	"\bbalancer\x18\x01 \x01(\v2$.xray.app.router.command.BalancerMsgR\bbalancer\"Y\n" +
+	"\bbalancer\x18\x01 \x01(\v2$.xray.app.router.command.BalancerMsgR\bbalancer\"\x16\n" +
+	"\x14ListBalancersRequest\"b\n" +
+	"\fBalancerItem\x12\x10\n" +
+	"\x03tag\x18\x01 \x01(\tR\x03tag\x12@\n" +
+	"\bbalancer\x18\x02 \x01(\v2$.xray.app.router.command.BalancerMsgR\bbalancer\"\\\n" +
+	"\x15ListBalancersResponse\x12C\n" +
+	"\tbalancers\x18\x01 \x03(\v2%.xray.app.router.command.BalancerItemR\tbalancers\"\x16\n" +
+	"\x14GetLoopGuardsRequest\"i\n" +
+	"\x15GetLoopGuardsResponse\x12%\n" +
+	"\x0efallback_chain\x18\x01 \x01(\x04R\rfallbackChain\x12)\n" +
+	"\x10loopback_reentry\x18\x02 \x01(\x04R\x0floopbackReentry\"Y\n" +
 	"\x1dOverrideBalancerTargetRequest\x12 \n" +
 	"\vbalancerTag\x18\x01 \x01(\tR\vbalancerTag\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\tR\x06target\" \n" +
@@ -1119,12 +1452,14 @@ const file_app_router_command_command_proto_rawDesc = "" +
 	"\x04rule\x18\x03 \x01(\v2\x1c.xray.app.router.RoutingRuleR\x04rule\"O\n" +
 	"\x10ListRuleResponse\x12;\n" +
 	"\x05rules\x18\x01 \x03(\v2%.xray.app.router.command.ListRuleItemR\x05rules\"\b\n" +
-	"\x06Config2\xa2\x06\n" +
+	"\x06Config2\x86\b\n" +
 	"\x0eRoutingService\x12{\n" +
 	"\x15SubscribeRoutingStats\x125.xray.app.router.command.SubscribeRoutingStatsRequest\x1a'.xray.app.router.command.RoutingContext\"\x000\x01\x12a\n" +
 	"\tTestRoute\x12).xray.app.router.command.TestRouteRequest\x1a'.xray.app.router.command.RoutingContext\"\x00\x12v\n" +
 	"\x0fGetBalancerInfo\x12/.xray.app.router.command.GetBalancerInfoRequest\x1a0.xray.app.router.command.GetBalancerInfoResponse\"\x00\x12\x8b\x01\n" +
-	"\x16OverrideBalancerTarget\x126.xray.app.router.command.OverrideBalancerTargetRequest\x1a7.xray.app.router.command.OverrideBalancerTargetResponse\"\x00\x12^\n" +
+	"\x16OverrideBalancerTarget\x126.xray.app.router.command.OverrideBalancerTargetRequest\x1a7.xray.app.router.command.OverrideBalancerTargetResponse\"\x00\x12p\n" +
+	"\rListBalancers\x12-.xray.app.router.command.ListBalancersRequest\x1a..xray.app.router.command.ListBalancersResponse\"\x00\x12p\n" +
+	"\rGetLoopGuards\x12-.xray.app.router.command.GetLoopGuardsRequest\x1a..xray.app.router.command.GetLoopGuardsResponse\"\x00\x12^\n" +
 	"\aAddRule\x12'.xray.app.router.command.AddRuleRequest\x1a(.xray.app.router.command.AddRuleResponse\"\x00\x12g\n" +
 	"\n" +
 	"RemoveRule\x12*.xray.app.router.command.RemoveRuleRequest\x1a+.xray.app.router.command.RemoveRuleResponse\"\x00\x12a\n" +
@@ -1143,62 +1478,75 @@ func file_app_router_command_command_proto_rawDescGZIP() []byte {
 	return file_app_router_command_command_proto_rawDescData
 }
 
-var file_app_router_command_command_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_app_router_command_command_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_app_router_command_command_proto_goTypes = []any{
 	(*RoutingContext)(nil),                 // 0: xray.app.router.command.RoutingContext
 	(*SubscribeRoutingStatsRequest)(nil),   // 1: xray.app.router.command.SubscribeRoutingStatsRequest
 	(*TestRouteRequest)(nil),               // 2: xray.app.router.command.TestRouteRequest
 	(*PrincipleTargetInfo)(nil),            // 3: xray.app.router.command.PrincipleTargetInfo
 	(*OverrideInfo)(nil),                   // 4: xray.app.router.command.OverrideInfo
-	(*FallbackInfo)(nil),                   // 5: xray.app.router.command.FallbackInfo
-	(*BalancerMsg)(nil),                    // 6: xray.app.router.command.BalancerMsg
-	(*GetBalancerInfoRequest)(nil),         // 7: xray.app.router.command.GetBalancerInfoRequest
-	(*GetBalancerInfoResponse)(nil),        // 8: xray.app.router.command.GetBalancerInfoResponse
-	(*OverrideBalancerTargetRequest)(nil),  // 9: xray.app.router.command.OverrideBalancerTargetRequest
-	(*OverrideBalancerTargetResponse)(nil), // 10: xray.app.router.command.OverrideBalancerTargetResponse
-	(*AddRuleRequest)(nil),                 // 11: xray.app.router.command.AddRuleRequest
-	(*AddRuleResponse)(nil),                // 12: xray.app.router.command.AddRuleResponse
-	(*RemoveRuleRequest)(nil),              // 13: xray.app.router.command.RemoveRuleRequest
-	(*RemoveRuleResponse)(nil),             // 14: xray.app.router.command.RemoveRuleResponse
-	(*ListRuleRequest)(nil),                // 15: xray.app.router.command.ListRuleRequest
-	(*ListRuleItem)(nil),                   // 16: xray.app.router.command.ListRuleItem
-	(*ListRuleResponse)(nil),               // 17: xray.app.router.command.ListRuleResponse
-	(*Config)(nil),                         // 18: xray.app.router.command.Config
-	nil,                                    // 19: xray.app.router.command.RoutingContext.AttributesEntry
-	(net.Network)(0),                       // 20: xray.common.net.Network
-	(*serial.TypedMessage)(nil),            // 21: xray.common.serial.TypedMessage
-	(*router.RoutingRule)(nil),             // 22: xray.app.router.RoutingRule
+	(*FallbackHop)(nil),                    // 5: xray.app.router.command.FallbackHop
+	(*FallbackInfo)(nil),                   // 6: xray.app.router.command.FallbackInfo
+	(*BalancerMsg)(nil),                    // 7: xray.app.router.command.BalancerMsg
+	(*GetBalancerInfoRequest)(nil),         // 8: xray.app.router.command.GetBalancerInfoRequest
+	(*GetBalancerInfoResponse)(nil),        // 9: xray.app.router.command.GetBalancerInfoResponse
+	(*ListBalancersRequest)(nil),           // 10: xray.app.router.command.ListBalancersRequest
+	(*BalancerItem)(nil),                   // 11: xray.app.router.command.BalancerItem
+	(*ListBalancersResponse)(nil),          // 12: xray.app.router.command.ListBalancersResponse
+	(*GetLoopGuardsRequest)(nil),           // 13: xray.app.router.command.GetLoopGuardsRequest
+	(*GetLoopGuardsResponse)(nil),          // 14: xray.app.router.command.GetLoopGuardsResponse
+	(*OverrideBalancerTargetRequest)(nil),  // 15: xray.app.router.command.OverrideBalancerTargetRequest
+	(*OverrideBalancerTargetResponse)(nil), // 16: xray.app.router.command.OverrideBalancerTargetResponse
+	(*AddRuleRequest)(nil),                 // 17: xray.app.router.command.AddRuleRequest
+	(*AddRuleResponse)(nil),                // 18: xray.app.router.command.AddRuleResponse
+	(*RemoveRuleRequest)(nil),              // 19: xray.app.router.command.RemoveRuleRequest
+	(*RemoveRuleResponse)(nil),             // 20: xray.app.router.command.RemoveRuleResponse
+	(*ListRuleRequest)(nil),                // 21: xray.app.router.command.ListRuleRequest
+	(*ListRuleItem)(nil),                   // 22: xray.app.router.command.ListRuleItem
+	(*ListRuleResponse)(nil),               // 23: xray.app.router.command.ListRuleResponse
+	(*Config)(nil),                         // 24: xray.app.router.command.Config
+	nil,                                    // 25: xray.app.router.command.RoutingContext.AttributesEntry
+	(net.Network)(0),                       // 26: xray.common.net.Network
+	(*serial.TypedMessage)(nil),            // 27: xray.common.serial.TypedMessage
+	(*router.RoutingRule)(nil),             // 28: xray.app.router.RoutingRule
 }
 var file_app_router_command_command_proto_depIdxs = []int32{
-	20, // 0: xray.app.router.command.RoutingContext.Network:type_name -> xray.common.net.Network
-	19, // 1: xray.app.router.command.RoutingContext.Attributes:type_name -> xray.app.router.command.RoutingContext.AttributesEntry
+	26, // 0: xray.app.router.command.RoutingContext.Network:type_name -> xray.common.net.Network
+	25, // 1: xray.app.router.command.RoutingContext.Attributes:type_name -> xray.app.router.command.RoutingContext.AttributesEntry
 	0,  // 2: xray.app.router.command.TestRouteRequest.RoutingContext:type_name -> xray.app.router.command.RoutingContext
-	4,  // 3: xray.app.router.command.BalancerMsg.override:type_name -> xray.app.router.command.OverrideInfo
-	3,  // 4: xray.app.router.command.BalancerMsg.principle_target:type_name -> xray.app.router.command.PrincipleTargetInfo
-	5,  // 5: xray.app.router.command.BalancerMsg.fallback:type_name -> xray.app.router.command.FallbackInfo
-	6,  // 6: xray.app.router.command.GetBalancerInfoResponse.balancer:type_name -> xray.app.router.command.BalancerMsg
-	21, // 7: xray.app.router.command.AddRuleRequest.config:type_name -> xray.common.serial.TypedMessage
-	22, // 8: xray.app.router.command.ListRuleItem.rule:type_name -> xray.app.router.RoutingRule
-	16, // 9: xray.app.router.command.ListRuleResponse.rules:type_name -> xray.app.router.command.ListRuleItem
-	1,  // 10: xray.app.router.command.RoutingService.SubscribeRoutingStats:input_type -> xray.app.router.command.SubscribeRoutingStatsRequest
-	2,  // 11: xray.app.router.command.RoutingService.TestRoute:input_type -> xray.app.router.command.TestRouteRequest
-	7,  // 12: xray.app.router.command.RoutingService.GetBalancerInfo:input_type -> xray.app.router.command.GetBalancerInfoRequest
-	9,  // 13: xray.app.router.command.RoutingService.OverrideBalancerTarget:input_type -> xray.app.router.command.OverrideBalancerTargetRequest
-	11, // 14: xray.app.router.command.RoutingService.AddRule:input_type -> xray.app.router.command.AddRuleRequest
-	13, // 15: xray.app.router.command.RoutingService.RemoveRule:input_type -> xray.app.router.command.RemoveRuleRequest
-	15, // 16: xray.app.router.command.RoutingService.ListRule:input_type -> xray.app.router.command.ListRuleRequest
-	0,  // 17: xray.app.router.command.RoutingService.SubscribeRoutingStats:output_type -> xray.app.router.command.RoutingContext
-	0,  // 18: xray.app.router.command.RoutingService.TestRoute:output_type -> xray.app.router.command.RoutingContext
-	8,  // 19: xray.app.router.command.RoutingService.GetBalancerInfo:output_type -> xray.app.router.command.GetBalancerInfoResponse
-	10, // 20: xray.app.router.command.RoutingService.OverrideBalancerTarget:output_type -> xray.app.router.command.OverrideBalancerTargetResponse
-	12, // 21: xray.app.router.command.RoutingService.AddRule:output_type -> xray.app.router.command.AddRuleResponse
-	14, // 22: xray.app.router.command.RoutingService.RemoveRule:output_type -> xray.app.router.command.RemoveRuleResponse
-	17, // 23: xray.app.router.command.RoutingService.ListRule:output_type -> xray.app.router.command.ListRuleResponse
-	17, // [17:24] is the sub-list for method output_type
-	10, // [10:17] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	5,  // 3: xray.app.router.command.FallbackInfo.chain:type_name -> xray.app.router.command.FallbackHop
+	4,  // 4: xray.app.router.command.BalancerMsg.override:type_name -> xray.app.router.command.OverrideInfo
+	3,  // 5: xray.app.router.command.BalancerMsg.principle_target:type_name -> xray.app.router.command.PrincipleTargetInfo
+	6,  // 6: xray.app.router.command.BalancerMsg.fallback:type_name -> xray.app.router.command.FallbackInfo
+	7,  // 7: xray.app.router.command.GetBalancerInfoResponse.balancer:type_name -> xray.app.router.command.BalancerMsg
+	7,  // 8: xray.app.router.command.BalancerItem.balancer:type_name -> xray.app.router.command.BalancerMsg
+	11, // 9: xray.app.router.command.ListBalancersResponse.balancers:type_name -> xray.app.router.command.BalancerItem
+	27, // 10: xray.app.router.command.AddRuleRequest.config:type_name -> xray.common.serial.TypedMessage
+	28, // 11: xray.app.router.command.ListRuleItem.rule:type_name -> xray.app.router.RoutingRule
+	22, // 12: xray.app.router.command.ListRuleResponse.rules:type_name -> xray.app.router.command.ListRuleItem
+	1,  // 13: xray.app.router.command.RoutingService.SubscribeRoutingStats:input_type -> xray.app.router.command.SubscribeRoutingStatsRequest
+	2,  // 14: xray.app.router.command.RoutingService.TestRoute:input_type -> xray.app.router.command.TestRouteRequest
+	8,  // 15: xray.app.router.command.RoutingService.GetBalancerInfo:input_type -> xray.app.router.command.GetBalancerInfoRequest
+	15, // 16: xray.app.router.command.RoutingService.OverrideBalancerTarget:input_type -> xray.app.router.command.OverrideBalancerTargetRequest
+	10, // 17: xray.app.router.command.RoutingService.ListBalancers:input_type -> xray.app.router.command.ListBalancersRequest
+	13, // 18: xray.app.router.command.RoutingService.GetLoopGuards:input_type -> xray.app.router.command.GetLoopGuardsRequest
+	17, // 19: xray.app.router.command.RoutingService.AddRule:input_type -> xray.app.router.command.AddRuleRequest
+	19, // 20: xray.app.router.command.RoutingService.RemoveRule:input_type -> xray.app.router.command.RemoveRuleRequest
+	21, // 21: xray.app.router.command.RoutingService.ListRule:input_type -> xray.app.router.command.ListRuleRequest
+	0,  // 22: xray.app.router.command.RoutingService.SubscribeRoutingStats:output_type -> xray.app.router.command.RoutingContext
+	0,  // 23: xray.app.router.command.RoutingService.TestRoute:output_type -> xray.app.router.command.RoutingContext
+	9,  // 24: xray.app.router.command.RoutingService.GetBalancerInfo:output_type -> xray.app.router.command.GetBalancerInfoResponse
+	16, // 25: xray.app.router.command.RoutingService.OverrideBalancerTarget:output_type -> xray.app.router.command.OverrideBalancerTargetResponse
+	12, // 26: xray.app.router.command.RoutingService.ListBalancers:output_type -> xray.app.router.command.ListBalancersResponse
+	14, // 27: xray.app.router.command.RoutingService.GetLoopGuards:output_type -> xray.app.router.command.GetLoopGuardsResponse
+	18, // 28: xray.app.router.command.RoutingService.AddRule:output_type -> xray.app.router.command.AddRuleResponse
+	20, // 29: xray.app.router.command.RoutingService.RemoveRule:output_type -> xray.app.router.command.RemoveRuleResponse
+	23, // 30: xray.app.router.command.RoutingService.ListRule:output_type -> xray.app.router.command.ListRuleResponse
+	22, // [22:31] is the sub-list for method output_type
+	13, // [13:22] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_app_router_command_command_proto_init() }
@@ -1212,7 +1560,7 @@ func file_app_router_command_command_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_app_router_command_command_proto_rawDesc), len(file_app_router_command_command_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   20,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
