@@ -8,10 +8,11 @@
 - [x] T005 `infra/conf` collision L9; unit FR-008.
 - [x] T006 Control plane: `FallbackHop`, `FallbackInfo.balancer/chain`, `reported` for every strategy,
   `ListBalancers`, `GetLoopGuards`; CP-7 contract FR-009.
-- [ ] T007 Full `go test ./... -count=1`, race and format checks; `xrayctl build core` from the committed tree;
-  stability-check gate (dispatcher row). Tests done (evidence); build and gate open.
-- [ ] T008 Consumers: open the Sidecar spec for `/xray-debug` `balancers`/`loop_guards` and the metrics; xray-config
-  spec019 for the xrayctl checks, gate, acceptance and asz.lite.
+- [x] T007 Full `go test ./... -count=1`, race and format checks; `xrayctl build core` from the committed tree;
+  stability-check gate (dispatcher row).
+- [x] T008 Consumers: xray-config spec019 for the xrayctl checks, gate and asz.lite (done 2026-11-06). The Sidecar
+  spec for `/xray-debug` `balancers`/`loop_guards` and the metrics, and spec019's acceptance items, are dropped
+  (2026-11-06, Control Plane).
 
 T007 results go to xray-config spec019 first; they come here with the next Core code change (stability-check: no
 doc-only Core commit between the gate and the deployment).
@@ -41,3 +42,15 @@ doc-only Core commit between the gate and the deployment).
 - `go test ./... -count=1 -timeout 1h` with `resources/geoip.dat` and `geosite.dat`: exit 0, 107 packages ok, no
   failure. `go vet` and `gofmt` clean on the touched packages; `-race` on `app/router/...`, `app/dispatcher`, `proxy/loopback`,
   `app/observatory/command`, `infra/conf` passes.
+
+2026-11-06, T007 (recorded first in xray-config spec019, carried here with spec018's opening):
+
+- `xrayctl build core` from `5305dea7`: `build/xray-linux-amd64` `vcs.modified=false`, SHA-256
+  `f036be579750ceca3dc8daf5f4775805b66c1495524fbb875f5b5e5a49772947`.
+- stability-check `singmux-check` A/B against asz.lite's `ee030ff`, chaos 600 s + settle 15 s + quiet 120 s, server on
+  hk.akile.lite and on la.akile.lite, the other as client: baseline and candidate PASS in both; no panic; goroutines
+  12 → 10, h2mux handlers and carriers to 0, FDs back to start; no corrupted byte; quiet phase 0 TCP failures, UDP at
+  least 99.3%. Candidate/baseline peaks: goroutines 1171/1158 and 1185/1172, handlers 106/104 and 108/102, RSS 71/71
+  and 79/76 MiB. tk.akile.hyper did not take part (its relay timed out at staging); the user accepted two hosts.
+- Deployed on asz.lite (`switch upgrade-prepare --core-only`, `switch upgrade`): Core interruption 417 ms;
+  `acceptance check --baseline --artifact-dir build` PASS without warnings.

@@ -1,7 +1,8 @@
 # Plan: Balancer Fallback Chains
 
 - Spec: [spec.md](spec.md)
-- Status: implemented 2026-11-06 (T002–T006); gate T007 and consumers T008 open.
+- Status: implemented 2026-11-06 (T002–T006); gate T007 passed and deployed on asz.lite 2026-11-06; T008 closed
+  (Sidecar and Portal consumers a non-goal, xray-config spec019 done).
 
 ## Code
 

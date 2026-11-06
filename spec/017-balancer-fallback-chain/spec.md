@@ -2,8 +2,10 @@
 
 - Feature ID: 017-balancer-fallback-chain
 - Created: 2026-11-05
-- Status: Approved (2026-11-05); implemented 2026-11-06 (T002–T006, T007 tests); build, stability-check gate and
-  deployment pending. L6 resolves on the map of the rule's balancer (amended at implementation, 2026-11-06).
+- Status: Approved (2026-11-05); implemented 2026-11-06 (`5305dea7`), stability-check gate passed and deployed on
+  asz.lite 2026-11-06 (xray-config spec019). L6 resolves on the map of the rule's balancer (amended at
+  implementation, 2026-11-06). Sidecar and Portal consumers: non-goal (2026-11-06, Control Plane). L-B and L-C are
+  refused before start by [spec018](../018-startup-loop-checks/spec.md).
 - Baseline: Core `ee030ff5` (develop, spec016)
 - Origin (user, 2026-11-05): asz.lite's monitoring root `hk-balancer` (Mini and VGD FCC, fallback CTC FCC) lost all
   three FCC paths together on 2026-11-05, 14:12–14:36 +08:00, while both AHK forwarders stayed alive (xray-config
@@ -68,8 +70,8 @@ The paths that can loop through a balancer fallback, and what closes each:
 | Class | Path | Decidable within one config | Core (this spec) | xray-config spec019 |
 |---|---|---|---|---|
 | L-A fallback cycle | fallback edges between balancers | exactly: the edges are unconditional | rejected at publish (L1–L5), pick guard (L6) | rejected at render, same rule |
-| L-B re-entry | a loopback outbound feeds the connection back into routing (rules or Lua) | no: it depends on rule conditions | each loopback passed at most once per connection (L7) | no fallback chain may reach a loopback |
-| L-C transport chain | `dialerProxy` / `proxySettings`, outbound to outbound | exactly | non-goal: it never names a balancer | rejected at render |
+| L-B re-entry | a loopback outbound feeds the connection back into routing (rules or Lua) | no: it depends on rule conditions | each loopback passed at most once per connection (L7); a possible loop is refused before start by spec018 S2 | no fallback chain may reach a loopback |
+| L-C transport chain | `dialerProxy` / `proxySettings`, outbound to outbound | exactly | non-goal here: it never names a balancer; refused before start by spec018 S1 | rejected at render |
 | L-D across nodes | an outbound reaches another node, or this one, whose routing comes back | no: it needs every node's config | not observable: the protocols carry no hop count | the fleet state graph must be acyclic |
 | L-E control plane | a consumer walking chains over several RPCs mixes two published maps | — | the whole chain comes from one map (Control Plane) | consumers bound what they read |
 
@@ -202,19 +204,22 @@ round-robin index or rolls a die.
   three-level chain healthy, with its first level forced down (spec015), and with the first two forced down;
   `GetLoopGuards` zero, then one after the FR-007 loop.
 - **Consumers (CP-8).**
-  - Sidecar: `/xray-debug` `balancers` (tag, strategy, override, the chain with `active`/`reported` per hop) and
-    `loop_guards`, from `ListBalancers` and `GetLoopGuards`; metrics `xray_balancer_fallback_active{balancer}` (the
-    balancer's own level falls back) and `xray_routing_loop_guard_total{kind}`. Planned in a Sidecar spec opened
-    with T008; until then the Sidecar does not read them (it does not read `GetBalancerInfo` today, spec016 CP-8).
-  - Portal: non-goal (2026-11-05), as in spec016: there is no balancer view; Grafana alerts carry the signal.
-  - Nodes: `api.services` already lists `RoutingService` on asz.lite and hq. Acceptance and alert rules belong to
-    xray-config spec019.
+  - Sidecar: non-goal (2026-11-06; user: "环路检查应该是一个xray-core启动的检查或者check的检查，出现环路禁止启动，而不需要改sidecar"). A loop Core can decide is refused before start (L1–L5,
+    spec018), so the guard counters are a last defence that is expected to stay zero, and the chain a running
+    Core uses is the configuration xray-config acceptance already pins (`config_hashes`, `versions`). The 2026-11-05
+    plan (`/xray-debug` `balancers` and `loop_guards`, metrics `xray_balancer_fallback_active` and
+    `xray_routing_loop_guard_total`) is dropped; the RPCs stay for direct reads.
+  - Portal: non-goal (2026-11-06). Corrected: the Portal does have a Balancers tab, built from the Sidecar's
+    configuration-file `balancers` section (selector, strategy, `fallbackTag`); it keeps showing configuration and
+    shows no runtime chain. Grafana alerts carry the signal (xray-config spec019, from `xray_outbound_alive`).
+  - Nodes: `api.services` already lists `RoutingService` on asz.lite and hq. The xrayctl checks, the deployment gate
+    and the alert rules belong to xray-config spec019.
 
 ## Non-goals (2026-11-05)
 
 - Override targets that name balancers.
 - `dialerProxy` / `proxySettings` cycles in Core (L-C): they involve no balancer, predate this spec and the fleet has
-  none; xray-config spec019 rejects them at render.
+  none; xray-config spec019 rejects them at render. Spec018 S1 refuses them before start (2026-11-06).
 - Detecting cross-node loops at runtime (L-D).
 - A depth limit (L1 bounds every chain).
 - Changing when a level falls back (B2). In particular leastPing still falls back before its first observation;
