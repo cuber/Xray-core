@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -21,33 +23,27 @@ import (
 
 // newChainFixture starts a Core shaped like asz.lite's monitoring root after Core spec017: l1 (c1)
 // falls back to l2 (c2), l2 to l3 (c3), l3 to block, as hk-balancer -> ahk-balancer -> ctc-balancer.
-// The probes reach a local 204 endpoint. A dokodemo inbound on the returned port leads into a
-// loopback whose inbound routes back to it.
-func newChainFixture(t *testing.T) (*trackFixture, int) {
+// The probes reach a local 204 endpoint.
+func newChainFixture(t *testing.T) *trackFixture {
 	f := &trackFixture{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	t.Cleanup(server.Close)
 
-	apiPort, loopPort := unusedPort(t), unusedPort(t)
+	apiPort := unusedPort(t)
 	roundrobin := map[string]any{"type": "roundrobin"}
 	config := map[string]any{
 		"api": map[string]any{
 			"tag": "api", "listen": fmt.Sprintf("127.0.0.1:%d", apiPort),
 			"services": []string{"ObservatoryService", "RoutingService"},
 		},
-		"inbounds": []any{map[string]any{
-			"tag": "in-loop", "listen": "127.0.0.1", "port": loopPort, "protocol": "dokodemo-door",
-			"settings": map[string]any{"address": "127.0.0.1", "port": 9, "network": "tcp"},
-		}},
 		"outbounds": []any{
 			map[string]any{"tag": "direct", "protocol": "freedom"},
 			map[string]any{"tag": "c1", "protocol": "freedom"},
 			map[string]any{"tag": "c2", "protocol": "freedom"},
 			map[string]any{"tag": "c3", "protocol": "freedom"},
 			map[string]any{"tag": "block", "protocol": "blackhole"},
-			map[string]any{"tag": "lo", "protocol": "loopback", "settings": map[string]any{"inboundTag": "via-lo"}},
 		},
 		"routing": map[string]any{
 			"balancers": []any{
@@ -59,7 +55,6 @@ func newChainFixture(t *testing.T) (*trackFixture, int) {
 			"rules": []any{
 				map[string]any{"type": "field", "domain": []string{"full:chain.test"}, "balancerTag": "l1"},
 				map[string]any{"type": "field", "domain": []string{"full:plain.test"}, "balancerTag": "plain"},
-				map[string]any{"type": "field", "inboundTag": []string{"in-loop", "via-lo"}, "outboundTag": "lo"},
 			},
 		},
 		"burstObservatory": map[string]any{"pingGroups": []any{map[string]any{
@@ -83,7 +78,7 @@ func newChainFixture(t *testing.T) (*trackFixture, int) {
 	t.Cleanup(func() { conn.Close() })
 	f.observatory = command.NewObservatoryServiceClient(conn)
 	f.routing = routercmd.NewRoutingServiceClient(conn)
-	return f, loopPort
+	return f
 }
 
 func (f *trackFixture) listBalancers(t *testing.T) *routercmd.ListBalancersResponse {
@@ -119,9 +114,9 @@ func chainInfo(l1, l2, l3 bool) *routercmd.FallbackInfo {
 
 // CP-7 (Core spec017 FR-009): the chain through a real gRPC server on a started instance, healthy,
 // with its first level forced down (spec015) and with the first two; ListBalancers equals
-// GetBalancerInfo; GetLoopGuards is zero, then one after a loopback loop.
+// GetBalancerInfo; GetLoopGuards is zero (TestLoopGuardsContract counts a loop).
 func TestFallbackChainContract(t *testing.T) {
-	f, loopPort := newChainFixture(t)
+	f := newChainFixture(t)
 	eventually(t, "c1 measured healthy", 15*time.Second, func() bool { return f.route("chain.test") == "c1" })
 	assertFallback(t, f.balancer(t, "l1"), chainInfo(false, false, false), "c1")
 	assertFallback(t, f.balancer(t, "plain"), &routercmd.FallbackInfo{Reported: true}, "c1")
@@ -163,14 +158,60 @@ func TestFallbackChainContract(t *testing.T) {
 	}
 
 	if guards := f.loopGuards(t); guards.FallbackChain != 0 || guards.LoopbackReentry != 0 {
-		t.Fatalf("guards at start = %v", guards)
+		t.Fatalf("guards = %v", guards)
 	}
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(loopPort)), 5*time.Second)
+}
+
+// CP-7: GetLoopGuards is zero, then one after a loopback loop. Start refuses a loop that rules make
+// (Core spec018 S2), so a routing script makes this one: a dokodemo inbound leads into a loopback
+// whose inbound the script routes back to it (spec018 L-F, which L7 ends).
+func TestLoopGuardsContract(t *testing.T) {
+	apiPort, loopPort := unusedPort(t), unusedPort(t)
+	script := filepath.Join(t.TempDir(), "route.lua")
+	if err := os.WriteFile(script, []byte(`
+function HandleRoute(ctx, inboundTag)
+    if inboundTag == "in-loop" or inboundTag == "via-lo" then
+        return "lo", "loop"
+    end
+    return "direct", "out"
+end`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(map[string]any{
+		"api": map[string]any{"tag": "api", "listen": fmt.Sprintf("127.0.0.1:%d", apiPort), "services": []string{"RoutingService"}},
+		"inbounds": []any{map[string]any{
+			"tag": "in-loop", "listen": "127.0.0.1", "port": loopPort, "protocol": "dokodemo-door",
+			"settings": map[string]any{"address": "127.0.0.1", "port": 9, "network": "tcp"},
+		}},
+		"outbounds": []any{
+			map[string]any{"tag": "direct", "protocol": "freedom"},
+			map[string]any{"tag": "lo", "protocol": "loopback", "settings": map[string]any{"inboundTag": "via-lo"}},
+		},
+		"routing": map[string]any{"script": script},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	conn.Write([]byte("ping"))
-	defer conn.Close()
+	x, err := core.StartInstance("json", raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { x.Close() })
+	conn, err := grpc.NewClient(fmt.Sprintf("127.0.0.1:%d", apiPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	f := &trackFixture{routing: routercmd.NewRoutingServiceClient(conn)}
+	if guards := f.loopGuards(t); guards.FallbackChain != 0 || guards.LoopbackReentry != 0 {
+		t.Fatalf("guards at start = %v", guards)
+	}
+	loop, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(loopPort)), 5*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loop.Write([]byte("ping"))
+	defer loop.Close()
 	eventually(t, "the loopback re-entry counted", 5*time.Second, func() bool {
 		guards := f.loopGuards(t)
 		return guards.FallbackChain == 0 && guards.LoopbackReentry == 1

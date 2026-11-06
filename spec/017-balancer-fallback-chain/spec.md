@@ -179,7 +179,7 @@ round-robin index or rolls a die.
 | FR-004 | L1, L3, L4: a self-reference, two- and three-balancer cycles and a balancer leading into a cycle are rejected at Init with the L4 text; `xray run -test` exits 23; an acyclic 64-level chain is accepted and resolves to its end | unit, CLI test |
 | FR-005 | L2, L5: `AddRule` replacing with a cycle and appending one that closes a cycle (L5) are rejected, and picks then still use the old map; `RemoveRule`, `OverrideBalancerTarget` and `HandlerService` leave the graph unchanged; `r.balancers.Store` has one caller | started-instance gRPC test, unit |
 | FR-006 | L6: picks during concurrent reloads terminate under `-race`; a hand-built cyclic map (white box) closes the connection, increments `fallback_chain` and never reaches the default outbound | unit |
-| FR-007 | L7: a rule → loopback → same rule loop ends after one pass and is counted; a path through two different loopbacks still works | started-instance test |
+| FR-007 | L7: a rule → loopback → same rule loop ends after one pass and is counted; a path through two different loopbacks still works. Since spec018 start refuses such a loop made by rules, so the test makes it with a routing script | started-instance test |
 | FR-008 | L9: a collision is rejected by `infra/conf` | unit |
 | FR-009 | Control plane: `fallback.balancer`, `fallback.chain`, `reported` for every strategy, `ListBalancers`, `GetLoopGuards` | CP-7 contract test |
 

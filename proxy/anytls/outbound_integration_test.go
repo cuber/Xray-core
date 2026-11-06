@@ -194,12 +194,17 @@ func TestAnyTLSOutboundFailureRecovery(t *testing.T) {
 			f, good := outboundFixture(t, "")
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
-			replace := func(config *core.OutboundHandlerConfig) {
+			install := func(config *core.OutboundHandlerConfig) error {
 				t.Helper()
 				if _, err := f.api.RemoveOutbound(ctx, &handler.RemoveOutboundRequest{Tag: "client"}); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := f.api.AddOutbound(ctx, &handler.AddOutboundRequest{Outbound: config}); err != nil {
+				_, err := f.api.AddOutbound(ctx, &handler.AddOutboundRequest{Outbound: config})
+				return err
+			}
+			replace := func(config *core.OutboundHandlerConfig) {
+				t.Helper()
+				if err := install(config); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -276,7 +281,16 @@ func TestAnyTLSOutboundFailureRecovery(t *testing.T) {
 				}
 				bad.SenderSettings = serial.ToTypedMessage(sender)
 			}
-			replace(bad)
+			// Core spec018 S1, S3.3: a dialerProxy cycle is refused when it is added, so that broken path
+			// never runs; the client then has no outbound and fails as boundedly. Every other failure is
+			// installed and fails at run time.
+			if err := install(bad); strings.Contains(failure, "cycle") {
+				if err == nil || !strings.Contains(err.Error(), "dialerProxy cycle: ") || !strings.Contains(err.Error(), "client") {
+					t.Fatalf("a dialerProxy cycle was added: %v", err)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			}
 			if err := f.alter("alice", "alice-secret", false); err != nil {
 				t.Fatal(err)
 			}

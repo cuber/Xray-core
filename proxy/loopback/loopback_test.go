@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"io"
 	"net"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -62,8 +65,9 @@ func echo(t *testing.T, port int) string {
 	return string(buf[:n])
 }
 
-// Core spec017 L7 (FR-007): a rule -> loopback -> the same loopback loop ends after one pass and is
-// counted; a path through two different loopbacks still works.
+// Core spec017 L7 (FR-007), spec018 S2 and FR-007: a path through two different loopbacks works; a
+// rule -> loopback -> the same rule loop is refused at start; the same loop made by a routing script,
+// which start cannot see, ends after one pass and is counted.
 func TestLoopbackReentry(t *testing.T) {
 	target := listenEcho(t)
 	loopPort, twoPort := freePort(t), freePort(t)
@@ -79,34 +83,55 @@ func TestLoopbackReentry(t *testing.T) {
 	rule := func(inbound, outbound string) map[string]any {
 		return map[string]any{"type": "field", "inboundTag": []string{inbound}, "outboundTag": outbound}
 	}
-	config := map[string]any{
-		"inbounds": []any{dokodemo("in-loop", loopPort), dokodemo("in-two", twoPort)},
-		"outbounds": []any{
-			map[string]any{"tag": "direct", "protocol": "freedom"},
-			loopback("lo-a", "via-a"), loopback("lo-b", "via-b"), loopback("lo-c", "via-c"),
-		},
-		"routing": map[string]any{"rules": []any{
-			rule("in-loop", "lo-a"), rule("via-a", "lo-a"),
-			rule("in-two", "lo-b"), rule("via-b", "lo-c"), rule("via-c", "direct"),
-		}},
+	start := func(routing map[string]any) (*core.Instance, error) {
+		raw, err := json.Marshal(map[string]any{
+			"inbounds": []any{dokodemo("in-loop", loopPort), dokodemo("in-two", twoPort)},
+			"outbounds": []any{
+				map[string]any{"tag": "direct", "protocol": "freedom"},
+				loopback("lo-a", "via-a"), loopback("lo-b", "via-b"), loopback("lo-c", "via-c"),
+			},
+			"routing": routing,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return core.StartInstance("json", raw)
 	}
-	raw, err := json.Marshal(config)
+	two := []any{rule("in-two", "lo-b"), rule("via-b", "lo-c"), rule("via-c", "direct")}
+
+	if _, err := start(map[string]any{"rules": append([]any{rule("in-loop", "lo-a"), rule("via-a", "lo-a")}, two...)}); err == nil ||
+		!strings.Contains(err.Error(), "loopback loop: via-a -> [rule #2] lo-a -> via-a") {
+		t.Fatalf("a rule loop through lo-a started: %v", err)
+	}
+
+	x, err := start(map[string]any{"rules": two})
 	if err != nil {
 		t.Fatal(err)
 	}
-	x, err := core.StartInstance("json", raw)
+	if got := echo(t, twoPort); got != "ping" {
+		t.Fatalf("two loopbacks echo %q, want ping", got)
+	}
+	if _, reentry := x.GetFeature(routing.RouterType()).(routing.LoopGuard).LoopGuards(); reentry != 0 {
+		t.Fatalf("loopback_reentry = %d after two different loopbacks", reentry)
+	}
+	x.Close()
+
+	script := filepath.Join(t.TempDir(), "route.lua")
+	if err := os.WriteFile(script, []byte(`
+function HandleRoute(ctx, inboundTag)
+    if inboundTag == "in-loop" or inboundTag == "via-a" then
+        return "lo-a", "loop"
+    end
+    return "direct", "out"
+end`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	x, err = start(map[string]any{"script": script})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { x.Close() })
 	guard := x.GetFeature(routing.RouterType()).(routing.LoopGuard)
-
-	if got := echo(t, twoPort); got != "ping" {
-		t.Fatalf("two loopbacks echo %q, want ping", got)
-	}
-	if _, reentry := guard.LoopGuards(); reentry != 0 {
-		t.Fatalf("loopback_reentry = %d after two different loopbacks", reentry)
-	}
 	if got := echo(t, loopPort); got != "" {
 		t.Fatalf("a loop through lo-a echoed %q", got)
 	}

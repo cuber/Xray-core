@@ -255,6 +255,13 @@ func initInstanceWithConfig(config *Config, server *Instance) (bool, error) {
 	if err := addOutboundHandlers(server, config.Outbound); err != nil {
 		return true, err
 	}
+
+	// Core spec018 S3.1: a loop one configuration decides is refused before anything starts.
+	if guard, ok := server.GetFeature(outbound.ManagerType()).(outbound.GraphGuard); ok {
+		if err := guard.CheckLoops(); err != nil {
+			return true, err
+		}
+	}
 	return false, nil
 }
 

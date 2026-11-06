@@ -201,7 +201,15 @@ func (r *Router) GetFallbackChain(tag string) ([]routing.FallbackHop, error) {
 
 // SetOverrideTarget implements routing.BalancerOverrider
 func (r *Router) SetOverrideTarget(tag, target string) error {
+	defer r.lockGraph()()
 	if b, ok := (*r.balancers.Load())[tag]; ok {
+		// Core spec018 S3.2: a target may name any outbound, a loopback included; clearing one
+		// only removes an edge.
+		if target != "" {
+			if err := r.guardRouting(*r.rules.Load(), *r.balancers.Load(), map[string]string{tag: target}); err != nil {
+				return err
+			}
+		}
 		b.override.Put(target)
 		return nil
 	}

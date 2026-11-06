@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/xtls/xray-core/common/errors"
+	"github.com/xtls/xray-core/common/loopcheck"
 	"github.com/xtls/xray-core/features/routing"
 )
 
@@ -14,50 +15,19 @@ import (
 // published map has no fallback cycle (L1).
 
 // checkFallbackCycles rejects a balancer map whose fallback graph has a cycle, a self-reference
-// included (L1, L4). Each balancer has at most one edge, so a walk follows it until a finished
-// balancer, a tag that is no balancer, or a balancer on the current walk: a cycle.
+// included (L1, L4). Each balancer has at most one edge, its fallbackTag; a tag that is no balancer
+// of the map ends a walk.
 func checkFallbackCycles(m map[string]*Balancer) error {
-	const (
-		unvisited = iota
-		walking
-		done
-	)
-	state := make(map[string]int, len(m))
-	var cycles []string
-	for _, start := range slices.Sorted(maps.Keys(m)) {
-		var walk []string
-		for tag := start; ; {
-			b, ok := m[tag]
-			if !ok || state[tag] == done {
-				break
-			}
-			if state[tag] == walking {
-				cycles = append(cycles, formatCycle(walk[slices.Index(walk, tag):]))
-				break
-			}
-			state[tag] = walking
-			walk = append(walk, tag)
-			if b.fallbackTag == "" {
-				break
-			}
-			tag = b.fallbackTag
-		}
-		for _, tag := range walk {
-			state[tag] = done
+	next := make(map[string]string, len(m))
+	for tag, b := range m {
+		if b.fallbackTag != "" {
+			next[tag] = b.fallbackTag
 		}
 	}
-	if len(cycles) == 0 {
-		return nil
+	if cycles := loopcheck.Functional(next); len(cycles) > 0 {
+		return errors.New("balancer fallback cycle: ", strings.Join(cycles, "; "))
 	}
-	slices.Sort(cycles)
-	return errors.New("balancer fallback cycle: ", strings.Join(cycles, "; "))
-}
-
-// formatCycle prints a cycle from its smallest tag back to it: "a -> b -> a".
-func formatCycle(cycle []string) string {
-	first := slices.Index(cycle, slices.Min(cycle))
-	tags := append(slices.Clone(cycle[first:]), cycle[:first]...)
-	return strings.Join(append(tags, tags[0]), " -> ")
+	return nil
 }
 
 // pickTag is a rule's outbound tag: its own, or its balancer's pick with the fallback chain resolved

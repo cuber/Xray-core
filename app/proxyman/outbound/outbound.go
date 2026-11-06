@@ -23,6 +23,11 @@ type Manager struct {
 	closed           bool
 	tagsCache        *sync.Map
 	retiring         map[outbound.Handler]struct{}
+
+	// Core spec018: graph serialises every graph change with its loop check (S3.4); loopChecker is
+	// the router's S2 check, nil without a routing section.
+	graph       sync.Mutex
+	loopChecker outbound.LoopChecker
 }
 
 // New creates a new Manager.
@@ -110,6 +115,25 @@ func (m *Manager) GetHandler(tag string) outbound.Handler {
 
 // AddHandler implements outbound.Manager.
 func (m *Manager) AddHandler(ctx context.Context, handler outbound.Handler) error {
+	m.access.RLock()
+	running := m.running
+	m.access.RUnlock()
+	if running {
+		// Core spec018 S3.3: once started, a handler that would close a loop is not added. While
+		// core.New adds them one by one, the start check sees them all instead (S3.1).
+		defer m.LockGraph()()
+		if tag := handler.Tag(); tag != "" && m.GetHandler(tag) != nil {
+			return errors.New("existing tag found: " + tag)
+		}
+		def := m.GetDefaultHandler()
+		if def == nil {
+			def = handler
+		}
+		if err := m.checkLoops(append(m.ListHandlers(ctx), handler), def); err != nil {
+			return err
+		}
+	}
+
 	m.access.Lock()
 	defer m.access.Unlock()
 	if m.closed {

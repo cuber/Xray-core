@@ -70,7 +70,14 @@ func (r *Router) Init(ctx context.Context, config *Config, d dns.Client, ohm out
 
 	r.rules.Store(new([]*Rule))
 	r.balancers.Store(&map[string]*Balancer{})
-	return r.ReloadRules(config, false)
+	if err := r.ReloadRules(config, false); err != nil {
+		return err
+	}
+	// Core spec018: the outbound manager asks this router about loops through loopbacks (S2).
+	if guard, ok := ohm.(outbound.GraphGuard); ok {
+		guard.SetLoopChecker(r)
+	}
+	return nil
 }
 
 // PickRoute implements routing.Router.
@@ -111,6 +118,7 @@ func (r *Router) ReloadRules(config *Config, shouldAppend bool) error {
 }
 
 func (r *Router) reloadRules(config *Config, shouldAppend bool, newWebhook func(*WebhookConfig) (*WebhookNotifier, error)) error {
+	defer r.lockGraph()()
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -186,6 +194,10 @@ func (r *Router) reloadRules(config *Config, shouldAppend bool, newWebhook func(
 	if err := checkFallbackCycles(newBalancers); err != nil {
 		return err
 	}
+	// Core spec018 S3.2: nor a loop through a loopback, against the current handlers.
+	if err := r.guardRouting(newRules, newBalancers, nil); err != nil {
+		return err
+	}
 
 	// Register feature dependencies only after every rule has validated.
 	for _, rule := range config.BalancingRule {
@@ -209,6 +221,7 @@ func (r *Router) RemoveRule(tag string) error {
 		return errors.New("empty tag name!")
 	}
 
+	defer r.lockGraph()()
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -221,6 +234,10 @@ func (r *Router) RemoveRule(tag string) error {
 		} else {
 			removed = append(removed, rule)
 		}
+	}
+	// Core spec018 S3.2: a removed rule may have ended a walk to a loopback.
+	if err := r.guardRouting(newRules, *r.balancers.Load(), nil); err != nil {
+		return err
 	}
 	r.rules.Store(&newRules)
 	closeWebhooks(removed)

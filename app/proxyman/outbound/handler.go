@@ -361,6 +361,27 @@ func (h *Handler) ProxySettings() *serial.TypedMessage {
 	return serial.ToTypedMessage(h.proxyConfig)
 }
 
+// DialerProxy implements outbound.LoopView (Core spec018 S1).
+func (h *Handler) DialerProxy() string {
+	if h.streamSettings == nil || h.streamSettings.SocketSettings == nil {
+		return ""
+	}
+	return h.streamSettings.SocketSettings.DialerProxy
+}
+
+// LoopbackInbound implements outbound.LoopView (Core spec018 S2). A loopback is recognised by its
+// configuration message, since proxy/loopback depends on routing.
+func (h *Handler) LoopbackInbound() (string, bool) {
+	if h.proxyConfig == nil || proto.MessageName(h.proxyConfig) != "xray.proxy.loopback.Config" {
+		return "", false
+	}
+	config, ok := h.proxyConfig.(interface{ GetInboundTag() string })
+	if !ok {
+		return "", false
+	}
+	return config.GetInboundTag(), true
+}
+
 func ParseRandomIP(addr net.Address, prefix string) net.Address {
 	_, ipnet, _ := net.ParseCIDR(addr.IP().String() + "/" + prefix)
 
