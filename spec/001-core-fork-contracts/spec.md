@@ -97,6 +97,7 @@ Then 记录实际通过、失败和跳过；不能把未启用公网测试算成
 - FR-011: 默认回归用本地可控 fixture；公网测试显式开启、代理失败不得静默直连；
   TLS 验证不得为了测试全绿而关闭；格式检查不修改源文件。
 - FR-012: proto 字段/编号、账户注册、依赖升级及既有协议回归必须有跨组件兼容检查。
+  2026-11-07 起 `github.com/apernet/quic-go` 经 `replace` 指向我们的 fork `github.com/cuber/quic-go`，先固定在上游同一提交；补丁都在只追加的 fork 线 `fork/<日期>/<上游分叉点>` 上，每次 rebase 升级两个 fork 同日各开新线并逐个移植补丁（现为 Core `fork/2026-11-07/0888beb38a9b`、quic-go `fork/2026-11-07/184d081eef3e`），补丁各归属 fork 自己的 spec（[spec022](../022-quic-go-fork/spec.md)、[spec023](../023-fork-lines/spec.md)）。
 
 ## 原重建阶段非目标
 

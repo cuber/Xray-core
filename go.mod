@@ -67,3 +67,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+replace github.com/apernet/quic-go => github.com/cuber/quic-go v0.61.1-0.20260806010916-184d081eef3e
