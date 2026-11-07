@@ -6,9 +6,9 @@
 - [x] T003 xray-config: `xray-core/line`, `build.sh` checks (L8) and their tests (FR-003).
 - [x] T004 Current-state documents in xray-config and Core (FR-005); spec022, spec021 and spec001 updated.
 - [x] T005 Commits, with the user's consent.
-- [ ] T006 Pushes of both lines (FR-002).
-- [ ] T007 `xrayctl build core` on the line: `vcs.modified=false`, quic-go check passes (with spec022 T006).
-- [ ] T008 GitHub default branches follow the current lines (FR-007).
+- [x] T006 Pushes of both lines (FR-002).
+- [x] T007 `xrayctl build core` on the line: `vcs.modified=false`, quic-go check passes (with spec022 T006).
+- [x] T008 GitHub default branches follow the current lines (FR-007).
 - [ ] T009 Deletion of the old remote names `cuber/develop` and `cuber/v0.61.0-cuber`, with the user's consent (FR-002).
 - [ ] T010 GitHub ruleset that blocks force-pushes and deletion of `fork/*`, with the user's consent.
 
@@ -37,3 +37,15 @@
   `.codex/COMPACT_CONTEXT.md`. Core spec001 FR-012, spec021, spec022 and the index.
 - 2026-11-07 T005: Core `build(spec022, spec023)` and `spec(021)`; xray-config `build(core): fork lines`, with the user's
   consent ("提交").
+- 2026-11-07 T006: `git push -u cuber` of both lines, Core at `17ac19a5` and quic-go at `184d081eef3e`. Both now track
+  `cuber/<line>`. `cuber/develop` (`431e0868`) and `cuber/v0.61.0-cuber` (`184d081eef3e`) are still on GitHub (T009).
+- 2026-11-07 T007: the build wrapper without `XRAY_CORE_BRANCH`, into a scratch directory so the approved `build/`
+  stays as it is:
+  - it reported `fork/2026-11-07/0888beb38a9b (17ac19a5) tracking cuber/fork/2026-11-07/0888beb38a9b` and
+    `quic-go 184d081eef3e on cuber/fork/2026-11-07/184d081eef3e`;
+  - `go version -m` on the Linux binary: `vcs.revision=17ac19a50a68…`, `vcs.modified=false`, and
+    `github.com/apernet/quic-go` `=> github.com/cuber/quic-go v0.61.1-0.20260806010916-184d081eef3e`.
+- 2026-11-07 T008: `gh repo edit --default-branch`, user: "然后fork的默认分支改成我们最新的 fork". `gh repo view
+  --json defaultBranchRef` gives `fork/2026-11-07/0888beb38a9b` for `cuber/Xray-core` (was `main`) and
+  `fork/2026-11-07/184d081eef3e` for `cuber/quic-go` (was `master`). GitHub lists `cuber/quic-go`'s parent as
+  `HyNetworks/quic-go`: `apernet/quic-go` redirects there, and the module path stays `github.com/apernet/quic-go`.

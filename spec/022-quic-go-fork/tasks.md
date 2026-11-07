@@ -6,7 +6,7 @@
 - [x] T003 `replace` at the base; `go mod verify`, build, QUIC users' tests; module trees equal (FR-001, FR-002).
 - [x] T004 Guard test (FR-003).
 - [x] T005 Spec001 FR-012 sentence (FR-005).
-- [ ] T006 Commit (with the user's consent); `xrayctl build core` identity check (FR-004).
+- [x] T006 Commit (with the user's consent); `xrayctl build core` identity check (FR-004).
 - [ ] T007 Next: the fork's spec-kit (its `spec/`), then spec021's library contract moves there. It links spec023's
   register and SOP instead of keeping copies.
 
@@ -51,3 +51,6 @@
     stay as they are. `go version -m` lists `dep github.com/apernet/quic-go v0.61.1-0.20260806010916-184d081eef3e`
     followed by `=> github.com/cuber/quic-go v0.61.1-0.20260806010916-184d081eef3e h1:gZ7RBgOk…`.
     `vcs.modified=false` is checked by `xrayctl build core` after the commit.
+- 2026-11-07 T006: committed as `7094086e` with spec023. **FR-004.** The build wrapper on
+  `fork/2026-11-07/0888beb38a9b` at `17ac19a5`, into a scratch directory: `vcs.modified=false`, and `go version -m`
+  names `=> github.com/cuber/quic-go v0.61.1-0.20260806010916-184d081eef3e`, as recorded in spec023 T007.
