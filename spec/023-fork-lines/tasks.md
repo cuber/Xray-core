@@ -9,8 +9,9 @@
 - [x] T006 Pushes of both lines (FR-002).
 - [x] T007 `xrayctl build core` on the line: `vcs.modified=false`, quic-go check passes (with spec022 T006).
 - [x] T008 GitHub default branches follow the current lines (FR-007).
-- [ ] T009 Deletion of the old remote names `cuber/develop` and `cuber/v0.61.0-cuber`, with the user's consent (FR-002).
-- [ ] T010 GitHub ruleset that blocks force-pushes and deletion of `fork/*`, with the user's consent.
+- [x] T009 Deletion of the old remote names `cuber/develop` and `cuber/v0.61.0-cuber`, with the user's consent (FR-002).
+- [x] T010 GitHub ruleset that blocks force-pushes and deletion of `fork/*`, with the user's consent (FR-008).
+- [x] T011 Local guards: `origin` push URL `no_push`, `gh` default repository `cuber/<fork>` (FR-001).
 
 ## Evidence
 
@@ -49,3 +50,15 @@
   --json defaultBranchRef` gives `fork/2026-11-07/0888beb38a9b` for `cuber/Xray-core` (was `main`) and
   `fork/2026-11-07/184d081eef3e` for `cuber/quic-go` (was `master`). GitHub lists `cuber/quic-go`'s parent as
   `HyNetworks/quic-go`: `apernet/quic-go` redirects there, and the module path stays `github.com/apernet/quic-go`.
+- 2026-11-07 T009, T010, T011 (user: "1，2，3 都执行"; "注意所有仓库都是对 cuber 的，不要操作原仓库"):
+  - `git push cuber --delete develop` and `git push cuber --delete v0.61.0-cuber`. Beforehand: no open PR on either
+    branch, neither protected, `cuber/develop` an ancestor of the Core line, `v0.61.0-cuber` at the quic-go line's
+    commit, and no script names either branch.
+  - Ruleset `fork lines are append-only`, `active`, `refs/heads/fork/**/*`, rules `deletion` and `non_fast_forward`:
+    id 26756644 in `cuber/Xray-core`, 26756647 in `cuber/quic-go`. `rules/branches/<line>` lists both rules for each
+    line and none for `main`.
+  - `git push --dry-run origin` in Core fails with "'no_push' does not appear to be a git repository";
+    `gh repo set-default --view` gives `cuber/Xray-core` and `cuber/quic-go`.
+  - Visibility: `cuber/Xray-core` and `cuber/quic-go` are public forks; `cuber/rule-set` is public, not a fork,
+    because subscriptions fetch `raw.githubusercontent.com/cuber/rule-set/main/...`; `xray-config`, `xray-sidecar`,
+    `xray-auth` are private.

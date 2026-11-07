@@ -49,9 +49,9 @@
 
 - No file changes. Its spec-kit (spec022 T007) links the register here.
 
-## Pending the user's consent
+## Done with the user's consent (2026-11-07)
 
-- Commits in xray-core, xray-config, xray-sidecar (spec019 docs) and quic-go (none yet).
+- Commits in xray-core, xray-config and xray-sidecar (spec019 docs); quic-go has none yet.
 - Pushes:
   - `git push -u cuber fork/2026-11-07/0888beb38a9b` (Core);
   - `git push -u cuber fork/2026-11-07/184d081eef3e` (quic-go).
@@ -60,6 +60,8 @@
 - GitHub: a ruleset that blocks force-pushes and deletion of `fork/*` in both forks.
 - Default branches: they follow the current line (user, 2026-11-07, "然后fork的默认分支改成我们最新的 fork"), so both
   move from their stale upstream copies (`main`, `master`) to the 2026-11-07 lines once those are pushed.
+- Local guards in both checkouts: `origin`'s push URL is `no_push` and `gh repo set-default` names the `cuber` fork
+  (user: "注意所有仓库都是对 cuber 的，不要操作原仓库").
 
 ## Tests
 

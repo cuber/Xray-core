@@ -5,6 +5,16 @@
   `origin` is upstream and `cuber` is ours (L1).
 - Pushing, deleting a branch and changing GitHub settings need the user's consent each time.
 
+## 0. Set up a checkout
+
+Every write goes to `cuber`; upstream is only read (L1).
+
+```bash
+git remote add cuber git@github.com:cuber/<fork>.git   # Xray-core or quic-go, if missing
+git remote set-url --push origin no_push               # a push to upstream fails
+gh repo set-default cuber/<fork>                       # gh otherwise targets the fork's parent
+```
+
 ## 1. Read the state
 
 ```bash

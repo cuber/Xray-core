@@ -4,7 +4,7 @@
 - Created: 2026-11-07
 - Status: Approved (2026-11-07; user: "那就把 develop/ 改成 fork/ 核心记录一个分叉点信息"; "fork/* 是核心迭代分支吧，单搞一个
   develop 没啥意义吧，因为未来我们会 rebase 啊"; "日期我们就用今天来命名吧，后续每次 rebase 升级，两个 fork 仓库都重新拉分支，日期对齐";
-  "顺带把这个fork规范落成spec或者sop"; "然后fork的默认分支改成我们最新的 fork")
+  "顺带把这个fork规范落成spec或者sop"; "然后fork的默认分支改成我们最新的 fork"; "注意所有仓库都是对 cuber 的，不要操作原仓库")
 - Baseline: Core `431e0868` on `develop`, fork point `0888beb38a9b`; quic-go `v0.61.0-cuber` at `184d081eef3e`
   ([spec022](../022-quic-go-fork/spec.md))
 - Procedures: [sop.md](sop.md). Register of lines: [lines.md](lines.md).
@@ -43,7 +43,10 @@ Goal: one convention for both forks.
   | `github.com/cuber/Xray-core` | `XTLS/Xray-core`, `main` | `../xray-core` |
   | `github.com/cuber/quic-go` | `apernet/quic-go`, `vX.Y.Z-mod-rename` | `../quic-go` |
 
-  In both checkouts `origin` is upstream and `cuber` is ours.
+  In both checkouts `origin` is upstream and `cuber` is ours. Upstream is only read: every write (push, deletion,
+  PR, issue, setting) goes to `cuber`. `origin`'s push URL is `no_push`, and `gh repo set-default` names the
+  `cuber` fork, since `gh` otherwise targets a fork's parent. Both forks are public, so their commits and specs carry
+  no credentials, addresses or private configuration.
 - **L2 Line name.** `fork/<YYYY-MM-DD>/<hash>`.
   - `<YYYY-MM-DD>` is the date, Beijing time, on which the line's generation was opened (L3).
   - `<hash>` is the first 12 hex digits of the fork point. The fork point is the upstream commit the line starts
@@ -64,7 +67,8 @@ Goal: one convention for both forks.
   - **Frozen.** A frozen line takes no commits but stays buildable, so a rollback can return to it.
   - **Abandoned.** A candidate that is never promoted is frozen and marked abandoned in the register.
 - **L5 Append only.** A `fork/` branch is never force-pushed, rewritten, renamed or deleted. Every commit a build or
-  a pin ever used stays reachable.
+  a pin ever used stays reachable. In each fork the GitHub ruleset `fork lines are append-only` refuses deletion and
+  non-fast-forward updates of `refs/heads/fork/**/*`; creating a line stays open.
 - **L6 Pins are hashes.**
   - **Core `go.mod` → quic-go.** A pseudo-version, which carries 12 hex digits, plus the `go.sum` hashes. It is
     looked up from the line's head with `go list -m github.com/cuber/quic-go@<commit>` and never stored as a branch
@@ -94,13 +98,14 @@ Goal: one convention for both forks.
 
 | ID | Requirement | Verified by |
 |---|---|---|
-| FR-001 | Both checkouts have `origin` = upstream and `cuber` = ours | `git remote -v` |
+| FR-001 | Both checkouts have `origin` = upstream, push URL `no_push`, and `cuber` = ours; `gh` defaults to the `cuber` fork | `git remote -v`, `gh repo set-default --view` |
 | FR-002 | Generation 2026-11-07, both lines pushed and tracked, `cuber/develop` and `cuber/v0.61.0-cuber` deleted. Core: `fork/2026-11-07/0888beb38a9b` continues `develop`'s history from `431e0868`. quic-go: `fork/2026-11-07/184d081eef3e` at `184d081eef3e` | `git ls-remote` |
 | FR-003 | `xray-config/xray-core/line` names the Core line, and `build.sh` enforces L8 | unit (`test/xrayctl/test_xrayctl_build.py`) |
 | FR-004 | The rename changes no pin: the Core `go.mod`/`go.sum`, Sidecar, xray-tui and Auth hashes stay as they are | diff |
 | FR-005 | Current-state documents name the line, not `develop`. xray-config: AGENTS rule 23 and repository table, `README.md`, `xray-core/README.md`, `docs/server/paths.md`, stability-check, `.codex/COMPACT_CONTEXT.md`. Core: spec001 FR-012, spec021, spec022 | review |
 | FR-006 | The register [lines.md](lines.md) lists every line with its fork point and status | docs |
 | FR-007 | Each fork's GitHub default branch is its current line: `fork/2026-11-07/0888beb38a9b` in `cuber/Xray-core`, `fork/2026-11-07/184d081eef3e` in `cuber/quic-go` | `gh repo view cuber/<fork> --json defaultBranchRef` |
+| FR-008 | The ruleset of L5 is active in both forks | `gh api repos/cuber/<fork>/rules/branches/<line>` lists `deletion` and `non_fast_forward` |
 
 ## Control Plane
 
