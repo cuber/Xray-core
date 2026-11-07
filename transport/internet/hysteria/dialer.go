@@ -23,6 +23,7 @@ import (
 	"github.com/xtls/xray-core/transport/internet/finalmask"
 	"github.com/xtls/xray-core/transport/internet/hysteria/congestion"
 	"github.com/xtls/xray-core/transport/internet/hysteria/congestion/bbr"
+	"github.com/xtls/xray-core/transport/internet/quicrecovery"
 	"github.com/xtls/xray-core/transport/internet/stat"
 	"github.com/xtls/xray-core/transport/internet/tls"
 )
@@ -39,6 +40,7 @@ type client struct {
 	socketConfig *internet.SocketConfig
 	finalMask    *finalmask.FinalMask
 	quicParams   *internet.QuicParams
+	quicStats    *internet.QuicStatsSet // the outbound's QUIC connections (spec021 R3)
 
 	conn    *quic.Conn
 	tr      *quic.Transport
@@ -60,6 +62,7 @@ func (c *client) status() status {
 
 func (c *client) close() {
 	c.conn.CloseWithError(closeErrCodeOK, "")
+	c.quicStats.Remove(quicrecovery.Conn(c.conn))
 	// Dispatch-backed PacketConn deadlines are no-ops. Unblock its reader
 	// before Transport.Close joins QUIC's listener goroutine.
 	c.pktConn.Close()
@@ -103,6 +106,7 @@ func (c *client) dial(ctx context.Context) error {
 		OmitMaxDatagramFrameSize:       true,
 		DisablePathManager:             true,
 	}
+	quicrecovery.Apply(quicConfig, quicParams)
 	if quicParams.InitStreamReceiveWindow == 0 {
 		quicConfig.InitialStreamReceiveWindow = 8388608
 	}
@@ -225,6 +229,7 @@ func (c *client) dial(ctx context.Context) error {
 	c.pktConn = pktConn
 	c.tr = tr
 	c.conn = conn
+	c.quicStats.Add(quicrecovery.Conn(conn))
 	c.udpSM = &udpSessionManager{
 		conn: conn,
 		m:    make(map[uint32]*InterConn),
@@ -416,6 +421,7 @@ func Dial(ctx context.Context, dest net.Destination, streamSettings *internet.Me
 				socketConfig: streamSettings.SocketSettings,
 				finalMask:    streamSettings.FinalMask,
 				quicParams:   streamSettings.QuicParams,
+				quicStats:    streamSettings.QuicStats,
 			}
 			c.ownerContext, c.ownerCancel = context.WithCancel(context.Background())
 			owned := c

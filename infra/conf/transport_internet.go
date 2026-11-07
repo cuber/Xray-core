@@ -300,6 +300,9 @@ func (c *StreamConfig) Build() (*internet.StreamConfig, error) {
 			if c.FinalMask.QuicParams.MaxIncomingStreams != 0 && c.FinalMask.QuicParams.MaxIncomingStreams < 8 {
 				return nil, errors.New("MaxIncomingStreams must be at least 8")
 			}
+			if err := c.FinalMask.QuicParams.checkLossRecovery(); err != nil {
+				return nil, err
+			}
 
 			if c.FinalMask.QuicParams.Debug {
 				os.Setenv("HYSTERIA_BBR_DEBUG", "true")
@@ -323,6 +326,15 @@ func (c *StreamConfig) Build() (*internet.StreamConfig, error) {
 				DisableGSO:                    c.FinalMask.QuicParams.DisableGSO,
 				MaxIncomingStreams:            c.FinalMask.QuicParams.MaxIncomingStreams,
 				DisableStatelessReset:         c.FinalMask.QuicParams.DisableStatelessReset,
+				MaxAckDelayMs:                 c.FinalMask.QuicParams.MaxAckDelayMs,
+				AckElicitingThreshold:         c.FinalMask.QuicParams.AckElicitingThreshold,
+				InitialRttMs:                  c.FinalMask.QuicParams.InitialRttMs,
+				PtoBackoffLimit:               c.FinalMask.QuicParams.PtoBackoffLimit,
+				LossTimeThreshold:             c.FinalMask.QuicParams.LossTimeThreshold,
+				LossPacketThreshold:           c.FinalMask.QuicParams.LossPacketThreshold,
+				DuplicateMaxSize:              c.FinalMask.QuicParams.DuplicateMaxSize,
+				DuplicateTail:                 c.FinalMask.QuicParams.DuplicateTail,
+				DuplicateDelayMs:              c.FinalMask.QuicParams.DuplicateDelayMs,
 			}
 		}
 	}

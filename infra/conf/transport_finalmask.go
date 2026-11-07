@@ -15,6 +15,7 @@ import (
 	googleuuid "github.com/google/uuid"
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/net"
+	"github.com/xtls/xray-core/transport/internet"
 	"github.com/xtls/xray-core/transport/internet/finalmask/fragment"
 	"github.com/xtls/xray-core/transport/internet/finalmask/header/custom"
 	"github.com/xtls/xray-core/transport/internet/finalmask/mkcp/aes128gcm"
@@ -1147,6 +1148,77 @@ type QuicParamsConfig struct {
 	DisableGSO                    bool      `json:"disableGSO"`
 	MaxIncomingStreams            int64     `json:"maxIncomingStreams"`
 	DisableStatelessReset         bool      `json:"disableStatelessReset"`
+
+	// Loss recovery and redundant copies (spec021 R1, R2); zero keeps quic-go's behavior.
+	MaxAckDelayMs         uint32  `json:"maxAckDelayMs"`
+	AckElicitingThreshold uint32  `json:"ackElicitingThreshold"`
+	InitialRttMs          uint32  `json:"initialRttMs"`
+	PtoBackoffLimit       uint32  `json:"ptoBackoffLimit"`
+	LossTimeThreshold     float64 `json:"lossTimeThreshold"`
+	LossPacketThreshold   uint32  `json:"lossPacketThreshold"`
+	DuplicateMaxSize      uint32  `json:"duplicateMaxSize"`
+	DuplicateTail         bool    `json:"duplicateTail"`
+	DuplicateDelayMs      uint32  `json:"duplicateDelayMs"`
+}
+
+// checkChromeParrotAckDelay refuses maxAckDelayMs on an outbound whose QUIC dialer parrots Chrome
+// (spec021 R1). A parroting client keeps advertising Chrome's max_ack_delay, so the server's PTO would
+// not follow the field; the outbound turns parroting off explicitly instead of the dialer doing it silently.
+// XHTTP dials QUIC only over HTTP/3, so the check applies to it only then; its downloadSettings are
+// checked as their own outbound stream (SplitHTTPConfig.Build).
+func checkChromeParrotAckDelay(ss *internet.StreamConfig) error {
+	q := ss.GetQuicParams()
+	if q == nil || q.MaxAckDelayMs == 0 || q.DisableChromeParrot {
+		return nil
+	}
+	switch {
+	case ss.ProtocolName == "hysteria":
+	case ss.ProtocolName == "splithttp" && dialsHTTP3(ss):
+	default:
+		return nil
+	}
+	return errors.New("quicParams.maxAckDelayMs on a ", ss.ProtocolName, " outbound requires disableChromeParrot: true: ",
+		"a client that parrots Chrome advertises Chrome's 25 ms max_ack_delay, so the server's PTO would not follow maxAckDelayMs")
+}
+
+// dialsHTTP3 mirrors splithttp's decideHTTPVersion: HTTP/3 needs TLS with exactly the ALPN h3.
+func dialsHTTP3(ss *internet.StreamConfig) bool {
+	settings, err := ss.GetEffectiveSecuritySettings()
+	if err != nil {
+		return false
+	}
+	t, ok := settings.(*tls.Config)
+	return ok && len(t.NextProtocol) == 1 && t.NextProtocol[0] == "h3"
+}
+
+// checkLossRecovery enforces the ranges of spec021 R1 and R2.
+func (c *QuicParamsConfig) checkLossRecovery() error {
+	inRange := func(name string, v, lo, hi uint32) error {
+		if v != 0 && (v < lo || v > hi) {
+			return errors.New(name, " must be between ", lo, " and ", hi)
+		}
+		return nil
+	}
+	for _, err := range []error{
+		inRange("maxAckDelayMs", c.MaxAckDelayMs, 1, 16382),
+		inRange("ackElicitingThreshold", c.AckElicitingThreshold, 1, 64),
+		inRange("initialRttMs", c.InitialRttMs, 1, 10000),
+		inRange("ptoBackoffLimit", c.PtoBackoffLimit, 1, 16),
+		inRange("lossPacketThreshold", c.LossPacketThreshold, 1, 64),
+		inRange("duplicateMaxSize", c.DuplicateMaxSize, 1, 65535),
+		inRange("duplicateDelayMs", c.DuplicateDelayMs, 1, 1000),
+	} {
+		if err != nil {
+			return err
+		}
+	}
+	if c.LossTimeThreshold != 0 && !(c.LossTimeThreshold >= 1 && c.LossTimeThreshold <= 4) {
+		return errors.New("lossTimeThreshold must be between 1.0 and 4.0")
+	}
+	if c.DuplicateDelayMs != 0 && c.DuplicateMaxSize == 0 && !c.DuplicateTail {
+		return errors.New("duplicateDelayMs requires duplicateMaxSize or duplicateTail")
+	}
+	return nil
 }
 
 type FinalMask struct {

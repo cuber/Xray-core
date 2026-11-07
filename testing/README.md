@@ -36,6 +36,14 @@ SOCKS server is insufficient for DoQ. Surge on the verification Mac rejects
 UDP ASSOCIATE (reply 7); native UDP and local Xray UDP also timed out. Public
 DoQ is therefore **not verified** on that network, despite local DoQ passing.
 
+Loss on the kernel's netem (spec021 FR-010) runs in an isolated Linux container,
+because it needs `tc` and a network namespace of its own; a QUIC change runs it
+with the suite above. It fails unless every netem test ran and passed:
+
+```sh
+testing/netem/run.sh -test.count=3
+```
+
 Do not replace failing assertions with skips, disable certificate verification,
 or use `-vet=off` to obtain a green result.
 

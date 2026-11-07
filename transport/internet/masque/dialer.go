@@ -22,6 +22,7 @@ import (
 	"github.com/xtls/xray-core/transport/internet/hysteria/congestion"
 	"github.com/xtls/xray-core/transport/internet/hysteria/congestion/bbr"
 	"github.com/xtls/xray-core/transport/internet/masque/connectip"
+	"github.com/xtls/xray-core/transport/internet/quicrecovery"
 	"github.com/xtls/xray-core/transport/internet/stat"
 	"github.com/xtls/xray-core/transport/internet/tls"
 	"golang.org/x/net/http2"
@@ -68,6 +69,7 @@ func Dial(ctx context.Context, dest net.Destination, streamSettings *internet.Me
 		EnableDatagrams:                true,
 		DisablePathManager:             true,
 	}
+	quicrecovery.Apply(quicConfig, quicParams)
 	if quicParams.MaxIdleTimeout == 0 {
 		quicConfig.MaxIdleTimeout = 30 * time.Second
 	}

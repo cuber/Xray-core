@@ -21,6 +21,8 @@ type MemoryStreamConfig struct {
 	QuicParams       *QuicParams
 	SocketSettings   *SocketConfig
 	DownloadSettings *MemoryStreamConfig
+	// QuicStats collects the QUIC connections built from these settings (spec021 R3).
+	QuicStats *QuicStatsSet
 }
 
 // ToMemoryStreamConfig converts a StreamConfig to MemoryStreamConfig. It returns a default non-nil MemoryStreamConfig for nil input.
@@ -33,6 +35,7 @@ func ToMemoryStreamConfig(s *StreamConfig) (*MemoryStreamConfig, error) {
 	mss := &MemoryStreamConfig{
 		ProtocolName:     s.GetEffectiveProtocol(),
 		ProtocolSettings: ets,
+		QuicStats:        &QuicStatsSet{},
 	}
 
 	if s != nil {

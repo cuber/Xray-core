@@ -51,6 +51,7 @@ type AlwaysOnInboundHandler struct {
 	proxy          proxy.Inbound
 	workers        []worker
 	mux            *mux.Server
+	stream         *internet.MemoryStreamConfig
 	tag            string
 	closeOnce      sync.Once
 	closeErr       error
@@ -111,6 +112,7 @@ func NewAlwaysOnInboundHandler(ctx context.Context, tag string, receiverConfig *
 		proxyConfig:    proxyConfig,
 		proxy:          p,
 		mux:            mux.NewServerWithSingMux(ctx, singMuxOptions(receiverConfig.SingMux, p)),
+		stream:         mss,
 		tag:            tag,
 	}
 
@@ -241,6 +243,11 @@ func (h *AlwaysOnInboundHandler) Close() error {
 
 func (h *AlwaysOnInboundHandler) Tag() string {
 	return h.tag
+}
+
+// StreamSettings returns the stream settings the inbound's listeners are built from.
+func (h *AlwaysOnInboundHandler) StreamSettings() *internet.MemoryStreamConfig {
+	return h.stream
 }
 
 // MuxStats reports the inbound's sing-mux and Mux.Cool runtime state.

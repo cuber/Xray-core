@@ -118,6 +118,80 @@ message GetInboundMuxStatsResponse {
   repeated InboundMuxStats inbounds = 1;
 }
 
+// spec021 R3: the QUIC connections of handlers whose stream settings build them (Hy2).
+message GetQuicStatsRequest {
+  // Empty selects every inbound and outbound.
+  string tag = 1;
+  // Adds one row per live connection, at most 256 per handler.
+  bool connections = 2;
+}
+
+// The loss recovery and copy settings after defaults, as the connections use them.
+message QuicEffective {
+  uint32 max_ack_delay_ms = 1;
+  uint32 ack_eliciting_threshold = 2;
+  uint32 initial_rtt_ms = 3;
+  // 0: the PTO doubles without limit.
+  uint32 pto_backoff_limit = 4;
+  double loss_time_threshold = 5;
+  uint32 loss_packet_threshold = 6;
+  // 0: no copies by size.
+  uint32 duplicate_max_size = 7;
+  bool duplicate_tail = 8;
+  uint32 duplicate_delay_ms = 9;
+}
+
+message QuicCounters {
+  // Originals only; copies are counted separately.
+  uint64 packets_sent = 1;
+  uint64 bytes_sent = 2;
+  // Processed packets; duplicates_received counts the ones dropped as duplicates.
+  uint64 packets_received = 3;
+  uint64 bytes_received = 4;
+  // Ack-eliciting packets declared lost, whatever the congestion controller.
+  uint64 packets_lost = 5;
+  uint64 bytes_lost = 6;
+  // Declared lost and acknowledged later.
+  uint64 spurious_losses = 7;
+  uint64 pto_count = 8;
+  uint64 copies_sent = 9;
+  uint64 copy_bytes_sent = 10;
+  // Copies not sent because a queue was full.
+  uint64 copies_skipped = 11;
+  uint64 duplicates_received = 12;
+}
+
+message QuicConnection {
+  string remote = 1;
+  // An inbound connection's authenticated user, by email.
+  string user = 2;
+  int64 age_ms = 3;
+  int64 smoothed_rtt_us = 4;
+  int64 min_rtt_us = 5;
+  int64 latest_rtt_us = 6;
+  int64 rtt_variance_us = 7;
+  QuicCounters counters = 8;
+}
+
+message QuicHandlerStats {
+  string tag = 1;
+  // inbound or outbound.
+  string direction = 2;
+  // hysteria.
+  string transport = 3;
+  QuicEffective effective = 4;
+  // Since the handler started; a closed connection's counters stay in them.
+  QuicCounters totals = 5;
+  uint64 connections_active = 6;
+  uint64 connections_total = 7;
+  repeated QuicConnection connections = 8;
+  bool truncated = 9;
+}
+
+message GetQuicStatsResponse {
+  repeated QuicHandlerStats handlers = 1;
+}
+
 service HandlerService {
   rpc AddInbound(AddInboundRequest) returns (AddInboundResponse) {}
 
@@ -132,6 +206,8 @@ service HandlerService {
   rpc GetInboundUsersCount(GetInboundUserRequest) returns (GetInboundUsersCountResponse) {}
 
   rpc GetInboundMuxStats(GetInboundMuxStatsRequest) returns (GetInboundMuxStatsResponse) {}
+
+  rpc GetQuicStats(GetQuicStatsRequest) returns (GetQuicStatsResponse) {}
 
   rpc AddOutbound(AddOutboundRequest) returns (AddOutboundResponse) {}
 

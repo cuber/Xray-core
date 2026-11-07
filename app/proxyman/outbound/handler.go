@@ -178,6 +178,11 @@ func NewHandler(ctx context.Context, config *core.OutboundHandlerConfig) (outbou
 	return h, nil
 }
 
+// StreamSettings returns the stream settings the outbound dials with.
+func (h *Handler) StreamSettings() *internet.MemoryStreamConfig {
+	return h.streamSettings
+}
+
 // Tag implements outbound.Handler.
 func (h *Handler) Tag() string {
 	return h.tag

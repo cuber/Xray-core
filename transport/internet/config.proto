@@ -81,6 +81,19 @@ message QuicParams {
   bool disableGSO = 14;
   int64 max_incoming_streams = 15;
   bool disable_stateless_reset = 16;    
+
+  // Loss recovery (spec021 R1). Zero keeps quic-go's value.
+  uint32 max_ack_delay_ms = 17;
+  uint32 ack_eliciting_threshold = 18;
+  uint32 initial_rtt_ms = 19;
+  uint32 pto_backoff_limit = 20;
+  double loss_time_threshold = 21;
+  uint32 loss_packet_threshold = 22;
+
+  // Redundant copies (spec021 R2). Off unless set.
+  uint32 duplicate_max_size = 23;
+  bool duplicate_tail = 24;
+  uint32 duplicate_delay_ms = 25;
 }
 
 message CustomSockopt {

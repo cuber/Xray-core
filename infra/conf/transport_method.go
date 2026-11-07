@@ -513,6 +513,9 @@ func (c *SplitHTTPConfig) Build() (proto.Message, error) {
 		if config.DownloadSettings, err = c.DownloadSettings.Build(); err != nil {
 			return nil, errors.New(`Failed to build "downloadSettings".`).Base(err)
 		}
+		if err := checkChromeParrotAckDelay(config.DownloadSettings); err != nil {
+			return nil, errors.New(`"downloadSettings": `).Base(err)
+		}
 	}
 
 	return config, nil

@@ -412,6 +412,9 @@ func (c *OutboundDetourConfig) Build() (*core.OutboundHandlerConfig, error) {
 		if err != nil {
 			return nil, errors.New("failed to build stream settings for outbound detour").Base(err)
 		}
+		if err := checkChromeParrotAckDelay(ss); err != nil {
+			return nil, err
+		}
 		senderSettings.StreamSettings = ss
 	}
 

@@ -24,6 +24,7 @@ import (
 	"github.com/xtls/xray-core/transport/internet/hysteria/congestion"
 	"github.com/xtls/xray-core/transport/internet/hysteria/congestion/bbr"
 	"github.com/xtls/xray-core/transport/internet/masque/connectip"
+	"github.com/xtls/xray-core/transport/internet/quicrecovery"
 	"github.com/xtls/xray-core/transport/internet/tls"
 	"golang.org/x/net/http2"
 )
@@ -113,6 +114,7 @@ func (l *Listener) listenHTTP3(address net.Address, port net.Port, streamSetting
 		EnableDatagrams:                true,
 		DisablePathManager:             true,
 	}
+	quicrecovery.Apply(quicConfig, quicParams)
 	if quicParams.MaxIdleTimeout == 0 {
 		quicConfig.MaxIdleTimeout = 30 * time.Second
 	}

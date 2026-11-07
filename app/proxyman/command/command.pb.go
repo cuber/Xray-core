@@ -1235,6 +1235,565 @@ func (x *GetInboundMuxStatsResponse) GetInbounds() []*InboundMuxStats {
 	return nil
 }
 
+// spec021 R3: the QUIC connections of handlers whose stream settings build them (Hy2).
+type GetQuicStatsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Empty selects every inbound and outbound.
+	Tag string `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	// Adds one row per live connection, at most 256 per handler.
+	Connections   bool `protobuf:"varint,2,opt,name=connections,proto3" json:"connections,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetQuicStatsRequest) Reset() {
+	*x = GetQuicStatsRequest{}
+	mi := &file_app_proxyman_command_command_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetQuicStatsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetQuicStatsRequest) ProtoMessage() {}
+
+func (x *GetQuicStatsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_app_proxyman_command_command_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetQuicStatsRequest.ProtoReflect.Descriptor instead.
+func (*GetQuicStatsRequest) Descriptor() ([]byte, []int) {
+	return file_app_proxyman_command_command_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *GetQuicStatsRequest) GetTag() string {
+	if x != nil {
+		return x.Tag
+	}
+	return ""
+}
+
+func (x *GetQuicStatsRequest) GetConnections() bool {
+	if x != nil {
+		return x.Connections
+	}
+	return false
+}
+
+// The loss recovery and copy settings after defaults, as the connections use them.
+type QuicEffective struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	MaxAckDelayMs         uint32                 `protobuf:"varint,1,opt,name=max_ack_delay_ms,json=maxAckDelayMs,proto3" json:"max_ack_delay_ms,omitempty"`
+	AckElicitingThreshold uint32                 `protobuf:"varint,2,opt,name=ack_eliciting_threshold,json=ackElicitingThreshold,proto3" json:"ack_eliciting_threshold,omitempty"`
+	InitialRttMs          uint32                 `protobuf:"varint,3,opt,name=initial_rtt_ms,json=initialRttMs,proto3" json:"initial_rtt_ms,omitempty"`
+	// 0: the PTO doubles without limit.
+	PtoBackoffLimit     uint32  `protobuf:"varint,4,opt,name=pto_backoff_limit,json=ptoBackoffLimit,proto3" json:"pto_backoff_limit,omitempty"`
+	LossTimeThreshold   float64 `protobuf:"fixed64,5,opt,name=loss_time_threshold,json=lossTimeThreshold,proto3" json:"loss_time_threshold,omitempty"`
+	LossPacketThreshold uint32  `protobuf:"varint,6,opt,name=loss_packet_threshold,json=lossPacketThreshold,proto3" json:"loss_packet_threshold,omitempty"`
+	// 0: no copies by size.
+	DuplicateMaxSize uint32 `protobuf:"varint,7,opt,name=duplicate_max_size,json=duplicateMaxSize,proto3" json:"duplicate_max_size,omitempty"`
+	DuplicateTail    bool   `protobuf:"varint,8,opt,name=duplicate_tail,json=duplicateTail,proto3" json:"duplicate_tail,omitempty"`
+	DuplicateDelayMs uint32 `protobuf:"varint,9,opt,name=duplicate_delay_ms,json=duplicateDelayMs,proto3" json:"duplicate_delay_ms,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *QuicEffective) Reset() {
+	*x = QuicEffective{}
+	mi := &file_app_proxyman_command_command_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QuicEffective) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuicEffective) ProtoMessage() {}
+
+func (x *QuicEffective) ProtoReflect() protoreflect.Message {
+	mi := &file_app_proxyman_command_command_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuicEffective.ProtoReflect.Descriptor instead.
+func (*QuicEffective) Descriptor() ([]byte, []int) {
+	return file_app_proxyman_command_command_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *QuicEffective) GetMaxAckDelayMs() uint32 {
+	if x != nil {
+		return x.MaxAckDelayMs
+	}
+	return 0
+}
+
+func (x *QuicEffective) GetAckElicitingThreshold() uint32 {
+	if x != nil {
+		return x.AckElicitingThreshold
+	}
+	return 0
+}
+
+func (x *QuicEffective) GetInitialRttMs() uint32 {
+	if x != nil {
+		return x.InitialRttMs
+	}
+	return 0
+}
+
+func (x *QuicEffective) GetPtoBackoffLimit() uint32 {
+	if x != nil {
+		return x.PtoBackoffLimit
+	}
+	return 0
+}
+
+func (x *QuicEffective) GetLossTimeThreshold() float64 {
+	if x != nil {
+		return x.LossTimeThreshold
+	}
+	return 0
+}
+
+func (x *QuicEffective) GetLossPacketThreshold() uint32 {
+	if x != nil {
+		return x.LossPacketThreshold
+	}
+	return 0
+}
+
+func (x *QuicEffective) GetDuplicateMaxSize() uint32 {
+	if x != nil {
+		return x.DuplicateMaxSize
+	}
+	return 0
+}
+
+func (x *QuicEffective) GetDuplicateTail() bool {
+	if x != nil {
+		return x.DuplicateTail
+	}
+	return false
+}
+
+func (x *QuicEffective) GetDuplicateDelayMs() uint32 {
+	if x != nil {
+		return x.DuplicateDelayMs
+	}
+	return 0
+}
+
+type QuicCounters struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Originals only; copies are counted separately.
+	PacketsSent uint64 `protobuf:"varint,1,opt,name=packets_sent,json=packetsSent,proto3" json:"packets_sent,omitempty"`
+	BytesSent   uint64 `protobuf:"varint,2,opt,name=bytes_sent,json=bytesSent,proto3" json:"bytes_sent,omitempty"`
+	// Processed packets; duplicates_received counts the ones dropped as duplicates.
+	PacketsReceived uint64 `protobuf:"varint,3,opt,name=packets_received,json=packetsReceived,proto3" json:"packets_received,omitempty"`
+	BytesReceived   uint64 `protobuf:"varint,4,opt,name=bytes_received,json=bytesReceived,proto3" json:"bytes_received,omitempty"`
+	// Ack-eliciting packets declared lost, whatever the congestion controller.
+	PacketsLost uint64 `protobuf:"varint,5,opt,name=packets_lost,json=packetsLost,proto3" json:"packets_lost,omitempty"`
+	BytesLost   uint64 `protobuf:"varint,6,opt,name=bytes_lost,json=bytesLost,proto3" json:"bytes_lost,omitempty"`
+	// Declared lost and acknowledged later.
+	SpuriousLosses uint64 `protobuf:"varint,7,opt,name=spurious_losses,json=spuriousLosses,proto3" json:"spurious_losses,omitempty"`
+	PtoCount       uint64 `protobuf:"varint,8,opt,name=pto_count,json=ptoCount,proto3" json:"pto_count,omitempty"`
+	CopiesSent     uint64 `protobuf:"varint,9,opt,name=copies_sent,json=copiesSent,proto3" json:"copies_sent,omitempty"`
+	CopyBytesSent  uint64 `protobuf:"varint,10,opt,name=copy_bytes_sent,json=copyBytesSent,proto3" json:"copy_bytes_sent,omitempty"`
+	// Copies not sent because a queue was full.
+	CopiesSkipped      uint64 `protobuf:"varint,11,opt,name=copies_skipped,json=copiesSkipped,proto3" json:"copies_skipped,omitempty"`
+	DuplicatesReceived uint64 `protobuf:"varint,12,opt,name=duplicates_received,json=duplicatesReceived,proto3" json:"duplicates_received,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *QuicCounters) Reset() {
+	*x = QuicCounters{}
+	mi := &file_app_proxyman_command_command_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QuicCounters) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuicCounters) ProtoMessage() {}
+
+func (x *QuicCounters) ProtoReflect() protoreflect.Message {
+	mi := &file_app_proxyman_command_command_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuicCounters.ProtoReflect.Descriptor instead.
+func (*QuicCounters) Descriptor() ([]byte, []int) {
+	return file_app_proxyman_command_command_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *QuicCounters) GetPacketsSent() uint64 {
+	if x != nil {
+		return x.PacketsSent
+	}
+	return 0
+}
+
+func (x *QuicCounters) GetBytesSent() uint64 {
+	if x != nil {
+		return x.BytesSent
+	}
+	return 0
+}
+
+func (x *QuicCounters) GetPacketsReceived() uint64 {
+	if x != nil {
+		return x.PacketsReceived
+	}
+	return 0
+}
+
+func (x *QuicCounters) GetBytesReceived() uint64 {
+	if x != nil {
+		return x.BytesReceived
+	}
+	return 0
+}
+
+func (x *QuicCounters) GetPacketsLost() uint64 {
+	if x != nil {
+		return x.PacketsLost
+	}
+	return 0
+}
+
+func (x *QuicCounters) GetBytesLost() uint64 {
+	if x != nil {
+		return x.BytesLost
+	}
+	return 0
+}
+
+func (x *QuicCounters) GetSpuriousLosses() uint64 {
+	if x != nil {
+		return x.SpuriousLosses
+	}
+	return 0
+}
+
+func (x *QuicCounters) GetPtoCount() uint64 {
+	if x != nil {
+		return x.PtoCount
+	}
+	return 0
+}
+
+func (x *QuicCounters) GetCopiesSent() uint64 {
+	if x != nil {
+		return x.CopiesSent
+	}
+	return 0
+}
+
+func (x *QuicCounters) GetCopyBytesSent() uint64 {
+	if x != nil {
+		return x.CopyBytesSent
+	}
+	return 0
+}
+
+func (x *QuicCounters) GetCopiesSkipped() uint64 {
+	if x != nil {
+		return x.CopiesSkipped
+	}
+	return 0
+}
+
+func (x *QuicCounters) GetDuplicatesReceived() uint64 {
+	if x != nil {
+		return x.DuplicatesReceived
+	}
+	return 0
+}
+
+type QuicConnection struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Remote string                 `protobuf:"bytes,1,opt,name=remote,proto3" json:"remote,omitempty"`
+	// An inbound connection's authenticated user, by email.
+	User          string        `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
+	AgeMs         int64         `protobuf:"varint,3,opt,name=age_ms,json=ageMs,proto3" json:"age_ms,omitempty"`
+	SmoothedRttUs int64         `protobuf:"varint,4,opt,name=smoothed_rtt_us,json=smoothedRttUs,proto3" json:"smoothed_rtt_us,omitempty"`
+	MinRttUs      int64         `protobuf:"varint,5,opt,name=min_rtt_us,json=minRttUs,proto3" json:"min_rtt_us,omitempty"`
+	LatestRttUs   int64         `protobuf:"varint,6,opt,name=latest_rtt_us,json=latestRttUs,proto3" json:"latest_rtt_us,omitempty"`
+	RttVarianceUs int64         `protobuf:"varint,7,opt,name=rtt_variance_us,json=rttVarianceUs,proto3" json:"rtt_variance_us,omitempty"`
+	Counters      *QuicCounters `protobuf:"bytes,8,opt,name=counters,proto3" json:"counters,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QuicConnection) Reset() {
+	*x = QuicConnection{}
+	mi := &file_app_proxyman_command_command_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QuicConnection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuicConnection) ProtoMessage() {}
+
+func (x *QuicConnection) ProtoReflect() protoreflect.Message {
+	mi := &file_app_proxyman_command_command_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuicConnection.ProtoReflect.Descriptor instead.
+func (*QuicConnection) Descriptor() ([]byte, []int) {
+	return file_app_proxyman_command_command_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *QuicConnection) GetRemote() string {
+	if x != nil {
+		return x.Remote
+	}
+	return ""
+}
+
+func (x *QuicConnection) GetUser() string {
+	if x != nil {
+		return x.User
+	}
+	return ""
+}
+
+func (x *QuicConnection) GetAgeMs() int64 {
+	if x != nil {
+		return x.AgeMs
+	}
+	return 0
+}
+
+func (x *QuicConnection) GetSmoothedRttUs() int64 {
+	if x != nil {
+		return x.SmoothedRttUs
+	}
+	return 0
+}
+
+func (x *QuicConnection) GetMinRttUs() int64 {
+	if x != nil {
+		return x.MinRttUs
+	}
+	return 0
+}
+
+func (x *QuicConnection) GetLatestRttUs() int64 {
+	if x != nil {
+		return x.LatestRttUs
+	}
+	return 0
+}
+
+func (x *QuicConnection) GetRttVarianceUs() int64 {
+	if x != nil {
+		return x.RttVarianceUs
+	}
+	return 0
+}
+
+func (x *QuicConnection) GetCounters() *QuicCounters {
+	if x != nil {
+		return x.Counters
+	}
+	return nil
+}
+
+type QuicHandlerStats struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Tag   string                 `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	// inbound or outbound.
+	Direction string `protobuf:"bytes,2,opt,name=direction,proto3" json:"direction,omitempty"`
+	// hysteria.
+	Transport string         `protobuf:"bytes,3,opt,name=transport,proto3" json:"transport,omitempty"`
+	Effective *QuicEffective `protobuf:"bytes,4,opt,name=effective,proto3" json:"effective,omitempty"`
+	// Since the handler started; a closed connection's counters stay in them.
+	Totals            *QuicCounters     `protobuf:"bytes,5,opt,name=totals,proto3" json:"totals,omitempty"`
+	ConnectionsActive uint64            `protobuf:"varint,6,opt,name=connections_active,json=connectionsActive,proto3" json:"connections_active,omitempty"`
+	ConnectionsTotal  uint64            `protobuf:"varint,7,opt,name=connections_total,json=connectionsTotal,proto3" json:"connections_total,omitempty"`
+	Connections       []*QuicConnection `protobuf:"bytes,8,rep,name=connections,proto3" json:"connections,omitempty"`
+	Truncated         bool              `protobuf:"varint,9,opt,name=truncated,proto3" json:"truncated,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *QuicHandlerStats) Reset() {
+	*x = QuicHandlerStats{}
+	mi := &file_app_proxyman_command_command_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QuicHandlerStats) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuicHandlerStats) ProtoMessage() {}
+
+func (x *QuicHandlerStats) ProtoReflect() protoreflect.Message {
+	mi := &file_app_proxyman_command_command_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuicHandlerStats.ProtoReflect.Descriptor instead.
+func (*QuicHandlerStats) Descriptor() ([]byte, []int) {
+	return file_app_proxyman_command_command_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *QuicHandlerStats) GetTag() string {
+	if x != nil {
+		return x.Tag
+	}
+	return ""
+}
+
+func (x *QuicHandlerStats) GetDirection() string {
+	if x != nil {
+		return x.Direction
+	}
+	return ""
+}
+
+func (x *QuicHandlerStats) GetTransport() string {
+	if x != nil {
+		return x.Transport
+	}
+	return ""
+}
+
+func (x *QuicHandlerStats) GetEffective() *QuicEffective {
+	if x != nil {
+		return x.Effective
+	}
+	return nil
+}
+
+func (x *QuicHandlerStats) GetTotals() *QuicCounters {
+	if x != nil {
+		return x.Totals
+	}
+	return nil
+}
+
+func (x *QuicHandlerStats) GetConnectionsActive() uint64 {
+	if x != nil {
+		return x.ConnectionsActive
+	}
+	return 0
+}
+
+func (x *QuicHandlerStats) GetConnectionsTotal() uint64 {
+	if x != nil {
+		return x.ConnectionsTotal
+	}
+	return 0
+}
+
+func (x *QuicHandlerStats) GetConnections() []*QuicConnection {
+	if x != nil {
+		return x.Connections
+	}
+	return nil
+}
+
+func (x *QuicHandlerStats) GetTruncated() bool {
+	if x != nil {
+		return x.Truncated
+	}
+	return false
+}
+
+type GetQuicStatsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Handlers      []*QuicHandlerStats    `protobuf:"bytes,1,rep,name=handlers,proto3" json:"handlers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetQuicStatsResponse) Reset() {
+	*x = GetQuicStatsResponse{}
+	mi := &file_app_proxyman_command_command_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetQuicStatsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetQuicStatsResponse) ProtoMessage() {}
+
+func (x *GetQuicStatsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_app_proxyman_command_command_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetQuicStatsResponse.ProtoReflect.Descriptor instead.
+func (*GetQuicStatsResponse) Descriptor() ([]byte, []int) {
+	return file_app_proxyman_command_command_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *GetQuicStatsResponse) GetHandlers() []*QuicHandlerStats {
+	if x != nil {
+		return x.Handlers
+	}
+	return nil
+}
+
 type Config struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1243,7 +1802,7 @@ type Config struct {
 
 func (x *Config) Reset() {
 	*x = Config{}
-	mi := &file_app_proxyman_command_command_proto_msgTypes[26]
+	mi := &file_app_proxyman_command_command_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1255,7 +1814,7 @@ func (x *Config) String() string {
 func (*Config) ProtoMessage() {}
 
 func (x *Config) ProtoReflect() protoreflect.Message {
-	mi := &file_app_proxyman_command_command_proto_msgTypes[26]
+	mi := &file_app_proxyman_command_command_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1268,7 +1827,7 @@ func (x *Config) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Config.ProtoReflect.Descriptor instead.
 func (*Config) Descriptor() ([]byte, []int) {
-	return file_app_proxyman_command_command_proto_rawDescGZIP(), []int{26}
+	return file_app_proxyman_command_command_proto_rawDescGZIP(), []int{32}
 }
 
 var File_app_proxyman_command_command_proto protoreflect.FileDescriptor
@@ -1344,9 +1903,60 @@ const file_app_proxyman_command_command_proto_rawDesc = "" +
 	"\bsing_mux\x18\x02 \x01(\v2'.xray.app.proxyman.command.SingMuxStatsR\asingMux\x12B\n" +
 	"\bmux_cool\x18\x03 \x01(\v2'.xray.app.proxyman.command.MuxCoolStatsR\amuxCool\"d\n" +
 	"\x1aGetInboundMuxStatsResponse\x12F\n" +
-	"\binbounds\x18\x01 \x03(\v2*.xray.app.proxyman.command.InboundMuxStatsR\binbounds\"\b\n" +
-	"\x06Config2\xb4\n" +
+	"\binbounds\x18\x01 \x03(\v2*.xray.app.proxyman.command.InboundMuxStatsR\binbounds\"I\n" +
+	"\x13GetQuicStatsRequest\x12\x10\n" +
+	"\x03tag\x18\x01 \x01(\tR\x03tag\x12 \n" +
+	"\vconnections\x18\x02 \x01(\bR\vconnections\"\xa9\x03\n" +
+	"\rQuicEffective\x12'\n" +
+	"\x10max_ack_delay_ms\x18\x01 \x01(\rR\rmaxAckDelayMs\x126\n" +
+	"\x17ack_eliciting_threshold\x18\x02 \x01(\rR\x15ackElicitingThreshold\x12$\n" +
+	"\x0einitial_rtt_ms\x18\x03 \x01(\rR\finitialRttMs\x12*\n" +
+	"\x11pto_backoff_limit\x18\x04 \x01(\rR\x0fptoBackoffLimit\x12.\n" +
+	"\x13loss_time_threshold\x18\x05 \x01(\x01R\x11lossTimeThreshold\x122\n" +
+	"\x15loss_packet_threshold\x18\x06 \x01(\rR\x13lossPacketThreshold\x12,\n" +
+	"\x12duplicate_max_size\x18\a \x01(\rR\x10duplicateMaxSize\x12%\n" +
+	"\x0eduplicate_tail\x18\b \x01(\bR\rduplicateTail\x12,\n" +
+	"\x12duplicate_delay_ms\x18\t \x01(\rR\x10duplicateDelayMs\"\xcb\x03\n" +
+	"\fQuicCounters\x12!\n" +
+	"\fpackets_sent\x18\x01 \x01(\x04R\vpacketsSent\x12\x1d\n" +
 	"\n" +
+	"bytes_sent\x18\x02 \x01(\x04R\tbytesSent\x12)\n" +
+	"\x10packets_received\x18\x03 \x01(\x04R\x0fpacketsReceived\x12%\n" +
+	"\x0ebytes_received\x18\x04 \x01(\x04R\rbytesReceived\x12!\n" +
+	"\fpackets_lost\x18\x05 \x01(\x04R\vpacketsLost\x12\x1d\n" +
+	"\n" +
+	"bytes_lost\x18\x06 \x01(\x04R\tbytesLost\x12'\n" +
+	"\x0fspurious_losses\x18\a \x01(\x04R\x0espuriousLosses\x12\x1b\n" +
+	"\tpto_count\x18\b \x01(\x04R\bptoCount\x12\x1f\n" +
+	"\vcopies_sent\x18\t \x01(\x04R\n" +
+	"copiesSent\x12&\n" +
+	"\x0fcopy_bytes_sent\x18\n" +
+	" \x01(\x04R\rcopyBytesSent\x12%\n" +
+	"\x0ecopies_skipped\x18\v \x01(\x04R\rcopiesSkipped\x12/\n" +
+	"\x13duplicates_received\x18\f \x01(\x04R\x12duplicatesReceived\"\xaa\x02\n" +
+	"\x0eQuicConnection\x12\x16\n" +
+	"\x06remote\x18\x01 \x01(\tR\x06remote\x12\x12\n" +
+	"\x04user\x18\x02 \x01(\tR\x04user\x12\x15\n" +
+	"\x06age_ms\x18\x03 \x01(\x03R\x05ageMs\x12&\n" +
+	"\x0fsmoothed_rtt_us\x18\x04 \x01(\x03R\rsmoothedRttUs\x12\x1c\n" +
+	"\n" +
+	"min_rtt_us\x18\x05 \x01(\x03R\bminRttUs\x12\"\n" +
+	"\rlatest_rtt_us\x18\x06 \x01(\x03R\vlatestRttUs\x12&\n" +
+	"\x0frtt_variance_us\x18\a \x01(\x03R\rrttVarianceUs\x12C\n" +
+	"\bcounters\x18\b \x01(\v2'.xray.app.proxyman.command.QuicCountersR\bcounters\"\xb0\x03\n" +
+	"\x10QuicHandlerStats\x12\x10\n" +
+	"\x03tag\x18\x01 \x01(\tR\x03tag\x12\x1c\n" +
+	"\tdirection\x18\x02 \x01(\tR\tdirection\x12\x1c\n" +
+	"\ttransport\x18\x03 \x01(\tR\ttransport\x12F\n" +
+	"\teffective\x18\x04 \x01(\v2(.xray.app.proxyman.command.QuicEffectiveR\teffective\x12?\n" +
+	"\x06totals\x18\x05 \x01(\v2'.xray.app.proxyman.command.QuicCountersR\x06totals\x12-\n" +
+	"\x12connections_active\x18\x06 \x01(\x04R\x11connectionsActive\x12+\n" +
+	"\x11connections_total\x18\a \x01(\x04R\x10connectionsTotal\x12K\n" +
+	"\vconnections\x18\b \x03(\v2).xray.app.proxyman.command.QuicConnectionR\vconnections\x12\x1c\n" +
+	"\ttruncated\x18\t \x01(\bR\ttruncated\"_\n" +
+	"\x14GetQuicStatsResponse\x12G\n" +
+	"\bhandlers\x18\x01 \x03(\v2+.xray.app.proxyman.command.QuicHandlerStatsR\bhandlers\"\b\n" +
+	"\x06Config2\xa7\v\n" +
 	"\x0eHandlerService\x12k\n" +
 	"\n" +
 	"AddInbound\x12,.xray.app.proxyman.command.AddInboundRequest\x1a-.xray.app.proxyman.command.AddInboundResponse\"\x00\x12t\n" +
@@ -1355,7 +1965,8 @@ const file_app_proxyman_command_command_proto_rawDesc = "" +
 	"\fListInbounds\x12..xray.app.proxyman.command.ListInboundsRequest\x1a/.xray.app.proxyman.command.ListInboundsResponse\"\x00\x12x\n" +
 	"\x0fGetInboundUsers\x120.xray.app.proxyman.command.GetInboundUserRequest\x1a1.xray.app.proxyman.command.GetInboundUserResponse\"\x00\x12\x83\x01\n" +
 	"\x14GetInboundUsersCount\x120.xray.app.proxyman.command.GetInboundUserRequest\x1a7.xray.app.proxyman.command.GetInboundUsersCountResponse\"\x00\x12\x83\x01\n" +
-	"\x12GetInboundMuxStats\x124.xray.app.proxyman.command.GetInboundMuxStatsRequest\x1a5.xray.app.proxyman.command.GetInboundMuxStatsResponse\"\x00\x12n\n" +
+	"\x12GetInboundMuxStats\x124.xray.app.proxyman.command.GetInboundMuxStatsRequest\x1a5.xray.app.proxyman.command.GetInboundMuxStatsResponse\"\x00\x12q\n" +
+	"\fGetQuicStats\x12..xray.app.proxyman.command.GetQuicStatsRequest\x1a/.xray.app.proxyman.command.GetQuicStatsResponse\"\x00\x12n\n" +
 	"\vAddOutbound\x12-.xray.app.proxyman.command.AddOutboundRequest\x1a..xray.app.proxyman.command.AddOutboundResponse\"\x00\x12w\n" +
 	"\x0eRemoveOutbound\x120.xray.app.proxyman.command.RemoveOutboundRequest\x1a1.xray.app.proxyman.command.RemoveOutboundResponse\"\x00\x12t\n" +
 	"\rAlterOutbound\x12/.xray.app.proxyman.command.AlterOutboundRequest\x1a0.xray.app.proxyman.command.AlterOutboundResponse\"\x00\x12t\n" +
@@ -1374,7 +1985,7 @@ func file_app_proxyman_command_command_proto_rawDescGZIP() []byte {
 	return file_app_proxyman_command_command_proto_rawDescData
 }
 
-var file_app_proxyman_command_command_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_app_proxyman_command_command_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_app_proxyman_command_command_proto_goTypes = []any{
 	(*AddUserOperation)(nil),             // 0: xray.app.proxyman.command.AddUserOperation
 	(*RemoveUserOperation)(nil),          // 1: xray.app.proxyman.command.RemoveUserOperation
@@ -1402,55 +2013,68 @@ var file_app_proxyman_command_command_proto_goTypes = []any{
 	(*MuxCoolStats)(nil),                 // 23: xray.app.proxyman.command.MuxCoolStats
 	(*InboundMuxStats)(nil),              // 24: xray.app.proxyman.command.InboundMuxStats
 	(*GetInboundMuxStatsResponse)(nil),   // 25: xray.app.proxyman.command.GetInboundMuxStatsResponse
-	(*Config)(nil),                       // 26: xray.app.proxyman.command.Config
-	nil,                                  // 27: xray.app.proxyman.command.SingMuxStats.ActiveCarriersEntry
-	nil,                                  // 28: xray.app.proxyman.command.SingMuxStats.RejectedEntry
-	(*protocol.User)(nil),                // 29: xray.common.protocol.User
-	(*core.InboundHandlerConfig)(nil),    // 30: xray.core.InboundHandlerConfig
-	(*serial.TypedMessage)(nil),          // 31: xray.common.serial.TypedMessage
-	(*core.OutboundHandlerConfig)(nil),   // 32: xray.core.OutboundHandlerConfig
+	(*GetQuicStatsRequest)(nil),          // 26: xray.app.proxyman.command.GetQuicStatsRequest
+	(*QuicEffective)(nil),                // 27: xray.app.proxyman.command.QuicEffective
+	(*QuicCounters)(nil),                 // 28: xray.app.proxyman.command.QuicCounters
+	(*QuicConnection)(nil),               // 29: xray.app.proxyman.command.QuicConnection
+	(*QuicHandlerStats)(nil),             // 30: xray.app.proxyman.command.QuicHandlerStats
+	(*GetQuicStatsResponse)(nil),         // 31: xray.app.proxyman.command.GetQuicStatsResponse
+	(*Config)(nil),                       // 32: xray.app.proxyman.command.Config
+	nil,                                  // 33: xray.app.proxyman.command.SingMuxStats.ActiveCarriersEntry
+	nil,                                  // 34: xray.app.proxyman.command.SingMuxStats.RejectedEntry
+	(*protocol.User)(nil),                // 35: xray.common.protocol.User
+	(*core.InboundHandlerConfig)(nil),    // 36: xray.core.InboundHandlerConfig
+	(*serial.TypedMessage)(nil),          // 37: xray.common.serial.TypedMessage
+	(*core.OutboundHandlerConfig)(nil),   // 38: xray.core.OutboundHandlerConfig
 }
 var file_app_proxyman_command_command_proto_depIdxs = []int32{
-	29, // 0: xray.app.proxyman.command.AddUserOperation.user:type_name -> xray.common.protocol.User
-	30, // 1: xray.app.proxyman.command.AddInboundRequest.inbound:type_name -> xray.core.InboundHandlerConfig
-	31, // 2: xray.app.proxyman.command.AlterInboundRequest.operation:type_name -> xray.common.serial.TypedMessage
-	30, // 3: xray.app.proxyman.command.ListInboundsResponse.inbounds:type_name -> xray.core.InboundHandlerConfig
-	29, // 4: xray.app.proxyman.command.GetInboundUserResponse.users:type_name -> xray.common.protocol.User
-	32, // 5: xray.app.proxyman.command.AddOutboundRequest.outbound:type_name -> xray.core.OutboundHandlerConfig
-	31, // 6: xray.app.proxyman.command.AlterOutboundRequest.operation:type_name -> xray.common.serial.TypedMessage
-	32, // 7: xray.app.proxyman.command.ListOutboundsResponse.outbounds:type_name -> xray.core.OutboundHandlerConfig
-	27, // 8: xray.app.proxyman.command.SingMuxStats.active_carriers:type_name -> xray.app.proxyman.command.SingMuxStats.ActiveCarriersEntry
-	28, // 9: xray.app.proxyman.command.SingMuxStats.rejected:type_name -> xray.app.proxyman.command.SingMuxStats.RejectedEntry
+	35, // 0: xray.app.proxyman.command.AddUserOperation.user:type_name -> xray.common.protocol.User
+	36, // 1: xray.app.proxyman.command.AddInboundRequest.inbound:type_name -> xray.core.InboundHandlerConfig
+	37, // 2: xray.app.proxyman.command.AlterInboundRequest.operation:type_name -> xray.common.serial.TypedMessage
+	36, // 3: xray.app.proxyman.command.ListInboundsResponse.inbounds:type_name -> xray.core.InboundHandlerConfig
+	35, // 4: xray.app.proxyman.command.GetInboundUserResponse.users:type_name -> xray.common.protocol.User
+	38, // 5: xray.app.proxyman.command.AddOutboundRequest.outbound:type_name -> xray.core.OutboundHandlerConfig
+	37, // 6: xray.app.proxyman.command.AlterOutboundRequest.operation:type_name -> xray.common.serial.TypedMessage
+	38, // 7: xray.app.proxyman.command.ListOutboundsResponse.outbounds:type_name -> xray.core.OutboundHandlerConfig
+	33, // 8: xray.app.proxyman.command.SingMuxStats.active_carriers:type_name -> xray.app.proxyman.command.SingMuxStats.ActiveCarriersEntry
+	34, // 9: xray.app.proxyman.command.SingMuxStats.rejected:type_name -> xray.app.proxyman.command.SingMuxStats.RejectedEntry
 	22, // 10: xray.app.proxyman.command.InboundMuxStats.sing_mux:type_name -> xray.app.proxyman.command.SingMuxStats
 	23, // 11: xray.app.proxyman.command.InboundMuxStats.mux_cool:type_name -> xray.app.proxyman.command.MuxCoolStats
 	24, // 12: xray.app.proxyman.command.GetInboundMuxStatsResponse.inbounds:type_name -> xray.app.proxyman.command.InboundMuxStats
-	2,  // 13: xray.app.proxyman.command.HandlerService.AddInbound:input_type -> xray.app.proxyman.command.AddInboundRequest
-	4,  // 14: xray.app.proxyman.command.HandlerService.RemoveInbound:input_type -> xray.app.proxyman.command.RemoveInboundRequest
-	6,  // 15: xray.app.proxyman.command.HandlerService.AlterInbound:input_type -> xray.app.proxyman.command.AlterInboundRequest
-	8,  // 16: xray.app.proxyman.command.HandlerService.ListInbounds:input_type -> xray.app.proxyman.command.ListInboundsRequest
-	10, // 17: xray.app.proxyman.command.HandlerService.GetInboundUsers:input_type -> xray.app.proxyman.command.GetInboundUserRequest
-	10, // 18: xray.app.proxyman.command.HandlerService.GetInboundUsersCount:input_type -> xray.app.proxyman.command.GetInboundUserRequest
-	21, // 19: xray.app.proxyman.command.HandlerService.GetInboundMuxStats:input_type -> xray.app.proxyman.command.GetInboundMuxStatsRequest
-	13, // 20: xray.app.proxyman.command.HandlerService.AddOutbound:input_type -> xray.app.proxyman.command.AddOutboundRequest
-	15, // 21: xray.app.proxyman.command.HandlerService.RemoveOutbound:input_type -> xray.app.proxyman.command.RemoveOutboundRequest
-	17, // 22: xray.app.proxyman.command.HandlerService.AlterOutbound:input_type -> xray.app.proxyman.command.AlterOutboundRequest
-	19, // 23: xray.app.proxyman.command.HandlerService.ListOutbounds:input_type -> xray.app.proxyman.command.ListOutboundsRequest
-	3,  // 24: xray.app.proxyman.command.HandlerService.AddInbound:output_type -> xray.app.proxyman.command.AddInboundResponse
-	5,  // 25: xray.app.proxyman.command.HandlerService.RemoveInbound:output_type -> xray.app.proxyman.command.RemoveInboundResponse
-	7,  // 26: xray.app.proxyman.command.HandlerService.AlterInbound:output_type -> xray.app.proxyman.command.AlterInboundResponse
-	9,  // 27: xray.app.proxyman.command.HandlerService.ListInbounds:output_type -> xray.app.proxyman.command.ListInboundsResponse
-	11, // 28: xray.app.proxyman.command.HandlerService.GetInboundUsers:output_type -> xray.app.proxyman.command.GetInboundUserResponse
-	12, // 29: xray.app.proxyman.command.HandlerService.GetInboundUsersCount:output_type -> xray.app.proxyman.command.GetInboundUsersCountResponse
-	25, // 30: xray.app.proxyman.command.HandlerService.GetInboundMuxStats:output_type -> xray.app.proxyman.command.GetInboundMuxStatsResponse
-	14, // 31: xray.app.proxyman.command.HandlerService.AddOutbound:output_type -> xray.app.proxyman.command.AddOutboundResponse
-	16, // 32: xray.app.proxyman.command.HandlerService.RemoveOutbound:output_type -> xray.app.proxyman.command.RemoveOutboundResponse
-	18, // 33: xray.app.proxyman.command.HandlerService.AlterOutbound:output_type -> xray.app.proxyman.command.AlterOutboundResponse
-	20, // 34: xray.app.proxyman.command.HandlerService.ListOutbounds:output_type -> xray.app.proxyman.command.ListOutboundsResponse
-	24, // [24:35] is the sub-list for method output_type
-	13, // [13:24] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	28, // 13: xray.app.proxyman.command.QuicConnection.counters:type_name -> xray.app.proxyman.command.QuicCounters
+	27, // 14: xray.app.proxyman.command.QuicHandlerStats.effective:type_name -> xray.app.proxyman.command.QuicEffective
+	28, // 15: xray.app.proxyman.command.QuicHandlerStats.totals:type_name -> xray.app.proxyman.command.QuicCounters
+	29, // 16: xray.app.proxyman.command.QuicHandlerStats.connections:type_name -> xray.app.proxyman.command.QuicConnection
+	30, // 17: xray.app.proxyman.command.GetQuicStatsResponse.handlers:type_name -> xray.app.proxyman.command.QuicHandlerStats
+	2,  // 18: xray.app.proxyman.command.HandlerService.AddInbound:input_type -> xray.app.proxyman.command.AddInboundRequest
+	4,  // 19: xray.app.proxyman.command.HandlerService.RemoveInbound:input_type -> xray.app.proxyman.command.RemoveInboundRequest
+	6,  // 20: xray.app.proxyman.command.HandlerService.AlterInbound:input_type -> xray.app.proxyman.command.AlterInboundRequest
+	8,  // 21: xray.app.proxyman.command.HandlerService.ListInbounds:input_type -> xray.app.proxyman.command.ListInboundsRequest
+	10, // 22: xray.app.proxyman.command.HandlerService.GetInboundUsers:input_type -> xray.app.proxyman.command.GetInboundUserRequest
+	10, // 23: xray.app.proxyman.command.HandlerService.GetInboundUsersCount:input_type -> xray.app.proxyman.command.GetInboundUserRequest
+	21, // 24: xray.app.proxyman.command.HandlerService.GetInboundMuxStats:input_type -> xray.app.proxyman.command.GetInboundMuxStatsRequest
+	26, // 25: xray.app.proxyman.command.HandlerService.GetQuicStats:input_type -> xray.app.proxyman.command.GetQuicStatsRequest
+	13, // 26: xray.app.proxyman.command.HandlerService.AddOutbound:input_type -> xray.app.proxyman.command.AddOutboundRequest
+	15, // 27: xray.app.proxyman.command.HandlerService.RemoveOutbound:input_type -> xray.app.proxyman.command.RemoveOutboundRequest
+	17, // 28: xray.app.proxyman.command.HandlerService.AlterOutbound:input_type -> xray.app.proxyman.command.AlterOutboundRequest
+	19, // 29: xray.app.proxyman.command.HandlerService.ListOutbounds:input_type -> xray.app.proxyman.command.ListOutboundsRequest
+	3,  // 30: xray.app.proxyman.command.HandlerService.AddInbound:output_type -> xray.app.proxyman.command.AddInboundResponse
+	5,  // 31: xray.app.proxyman.command.HandlerService.RemoveInbound:output_type -> xray.app.proxyman.command.RemoveInboundResponse
+	7,  // 32: xray.app.proxyman.command.HandlerService.AlterInbound:output_type -> xray.app.proxyman.command.AlterInboundResponse
+	9,  // 33: xray.app.proxyman.command.HandlerService.ListInbounds:output_type -> xray.app.proxyman.command.ListInboundsResponse
+	11, // 34: xray.app.proxyman.command.HandlerService.GetInboundUsers:output_type -> xray.app.proxyman.command.GetInboundUserResponse
+	12, // 35: xray.app.proxyman.command.HandlerService.GetInboundUsersCount:output_type -> xray.app.proxyman.command.GetInboundUsersCountResponse
+	25, // 36: xray.app.proxyman.command.HandlerService.GetInboundMuxStats:output_type -> xray.app.proxyman.command.GetInboundMuxStatsResponse
+	31, // 37: xray.app.proxyman.command.HandlerService.GetQuicStats:output_type -> xray.app.proxyman.command.GetQuicStatsResponse
+	14, // 38: xray.app.proxyman.command.HandlerService.AddOutbound:output_type -> xray.app.proxyman.command.AddOutboundResponse
+	16, // 39: xray.app.proxyman.command.HandlerService.RemoveOutbound:output_type -> xray.app.proxyman.command.RemoveOutboundResponse
+	18, // 40: xray.app.proxyman.command.HandlerService.AlterOutbound:output_type -> xray.app.proxyman.command.AlterOutboundResponse
+	20, // 41: xray.app.proxyman.command.HandlerService.ListOutbounds:output_type -> xray.app.proxyman.command.ListOutboundsResponse
+	30, // [30:42] is the sub-list for method output_type
+	18, // [18:30] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_app_proxyman_command_command_proto_init() }
@@ -1464,7 +2088,7 @@ func file_app_proxyman_command_command_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_app_proxyman_command_command_proto_rawDesc), len(file_app_proxyman_command_command_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   29,
+			NumMessages:   35,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

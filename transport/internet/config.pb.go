@@ -400,8 +400,19 @@ type QuicParams struct {
 	DisableGSO                    bool                   `protobuf:"varint,14,opt,name=disableGSO,proto3" json:"disableGSO,omitempty"`
 	MaxIncomingStreams            int64                  `protobuf:"varint,15,opt,name=max_incoming_streams,json=maxIncomingStreams,proto3" json:"max_incoming_streams,omitempty"`
 	DisableStatelessReset         bool                   `protobuf:"varint,16,opt,name=disable_stateless_reset,json=disableStatelessReset,proto3" json:"disable_stateless_reset,omitempty"`
-	unknownFields                 protoimpl.UnknownFields
-	sizeCache                     protoimpl.SizeCache
+	// Loss recovery (spec021 R1). Zero keeps quic-go's value.
+	MaxAckDelayMs         uint32  `protobuf:"varint,17,opt,name=max_ack_delay_ms,json=maxAckDelayMs,proto3" json:"max_ack_delay_ms,omitempty"`
+	AckElicitingThreshold uint32  `protobuf:"varint,18,opt,name=ack_eliciting_threshold,json=ackElicitingThreshold,proto3" json:"ack_eliciting_threshold,omitempty"`
+	InitialRttMs          uint32  `protobuf:"varint,19,opt,name=initial_rtt_ms,json=initialRttMs,proto3" json:"initial_rtt_ms,omitempty"`
+	PtoBackoffLimit       uint32  `protobuf:"varint,20,opt,name=pto_backoff_limit,json=ptoBackoffLimit,proto3" json:"pto_backoff_limit,omitempty"`
+	LossTimeThreshold     float64 `protobuf:"fixed64,21,opt,name=loss_time_threshold,json=lossTimeThreshold,proto3" json:"loss_time_threshold,omitempty"`
+	LossPacketThreshold   uint32  `protobuf:"varint,22,opt,name=loss_packet_threshold,json=lossPacketThreshold,proto3" json:"loss_packet_threshold,omitempty"`
+	// Redundant copies (spec021 R2). Off unless set.
+	DuplicateMaxSize uint32 `protobuf:"varint,23,opt,name=duplicate_max_size,json=duplicateMaxSize,proto3" json:"duplicate_max_size,omitempty"`
+	DuplicateTail    bool   `protobuf:"varint,24,opt,name=duplicate_tail,json=duplicateTail,proto3" json:"duplicate_tail,omitempty"`
+	DuplicateDelayMs uint32 `protobuf:"varint,25,opt,name=duplicate_delay_ms,json=duplicateDelayMs,proto3" json:"duplicate_delay_ms,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *QuicParams) Reset() {
@@ -544,6 +555,69 @@ func (x *QuicParams) GetDisableStatelessReset() bool {
 		return x.DisableStatelessReset
 	}
 	return false
+}
+
+func (x *QuicParams) GetMaxAckDelayMs() uint32 {
+	if x != nil {
+		return x.MaxAckDelayMs
+	}
+	return 0
+}
+
+func (x *QuicParams) GetAckElicitingThreshold() uint32 {
+	if x != nil {
+		return x.AckElicitingThreshold
+	}
+	return 0
+}
+
+func (x *QuicParams) GetInitialRttMs() uint32 {
+	if x != nil {
+		return x.InitialRttMs
+	}
+	return 0
+}
+
+func (x *QuicParams) GetPtoBackoffLimit() uint32 {
+	if x != nil {
+		return x.PtoBackoffLimit
+	}
+	return 0
+}
+
+func (x *QuicParams) GetLossTimeThreshold() float64 {
+	if x != nil {
+		return x.LossTimeThreshold
+	}
+	return 0
+}
+
+func (x *QuicParams) GetLossPacketThreshold() uint32 {
+	if x != nil {
+		return x.LossPacketThreshold
+	}
+	return 0
+}
+
+func (x *QuicParams) GetDuplicateMaxSize() uint32 {
+	if x != nil {
+		return x.DuplicateMaxSize
+	}
+	return 0
+}
+
+func (x *QuicParams) GetDuplicateTail() bool {
+	if x != nil {
+		return x.DuplicateTail
+	}
+	return false
+}
+
+func (x *QuicParams) GetDuplicateDelayMs() uint32 {
+	if x != nil {
+		return x.DuplicateDelayMs
+	}
+	return 0
 }
 
 type CustomSockopt struct {
@@ -928,7 +1002,7 @@ const file_transport_internet_config_proto_rawDesc = "" +
 	"\btcpmasks\x18\v \x03(\v2 .xray.common.serial.TypedMessageR\btcpmasks\x12D\n" +
 	"\vquic_params\x18\f \x01(\v2#.xray.transport.internet.QuicParamsR\n" +
 	"quicParams\x12N\n" +
-	"\x0fsocket_settings\x18\x06 \x01(\v2%.xray.transport.internet.SocketConfigR\x0esocketSettings\"\x8d\x06\n" +
+	"\x0fsocket_settings\x18\x06 \x01(\v2%.xray.transport.internet.SocketConfigR\x0esocketSettings\"\xa7\t\n" +
 	"\n" +
 	"QuicParams\x12\x1e\n" +
 	"\n" +
@@ -953,7 +1027,16 @@ const file_transport_internet_config_proto_rawDesc = "" +
 	"disableGSO\x18\x0e \x01(\bR\n" +
 	"disableGSO\x120\n" +
 	"\x14max_incoming_streams\x18\x0f \x01(\x03R\x12maxIncomingStreams\x126\n" +
-	"\x17disable_stateless_reset\x18\x10 \x01(\bR\x15disableStatelessReset\"\x93\x01\n" +
+	"\x17disable_stateless_reset\x18\x10 \x01(\bR\x15disableStatelessReset\x12'\n" +
+	"\x10max_ack_delay_ms\x18\x11 \x01(\rR\rmaxAckDelayMs\x126\n" +
+	"\x17ack_eliciting_threshold\x18\x12 \x01(\rR\x15ackElicitingThreshold\x12$\n" +
+	"\x0einitial_rtt_ms\x18\x13 \x01(\rR\finitialRttMs\x12*\n" +
+	"\x11pto_backoff_limit\x18\x14 \x01(\rR\x0fptoBackoffLimit\x12.\n" +
+	"\x13loss_time_threshold\x18\x15 \x01(\x01R\x11lossTimeThreshold\x122\n" +
+	"\x15loss_packet_threshold\x18\x16 \x01(\rR\x13lossPacketThreshold\x12,\n" +
+	"\x12duplicate_max_size\x18\x17 \x01(\rR\x10duplicateMaxSize\x12%\n" +
+	"\x0eduplicate_tail\x18\x18 \x01(\bR\rduplicateTail\x12,\n" +
+	"\x12duplicate_delay_ms\x18\x19 \x01(\rR\x10duplicateDelayMs\"\x93\x01\n" +
 	"\rCustomSockopt\x12\x16\n" +
 	"\x06system\x18\x01 \x01(\tR\x06system\x12\x18\n" +
 	"\anetwork\x18\x02 \x01(\tR\anetwork\x12\x14\n" +

@@ -24,6 +24,7 @@ import (
 	"github.com/xtls/xray-core/transport/internet"
 	"github.com/xtls/xray-core/transport/internet/hysteria/congestion"
 	"github.com/xtls/xray-core/transport/internet/hysteria/congestion/bbr"
+	"github.com/xtls/xray-core/transport/internet/quicrecovery"
 	"github.com/xtls/xray-core/transport/internet/tls"
 )
 
@@ -34,6 +35,7 @@ type httpHandler struct {
 	config      *Config
 	masqHandler http.Handler
 	quicParams  *internet.QuicParams
+	quicStats   *internet.QuicStatsSet
 	addConn     internet.ConnHandler
 	conn        *quic.Conn
 
@@ -68,6 +70,9 @@ func (h *httpHandler) AuthHTTP(w http.ResponseWriter, r *http.Request) bool {
 		if user != nil || ok {
 			h.auth = true
 			h.user = user
+			if user != nil {
+				h.quicStats.SetUser(quicrecovery.Conn(h.conn), user.Email)
+			}
 
 			conn := h.conn
 			quicParams := h.quicParams
@@ -153,6 +158,7 @@ type Listener struct {
 	config      *Config
 	masqHandler http.Handler
 	quicParams  *internet.QuicParams
+	quicStats   *internet.QuicStatsSet // the inbound's QUIC connections, across its listeners (spec021 R3)
 	addConn     internet.ConnHandler
 
 	pktConn  net.PacketConn
@@ -161,7 +167,9 @@ type Listener struct {
 }
 
 func (l *Listener) handleClient(conn *quic.Conn) {
+	l.quicStats.Add(quicrecovery.Conn(conn))
 	defer func() {
+		l.quicStats.Remove(quicrecovery.Conn(conn))
 		l.mu.Lock()
 		delete(l.connections, conn)
 		l.mu.Unlock()
@@ -172,6 +180,7 @@ func (l *Listener) handleClient(conn *quic.Conn) {
 		config:      l.config,
 		masqHandler: l.masqHandler,
 		quicParams:  l.quicParams,
+		quicStats:   l.quicStats,
 		addConn:     l.addConn,
 		conn:        conn,
 	}
@@ -345,6 +354,7 @@ func Listen(ctx context.Context, address net.Address, port net.Port, streamSetti
 		AssumePeerMaxDatagramFrameSize: MaxDatagramFrameSize,
 		DisablePathManager:             true,
 	}
+	quicrecovery.Apply(quicConfig, quicParams)
 	if quicParams.InitStreamReceiveWindow == 0 {
 		quicConfig.InitialStreamReceiveWindow = 8388608
 	}
@@ -396,6 +406,7 @@ func Listen(ctx context.Context, address net.Address, port net.Port, streamSetti
 		config:      config,
 		masqHandler: masqHandler,
 		quicParams:  quicParams,
+		quicStats:   streamSettings.QuicStats,
 		addConn:     handler,
 
 		pktConn:  pktConn,
