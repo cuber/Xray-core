@@ -27,7 +27,8 @@
   - `git log --first-parent 0888beb38a9b..fork/2026-11-07/0888beb38a9b` lists this line's own commits. Without
     `--first-parent`, the 19 commits of the earlier series also appear.
   - Later lines are linear.
-- **quic-go 2026-11-07.** This line is the former `v0.61.0-cuber`, at the base itself with no patches yet. apernet's
-  `v0.61.0-mod-rename` points at the same commit.
+- **quic-go 2026-11-07.** This line is the former `v0.61.0-cuber`. It started at the base itself; apernet's
+  `v0.61.0-mod-rename` points at that commit. On 2026-11-07 the fork's spec001 (Core spec021) added five commits,
+  `533e1b9f`..`0162af63`, and Core's `replace` moved to `0162af63` (`v0.61.1-0.20261107140010-0162af6383a0`).
 - **Before this convention.** `backup/develop-before-*` hold states of `develop` that in-place rewrites replaced
   (2026-09-27, 2026-10-14, 2026-10-20). They are not ancestors of any line.

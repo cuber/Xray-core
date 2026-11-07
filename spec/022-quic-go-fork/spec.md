@@ -5,6 +5,8 @@
 - Status: Approved (2026-11-07; user: "确认，先把仓库和依赖搞好，独立 quic-go 先做一个 xray-core 的 spec"; "quic-go 也要使用
   spec-kit 不然后续 rebase 升级就无从下手了")
 - Baseline: Core `431e0868` (develop), `github.com/apernet/quic-go` `v0.61.1-0.20260806010916-184d081eef3e`
+- Current pin (2026-11-07): `0162af63`, the head of the fork's spec001 series for [spec021](../021-quic-loss-recovery/spec.md).
+  FR-001 and FR-002 describe the first pin, at the base itself.
 - Consumers: [spec021](../021-quic-loss-recovery/spec.md), the first patch series to land on the fork. The fork's own
   specifications (its `spec/`, set up after this spec) own every patch on it.
 
