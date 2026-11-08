@@ -75,7 +75,18 @@ func (c *Client) Process(ctx context.Context, link *transport.Link, dialer inter
 		return conn, c.server.Destination, err
 	}
 	if c.relay != nil {
-		dial = c.dialRelay
+		dial = func(ctx context.Context) (stat.Connection, net.Destination, error) {
+			conn, server, err := c.dialRelay(ctx)
+			if err != nil {
+				return nil, server, err
+			}
+			// The stream runs on the owner's connections, not through this outbound's Dial, so it is counted under
+			// this outbound's tag here.
+			if counter, ok := dialer.(connectionCounter); ok {
+				conn = counter.CountConnection(conn)
+			}
+			return conn, server, nil
+		}
 	}
 	conn, server, err := dial(hysteria.ContextWithDatagram(ctx, target.Network == net.Network_UDP))
 	if err != nil {
@@ -203,6 +214,11 @@ func (c *Client) sessionOwner() (*Client, *internet.MemoryStreamConfig, error) {
 		return nil, nil, errors.New("hysteria relay: ", c.relay.Session, " is not a Hy2 session owner")
 	}
 	return owner, handler.StreamSettings(), nil
+}
+
+// connectionCounter is the outbound handler's traffic accounting, which its Dial applies to what it dials itself.
+type connectionCounter interface {
+	CountConnection(stat.Connection) stat.Connection
 }
 
 // dialRelay opens the stream or UDP session on the owner's connections as the relayed user (spec024 R2).

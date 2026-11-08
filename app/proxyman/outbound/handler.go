@@ -320,6 +320,12 @@ func (h *Handler) SetOutboundGateway(ctx context.Context, ob *session.Outbound) 
 	}
 }
 
+// CountConnection wraps conn with the handler's traffic counters, as Dial does. A proxy that opens its streams
+// without Dial, such as a Hy2 relay outbound on its session owner's connections (spec024), counts them with it.
+func (h *Handler) CountConnection(conn stat.Connection) stat.Connection {
+	return h.getStatCouterConnection(conn)
+}
+
 func (h *Handler) getStatCouterConnection(conn stat.Connection) stat.Connection {
 	if h.uplinkCounter != nil || h.downlinkCounter != nil {
 		return &stat.CounterConnection{

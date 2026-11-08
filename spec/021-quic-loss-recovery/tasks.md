@@ -12,7 +12,7 @@
 - [x] T008 Hy2 per-handler stats set, `HandlerService.GetQuicStats`; the CP-7 contract; FR-007.
 - [x] T009 `xray api quicstats`; FR-008.
 - [x] T011 netem tests (FR-010): `testing/netem/run.sh`, each test passing three times in a row.
-- [ ] T010 Full suite, race, format (done); `xrayctl build core` (`go version -m` names the replacement); `xrayctl gate plan`
+- [x] T010 Full suite, race, format (done); `xrayctl build core` (`go version -m` names the replacement); `xrayctl gate plan`
   and its gate with default and spec024 parameters. The forked dependency is recorded by spec001 FR-012 (spec022);
   `inventory.md` is the 2026-09-27 audit and stays as it is.
 
@@ -65,3 +65,19 @@
   `hysteria`, `splithttp`, `masque/...`, `app/proxyman/...`, `infra/conf` and `main/commands/all/api` ok;
   `.github/check-gofmt.sh` ok. An earlier run's `proxy/anytls` and `masque/connectip` failures did not recur (each
   passed 10 times alone, and the whole suite after).
+- 2026-11-08 T010, candidate `31a83508` (Linux SHA-256 `252584a9f0c6…`) against the deployed `ee030ff5`:
+  - `xrayctl gate plan` chose L1 against `431e0868`, and L2 when recomputed against the target nodes' installed Cores
+    (`ee030ff5..31a83508` also carries spec017–020's routing and balancer hot paths), so `singmux-check` A/B was added.
+  - Local: `go test ./...` passed; changed packages `-race -count=3`; xray-config's full suite and `xrayctl test` for the
+    three target nodes.
+  - `migration hy2-check --duration 600` on hk.akile.lite (735 s): mihomo / sing-box TCP 11606 / 11604, connection
+    churn 2355 / 2355 and UDP 5898 / 5899, all successful; idle recovery, client restart and the negative control passed; Core 55 MB, no
+    restart. Reverted afterwards.
+  - `quic-check` PASS (260 s). Added latency per request at 15% injected loss (baseline / default / tuned / copies):
+    hk→tk 42 / 43 / 32 / 13 ms, tk→la 91 / 87 / 70 / 23 ms, la→hk 134 / 155 / 108 / 36 ms; at 5%, copies 2–7 ms and the
+    others 10–49 ms. Copies added about 120% upstream and 75% downstream packets for lone small requests.
+  - `singmux-check` A/B against `ee030ff`: PASS with hk.akile.lite and la.akile.lite as server; candidate peaks 1171 /
+    1167 goroutines, 101 / 102 handlers, 20 / 20 carriers, 73 / 79 MiB (baseline 1236 / 1172, 108 / 105, 19 / 20, 72 /
+    76 MiB); handlers and carriers back to 0, no panic.
+  - Deployed 2026-11-08 to isz5, tgz.lite and vgz.ecs with Sidecar `fab102d`, configuration unchanged (Core
+    interruptions 155, 208 and 195 ms); followed the same day by spec024's `76e28afd`.

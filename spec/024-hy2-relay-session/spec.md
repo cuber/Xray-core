@@ -115,6 +115,10 @@ Without `session`, `relay` and the client `relay` list, configuration and behavi
   one. Active connections never drop below `minConnections`.
 - Flows never move between connections (non-goal); a long-lived stream keeps its draining connection open.
 - A pool's connections all use the owner's settings, credential and relay list, and count into the owner's `QuicStatsSet`.
+- A relay outbound's streams and UDP sessions count in its own outbound traffic statistics
+  (`outbound>>>tag>>>traffic>>>uplink|downlink`), never in its owner's, although they run on the owner's connections
+  and their QUIC counters stay in the owner's `QuicStatsSet` (2026-11-08 amendment: as first deployed they counted
+  nowhere, because a relay opens its streams without its handler's `Dial`).
 
 ### R5 Failure handling
 
@@ -182,6 +186,7 @@ two connections hold.
 | FR-008 | R7 through a real gRPC server on a started instance: an owner with two connections and two relay outbounds, a server with relayed users; no credential in the response | CP-7 contract test |
 | FR-009 | `xray api quicstats` text and `-json` with the new fields, against a fake server and an older Core | CLI test |
 | FR-010 | netem (`testing/netem/run.sh`): 0 → 600 → 0 concurrent streams scale the pool to 4 and back to 1 with no stream failing for credit; closing one connection keeps the probe alive; a restarted server is reconnected within one RTT plus 500 ms; during a bulk transfer on the session, the probe's delay rises with the queue | netem |
+| FR-011 | Traffic statistics of relays (R4, 2026-11-08): on a started client with outbound statistics, a relay's TCP stream and UDP session count under its own tag, and nothing of them under its owner's; the owner's own stream counts under the owner's | started instances (`proxy/hysteria/relay_session_test.go`) |
 
 ## Control Plane
 

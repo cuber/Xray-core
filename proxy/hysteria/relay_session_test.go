@@ -134,6 +134,8 @@ type relayFixture struct {
 	handler handlercmd.HandlerServiceClient
 	stats   statscmd.StatsServiceClient
 	client  handlercmd.HandlerServiceClient
+	// clientStats reads the client's outbound traffic counters.
+	clientStats statscmd.StatsServiceClient
 }
 
 var relayUsers = []string{"trunk", "a", "b", "c"}
@@ -226,7 +228,9 @@ func newRelayFixture(t *testing.T) *relayFixture {
 	}
 	client, err := json.Marshal(map[string]any{
 		"log":       map[string]any{"loglevel": "error", "access": "none"},
-		"api":       map[string]any{"tag": "api", "listen": fmt.Sprintf("127.0.0.1:%d", clientAPI), "services": []string{"HandlerService"}},
+		"stats":     map[string]any{},
+		"api":       map[string]any{"tag": "api", "listen": fmt.Sprintf("127.0.0.1:%d", clientAPI), "services": []string{"HandlerService", "StatsService"}},
+		"policy":    map[string]any{"system": map[string]any{"statsOutboundUplink": true, "statsOutboundDownlink": true}},
 		"inbounds":  doors,
 		"outbounds": clientOutbounds,
 		"routing":   map[string]any{"rules": doorRules},
@@ -252,7 +256,25 @@ func newRelayFixture(t *testing.T) *relayFixture {
 	f.handler = handlercmd.NewHandlerServiceClient(dial(serverAPI))
 	f.client = handlercmd.NewHandlerServiceClient(dial(clientAPI))
 	f.stats = statscmd.NewStatsServiceClient(dial(serverAPI))
+	f.clientStats = statscmd.NewStatsServiceClient(dial(clientAPI))
 	return f
+}
+
+// traffic is a client outbound's uplink and downlink counters.
+func (f *relayFixture) traffic(t *testing.T, tag string) (up, down int64) {
+	t.Helper()
+	for i, dir := range []string{"uplink", "downlink"} {
+		resp, err := f.clientStats.GetStats(context.Background(), &statscmd.GetStatsRequest{Name: "outbound>>>" + tag + ">>>traffic>>>" + dir})
+		if err != nil {
+			t.Fatalf("%s %s: %v", tag, dir, err)
+		}
+		if i == 0 {
+			up = resp.Stat.Value
+		} else {
+			down = resp.Stat.Value
+		}
+	}
+	return up, down
 }
 
 // owner is the client's session owner entry.
@@ -362,6 +384,43 @@ func TestRelaySessionQuicStatsContract(t *testing.T) {
 		if raw, _ := json.Marshal(r); strings.Contains(string(raw), "secret-") {
 			t.Errorf("a credential in the report: %s", raw)
 		}
+	}
+}
+
+// A relay's streams and UDP sessions count under the relay's own outbound tag, never under its owner's, although
+// they run on the owner's connections.
+func TestRelaySessionCountsTrafficUnderEachRelay(t *testing.T) {
+	f := newRelayFixture(t)
+	if got, err := f.mark("relay-a"); err != nil || got != "A" {
+		t.Fatalf("relay-a: %q, %v", got, err)
+	}
+	if got, err := f.datagram("relay-b"); err != nil || got != "B" {
+		t.Fatalf("relay-b: %q, %v", got, err)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		aUp, aDown := f.traffic(t, "relay-a")
+		bUp, bDown := f.traffic(t, "relay-b")
+		if aUp > 0 && aDown > 0 && bUp > 0 && bDown > 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("relay counters: relay-a %d/%d, relay-b %d/%d", aUp, aDown, bUp, bDown)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if up, down := f.traffic(t, "owner"); up != 0 || down != 0 {
+		t.Errorf("owner counted the relays' traffic: %d/%d", up, down)
+	}
+	if got, err := f.mark("owner"); err != nil || got != "T" {
+		t.Fatalf("owner: %q, %v", got, err)
+	}
+	deadline = time.Now().Add(5 * time.Second)
+	for up, down := f.traffic(t, "owner"); up == 0 || down == 0; up, down = f.traffic(t, "owner") {
+		if time.Now().After(deadline) {
+			t.Fatalf("owner counters after its own stream: %d/%d", up, down)
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
 }
 

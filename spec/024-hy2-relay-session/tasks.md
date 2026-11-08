@@ -12,7 +12,10 @@
 - [x] T010 netem; FR-010.
 - [x] T012 quic-go fork spec002 (`PacketsAcked`, `BytesInFlight`) for R5's stall check; the `replace` names the pushed
   commit `67b1e9ed`.
-- [ ] T011 Full suite, race, format; `xrayctl build core`; `xrayctl gate plan` and its gate.
+- [x] T011 Full suite, race, format; `xrayctl build core`; `xrayctl gate plan` and its gate.
+- [x] T013 Relay outbounds count their traffic under their own tag (R4 amendment, FR-011): `Handler.CountConnection`
+  and the relay dial.
+- [ ] T014 The gate for the T013 candidate, then the rollout on the nodes that run relays (xray-config spec026).
 
 ## Evidence
 
@@ -52,3 +55,29 @@
   `v0.61.1-0.20261108044907-67b1e9edf55c` (`go.mod`, `go.sum`: only the quic-go lines), `TestQuicGoIsReplacedByTheFork` passes.
 - 2026-11-08 T011 (suites): `go test ./... -count=1` 111 packages ok; `-race` on the 11 touched packages ok; `gofmt` clean on
   the touched files. The build and the gate follow the commit.
+- 2026-11-08 T011, candidate `76e28afd` (Linux SHA-256 `91f88b3db2b6…`); `xrayctl gate plan` for the target nodes chose L2:
+  - `relay-check` (xray-config spec026 FR-009) on the three Akile pairs passed on its second run (1685 s); the first
+    run's three failures were all in the check, which was fixed (one UDP flow per pair through a server-side demux,
+    latency measured from each outbound's own round trip, the loss relay kept up through the restart phase, bulk
+    progress recorded per second). Routing and the refused user right on all pairs; 600 streams with 0 failures spread to
+    4 connections and were back to 1 after 191 s. At 15% loss each relay stayed within the noise of its reference
+    (hk→tk 32–40 ms against 33–37 ms added per request, tk→la 75–93 against 76–94, la→hk 131–159 against 114–151).
+    Bulk echo 87–106 Mbit/s with no stall, and the owner's request median unchanged meanwhile. A server restart of
+    1.12–1.15 s cost the client 1.05–1.24 s.
+  - `quic-check` PASS (267 s). Added latency per request at 15% injected loss (baseline / default / tuned / copies):
+    hk→tk 43 / 42 / 35 / 14 ms, tk→la 82 / 78 / 66 / 26 ms, la→hk 147 / 160 / 115 / 43 ms.
+  - `singmux-check` A/B against `31a8350` (measured within 7 days): PASS with each of hk.akile.lite and la.akile.lite as
+    server; candidate peaks 1125 / 1115 goroutines, 109 / 110 h2mux handlers, 19 / 20 carriers, 73 / 77 MiB (baseline
+    1171 / 1167, 101 / 102, 20 / 20, 73 / 79 MiB); handlers and carriers back to 0, no TCP failure in the quiet phase.
+  - `migration hy2-check --duration 600` on hk.akile.lite: mihomo / sing-box TCP 11609 / 11608, connection churn
+    2357 / 2357 and UDP 5901 / 5901, all successful; idle recovery and the negative control passed; Core 56 MB, no restart. Reverted
+    afterwards.
+  - Deployed 2026-11-08 to isz5, tgz.lite and vgz.ecs with Sidecar `98ee339` (Core interruptions 101, 206 and 199 ms);
+    tgz.lite's acceptance shows one session owner with seven relay outbounds bound.
+- 2026-11-08 T013: found on tgz.lite the same day: its seven relay outbounds counted 0 bytes since the deployment while
+  their session carried several GB. A relay opened its streams through the transport, not its handler's `Dial`, which
+  is where outbound counters wrap a connection. The relay dial now wraps its stream with the relay handler's counters
+  (`Handler.CountConnection`, an optional interface the proxy checks); the UDP path already unwraps a counted
+  connection. `TestRelaySessionCountsTrafficUnderEachRelay` (client outbound statistics on) fails without the change
+  (relay-a 0/0, relay-b 0/0) and passes with it; the owner counts only its own stream. `-race -count=3` over
+  `proxy/hysteria/...`, `app/proxyman/...` and `transport/internet/hysteria/...`.
