@@ -15,7 +15,7 @@
 - [x] T011 Full suite, race, format; `xrayctl build core`; `xrayctl gate plan` and its gate.
 - [x] T013 Relay outbounds count their traffic under their own tag (R4 amendment, FR-011): `Handler.CountConnection`
   and the relay dial.
-- [ ] T014 The gate for the T013 candidate, then the rollout on the nodes that run relays (xray-config spec026).
+- [x] T014 The gate for the T013 candidate, then the rollout on the nodes that run relays (xray-config spec026).
 
 ## Evidence
 
@@ -81,3 +81,24 @@
   connection. `TestRelaySessionCountsTrafficUnderEachRelay` (client outbound statistics on) fails without the change
   (relay-a 0/0, relay-b 0/0) and passes with it; the owner counts only its own stream. `-race -count=3` over
   `proxy/hysteria/...`, `app/proxyman/...` and `transport/internet/hysteria/...`.
+- 2026-11-08 T014 (transcribed from xray-config spec026, its T010 entry of the same day): candidate `312ee32e`, Linux SHA-256
+  `83074cc33fa3…`; `xrayctl gate plan --node tgz.lite` chose L1.
+  - Local: `go test ./...` 111 packages ok, `-race -count=3` on the touched packages; xray-config's full suite, 1759 tests.
+  - `singmux-check` quick check (hk.akile.lite server, la.akile.lite client, 60 s chaos, 30 s quiet): PASS, the installed
+    services unchanged.
+  - `quic-check --baseline-node tgz.lite`: the first run timed out over SSH while distributing to tk.akile.hyper through
+    tk.dmit.t1.tiny (nothing installed; the empty directory it left was removed); the rerun passed (253 s). Added latency
+    per request at 15% injected loss (baseline / default / tuned / copies): hk→tk 47 / 47 / 34 / 15 ms, tk→la
+    78 / 85 / 69 / 28 ms, la→hk 140 / 154 / 132 / 23 ms.
+  - `relay-check` PASS (1692 s): 600 streams with 0 failures spread to 4 connections and were back to 1 after 191 s; a
+    1.12 s server stop cost the client 1.15 s.
+  - hk.akile.lite: `switch upgrade-prepare --core-only`, `check-stage --core-only` and `switch upgrade` (213 ms
+    interruption), then `migration hy2-check --duration 600` PASS: mihomo / sing-box TCP 11612 / 11611, connection churn
+    2357 / 2357 and UDP 5899 / 5899, none failed; idle recovery, client restart and the negative control passed; Core
+    peak 56 MB. `switch revert` (216 ms), configuration `verify` MATCH.
+  - Rollout on tgz.lite, the only node that runs relays: `acceptance capture`, `switch upgrade-prepare --core-only`,
+    `switch upgrade` (Sidecar 150 ms, Core interruption 208 ms), `acceptance check --baseline --artifact-dir build` PASS
+    with no new warning (`hy2_relay`: 7 relay outbounds bound; `observatory_track`: 7 outbounds follow the owner's
+    probe); `version` CURRENT `312ee32`. Within a minute or two the relay outbounds of hk.pccw.hkt, la.usvps24.att.1st
+    and la.usvps24.att.2nd counted traffic. isz5 and vgz.ecs run no relays and stay on `76e28afd` until their next Core
+    upgrade.
