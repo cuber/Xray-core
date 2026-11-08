@@ -73,6 +73,7 @@ func quicStatsFixture() *fakeHandlers {
 			Effective: &handlerService.QuicEffective{
 				MaxAckDelayMs: 2, AckElicitingThreshold: 2, InitialRttMs: 15,
 				PtoBackoffLimit: 1, LossTimeThreshold: 1.125, LossPacketThreshold: 3, DuplicateMaxSize: 300, DuplicateTail: true, DuplicateDelayMs: 3,
+				Padding: "off",
 			},
 			Totals:            &handlerService.QuicCounters{PacketsSent: 1000, BytesSent: 900000, PacketsLost: 7, BytesLost: 6300, PtoCount: 2, CopiesSent: 50, CopyBytesSent: 4000, DuplicatesReceived: 40},
 			ConnectionsActive: 1, ConnectionsTotal: 3,
@@ -84,6 +85,12 @@ func quicStatsFixture() *fakeHandlers {
 		},
 		{
 			Tag: "hy2-out", Direction: "outbound", Transport: "hysteria",
+			Effective: &handlerService.QuicEffective{MaxAckDelayMs: 25, AckElicitingThreshold: 2, InitialRttMs: 100, LossTimeThreshold: 1.125, LossPacketThreshold: 3, Padding: "random"},
+			Totals:    &handlerService.QuicCounters{},
+		},
+		// A Core before spec025 reports no padding.
+		{
+			Tag: "hy2-old", Direction: "outbound", Transport: "hysteria",
 			Effective: &handlerService.QuicEffective{MaxAckDelayMs: 25, AckElicitingThreshold: 2, InitialRttMs: 100, LossTimeThreshold: 1.125, LossPacketThreshold: 3},
 			Totals:    &handlerService.QuicCounters{},
 		},
@@ -101,7 +108,10 @@ func TestQuicStatsText(t *testing.T) {
 	text := out.String()
 	for _, want := range []string{
 		"hy2-in  inbound  hysteria  connections 1 active, 3 total\n",
-		"    effective  maxAckDelay 2ms  ackEliciting 2  initialRtt 15ms  ptoBackoff 1  lossTime 1.125  lossPacket 3  copies <=300B+tail after 3ms\n",
+		"    effective  maxAckDelay 2ms  ackEliciting 2  initialRtt 15ms  ptoBackoff 1  lossTime 1.125  lossPacket 3  copies <=300B+tail after 3ms  padding off\n",
+		// spec025 FR-008.
+		"    effective  maxAckDelay 25ms  ackEliciting 2  initialRtt 100ms  ptoBackoff unlimited  lossTime 1.125  lossPacket 3  copies off  padding random\n",
+		"hy2-old  outbound  hysteria  connections 0 active, 0 total\n    effective  maxAckDelay 25ms  ackEliciting 2  initialRtt 100ms  ptoBackoff unlimited  lossTime 1.125  lossPacket 3  copies off  padding unavailable\n",
 		"    sent 1000 pkts 900000B  received 0 pkts 0B  lost 7 pkts 6300B  spurious 0  pto 2\n",
 		"    copies 50 (4000B)  skipped 0  duplicates received 40\n",
 		"hy2-out  outbound  hysteria  connections 0 active, 0 total\n",
@@ -192,7 +202,8 @@ func TestQuicStatsJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	printed, _ := io.ReadAll(read)
-	if out.Len() != 0 || !strings.Contains(string(printed), `"tag": "hy2-out"`) || !strings.Contains(string(printed), `"maxAckDelayMs": 25`) {
+	if out.Len() != 0 || !strings.Contains(string(printed), `"tag": "hy2-out"`) || !strings.Contains(string(printed), `"maxAckDelayMs": 25`) ||
+		!strings.Contains(string(printed), `"padding": "random"`) {
 		t.Fatalf("JSON output:\n%s", printed)
 	}
 }

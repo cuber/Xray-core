@@ -76,6 +76,19 @@ No library change; the quic-go pin stays.
 - The full suite of a Hy2 change: `go test ./...`, `-race` on the touched packages, `.github/check-gofmt.sh`, and
   `testing/netem/run.sh -test.count=3` (its tests run with padding on, the default).
 
+## As implemented (2026-11-09)
+
+- The writers keep one encoder each (`writeTCPRequest`, `writeTCPResponse`, taking the padding string), and
+  `sendsPadding` sits beside them in `proxy/hysteria/protocol.go`.
+- FR-002's started-instance part (`ListInbounds`, `ListOutbounds`) is in FR-007's contract test, whose instance already
+  has `HandlerService`; `infra/conf/hysteria_padding_test.go` covers the parsing and the handlers' stream settings.
+- FR-005 runs end to end on started instances in `proxy/hysteria/padding_wire_test.go`: a raw server reads the owner's
+  `0x401` and its relay's `0x402` streams on both connections of the pool. `transport/internet/hysteria/padding_test.go`
+  covers `HysteriaPadding()` on a plain client stream and on the listener's streams.
+- FR-006: the loss relay also wraps the server's socket in that mode, and the server turns path MTU discovery off as the
+  fixture's client already does (an MTU probe is no datagram of the measured exchange). The padding-on run counts the
+  datagrams above 512 bytes without drops: dropping the first instance of a datagram that has no copy loses it every time.
+
 ## Gate and rollout
 
 - The change reaches Hy2's per-stream write path (`proxy/hysteria`, `transport/internet/hysteria`), its configuration

@@ -212,11 +212,11 @@ func (c *client) dial(ctx context.Context) error {
 			Path:   URLPath,
 		},
 		Header: http.Header{
-			RequestHeaderAuth:   []string{c.config.Auth},
-			CommonHeaderCCRX:    []string{strconv.FormatUint(quicParams.BrutalDown, 10)},
-			CommonHeaderPadding: []string{AuthRequestPadding.String()},
+			RequestHeaderAuth: []string{c.config.Auth},
+			CommonHeaderCCRX:  []string{strconv.FormatUint(quicParams.BrutalDown, 10)},
 		},
 	}
+	setPadding(req.Header, AuthRequestPadding, c.config)
 	relays := c.config.GetSession().GetRelayAuth()
 	if len(relays) > 0 {
 		req.Header.Set(HeaderRelay, encodeRelayRequest(relays))
@@ -382,6 +382,9 @@ func (c *client) tcpOpen(ctx context.Context, wait bool) (*interConn, error) {
 
 		client:     true,
 		relayIndex: index,
+		// Every client stream is opened here, on the client of the connection that carries it: a plain
+		// outbound's, a pool member's, and a relay outbound's on its owner's (spec025 R3).
+		noPadding: c.config.GetDisablePadding(),
 	}, nil
 }
 

@@ -28,10 +28,18 @@ type interConn struct {
 	// A pool stream's release, run once on Close (spec024 R4).
 	release     func()
 	releaseOnce sync.Once
+	// noPadding: the connection's end sends its TCP header unpadded (spec025 R2, R3).
+	noPadding bool
 }
 
 func (c *interConn) User() *protocol.MemoryUser {
 	return c.user
+}
+
+// HysteriaPadding says whether the proxy pads the TCP request or response header it writes on this stream:
+// the setting of the end whose connection carries it, never of the outbound that opened it (spec025 R3).
+func (c *interConn) HysteriaPadding() bool {
+	return !c.noPadding
 }
 
 func (c *interConn) Read(b []byte) (int, error) {

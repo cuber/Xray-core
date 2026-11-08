@@ -77,11 +77,13 @@ func quicHandlerStats(handler any, tag, direction string, rows bool) *QuicHandle
 		return nil
 	}
 	report := mss.QuicStats.Report(rows)
+	effective := quicEffective(quicrecovery.Effective(mss.QuicParams))
+	effective.Padding = quicPadding(mss.ProtocolSettings)
 	stats := &QuicHandlerStats{
 		Tag:               tag,
 		Direction:         direction,
 		Transport:         mss.ProtocolName,
-		Effective:         quicEffective(quicrecovery.Effective(mss.QuicParams)),
+		Effective:         effective,
 		Totals:            quicCounters(report.Totals),
 		ConnectionsActive: report.ConnectionsActive,
 		ConnectionsTotal:  report.ConnectionsTotal,
@@ -154,6 +156,20 @@ func quicEffective(r quic.LossRecovery) *QuicEffective {
 		DuplicateTail:         r.DuplicateTail,
 		DuplicateDelayMs:      uint32(r.DuplicateDelay / time.Millisecond),
 	}
+}
+
+// quicPadding is the padding a handler's Hy2 messages carry (spec025 R4), read from the transport settings its
+// dialer or listener loaded: "off" with disablePadding, "random" otherwise, and empty for settings that have no
+// such field. The command package does not import the Hy2 transport.
+func quicPadding(settings any) string {
+	p, ok := settings.(interface{ GetDisablePadding() bool })
+	switch {
+	case !ok:
+		return ""
+	case p.GetDisablePadding():
+		return "off"
+	}
+	return "random"
 }
 
 func quicCounters(c internet.QuicCounters) *QuicCounters {

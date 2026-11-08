@@ -21,8 +21,9 @@ var cmdQuicStats = &base.Command{
 	Long: `
 Retrieve the QUIC connections of inbounds and outbounds whose transport builds them (Hy2):
 the loss recovery and copy settings in effect, packets and bytes sent, received and lost,
-spurious losses, probe timeouts, copies, and duplicates received (Core spec021). Without a
-tag, every such handler is listed.
+spurious losses, probe timeouts, copies, and duplicates received (Core spec021), and whether
+the handler pads its Hy2 messages: random, off, or unavailable from an older Core (Core
+spec025). Without a tag, every such handler is listed.
 
 > Ensure that "HandlerService" is enabled under "config.api.services" in the server configuration.
 
@@ -158,8 +159,13 @@ func formatQuicEffective(e *handlerService.QuicEffective) string {
 			copyMode += fmt.Sprintf(" after %dms", e.DuplicateDelayMs)
 		}
 	}
-	return fmt.Sprintf("maxAckDelay %dms  ackEliciting %d  initialRtt %dms  ptoBackoff %s  lossTime %g  lossPacket %d  copies %s",
-		e.MaxAckDelayMs, e.AckElicitingThreshold, e.InitialRttMs, pto, e.LossTimeThreshold, e.LossPacketThreshold, copyMode)
+	// spec025 R4: empty from an older Core, never read as random.
+	padding := e.Padding
+	if padding == "" {
+		padding = "unavailable"
+	}
+	return fmt.Sprintf("maxAckDelay %dms  ackEliciting %d  initialRtt %dms  ptoBackoff %s  lossTime %g  lossPacket %d  copies %s  padding %s",
+		e.MaxAckDelayMs, e.AckElicitingThreshold, e.InitialRttMs, pto, e.LossTimeThreshold, e.LossPacketThreshold, copyMode, padding)
 }
 
 func writeQuicCounters(w io.Writer, indent string, c *handlerService.QuicCounters) {

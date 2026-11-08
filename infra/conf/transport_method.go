@@ -768,6 +768,9 @@ type HysteriaConfig struct {
 	UdpIdleTimeout int64                  `json:"udpIdleTimeout"`
 	Masquerade     Masquerade             `json:"masquerade"`
 	Session        *HysteriaSessionConfig `json:"session"`
+	// DisablePadding: this end sends its Hy2 messages without random padding (Core spec025 R1); only inside a
+	// WireGuard tunnel, which xray-config's checks enforce.
+	DisablePadding bool `json:"disablePadding"`
 }
 
 // HysteriaSessionConfig makes a Hy2 outbound a session owner with a connection pool (spec024 R1, R4).
@@ -818,6 +821,7 @@ func (c *HysteriaConfig) Build() (proto.Message, error) {
 	config.MasqString = c.Masquerade.Content
 	config.MasqStringHeaders = c.Masquerade.Headers
 	config.MasqStringStatusCode = c.Masquerade.StatusCode
+	config.DisablePadding = c.DisablePadding
 
 	if config.UdpIdleTimeout == 0 {
 		config.UdpIdleTimeout = 60

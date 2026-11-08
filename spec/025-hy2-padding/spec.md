@@ -4,6 +4,7 @@
 - Created: 2026-11-08
 - Status: Approved 2026-11-08 (user: "随机panding应该可以考虑支持关闭，chrome的特征我们都关了"; on review, "1-4都ok，5 可以的，
   仅在 wg 隧道内允许使用，这个可以加到 xrayctl 的检查里，不能隐式开启"). Rollout is a separate step (xray-config spec024).
+  Core side (T002–T007, FR-001–FR-008) implemented 2026-11-09; the consumers (T008) and the gate (T009, FR-009) are pending.
 - Baseline: Core `76e28afd` on `fork/2026-11-07/0888beb38a9b`, quic-go `67b1e9ed` on `fork/2026-11-07/184d081eef3e`
   ([spec023](../023-fork-lines/spec.md)). No library change.
 - Depends on: [spec021](../021-quic-loss-recovery/spec.md) (`GetQuicStats` `effective`, R2 copies) and

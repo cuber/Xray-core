@@ -35,9 +35,13 @@ type Config struct {
 	MasqStringHeaders    map[string]string      `protobuf:"bytes,11,rep,name=masq_string_headers,json=masqStringHeaders,proto3" json:"masq_string_headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	MasqStringStatusCode int32                  `protobuf:"varint,12,opt,name=masq_string_status_code,json=masqStringStatusCode,proto3" json:"masq_string_status_code,omitempty"`
 	// A session owner's connection pool (spec024 R1, R4); unset keeps one connection per outbound.
-	Session       *Session `protobuf:"bytes,13,opt,name=session,proto3" json:"session,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Session *Session `protobuf:"bytes,13,opt,name=session,proto3" json:"session,omitempty"`
+	// spec025 R1, R2: this end sends its Hy2 messages without random padding (an outbound: the authentication
+	// request and TCP request headers; an inbound: the authentication responses and TCP response headers). Only
+	// inside a WireGuard tunnel; false keeps today's padding.
+	DisablePadding bool `protobuf:"varint,14,opt,name=disable_padding,json=disablePadding,proto3" json:"disable_padding,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Config) Reset() {
@@ -154,6 +158,13 @@ func (x *Config) GetSession() *Session {
 	return nil
 }
 
+func (x *Config) GetDisablePadding() bool {
+	if x != nil {
+		return x.DisablePadding
+	}
+	return false
+}
+
 type Session struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	MinConnections       uint32                 `protobuf:"varint,1,opt,name=min_connections,json=minConnections,proto3" json:"min_connections,omitempty"`
@@ -236,7 +247,7 @@ var File_transport_internet_hysteria_config_proto protoreflect.FileDescriptor
 
 const file_transport_internet_hysteria_config_proto_rawDesc = "" +
 	"\n" +
-	"(transport/internet/hysteria/config.proto\x12 xray.transport.internet.hysteria\"\x85\x05\n" +
+	"(transport/internet/hysteria/config.proto\x12 xray.transport.internet.hysteria\"\xae\x05\n" +
 	"\x06Config\x12\x12\n" +
 	"\x04auth\x18\x02 \x01(\tR\x04auth\x12(\n" +
 	"\x10udp_idle_timeout\x18\x03 \x01(\x03R\x0eudpIdleTimeout\x12\x1b\n" +
@@ -251,7 +262,8 @@ const file_transport_internet_hysteria_config_proto_rawDesc = "" +
 	"masqString\x12o\n" +
 	"\x13masq_string_headers\x18\v \x03(\v2?.xray.transport.internet.hysteria.Config.MasqStringHeadersEntryR\x11masqStringHeaders\x125\n" +
 	"\x17masq_string_status_code\x18\f \x01(\x05R\x14masqStringStatusCode\x12C\n" +
-	"\asession\x18\r \x01(\v2).xray.transport.internet.hysteria.SessionR\asession\x1aD\n" +
+	"\asession\x18\r \x01(\v2).xray.transport.internet.hysteria.SessionR\asession\x12'\n" +
+	"\x0fdisable_padding\x18\x0e \x01(\bR\x0edisablePadding\x1aD\n" +
 	"\x16MasqStringHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01J\x04\b\x01\x10\x02\"\xda\x01\n" +

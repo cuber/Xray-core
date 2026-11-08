@@ -118,7 +118,7 @@ func (c *Client) Process(ctx context.Context, link *transport.Link, dialer inter
 		requestDone := func() error {
 			defer timer.SetTimeout(sessionPolicy.Timeouts.DownlinkOnly)
 			bufferedWriter := buf.NewBufferedWriter(buf.NewWriter(conn))
-			err := WriteTCPRequest(bufferedWriter, target.NetAddr())
+			err := WriteTCPRequest(bufferedWriter, target.NetAddr(), sendsPadding(conn))
 			if err != nil {
 				return errors.New("failed to write request").Base(err)
 			}

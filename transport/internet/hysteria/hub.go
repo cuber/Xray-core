@@ -58,7 +58,7 @@ func (h *httpHandler) AuthHTTP(w http.ResponseWriter, r *http.Request) bool {
 			}
 			w.Header().Set(ResponseHeaderUDPEnabled, strconv.FormatBool(h.validator != nil))
 			w.Header().Set(CommonHeaderCCRX, strconv.FormatUint(h.quicParams.BrutalDown, 10))
-			w.Header().Set(CommonHeaderPadding, AuthResponsePadding.String())
+			setPadding(w.Header(), AuthResponsePadding, h.config)
 			w.WriteHeader(StatusAuthOK)
 			return true
 		}
@@ -121,7 +121,7 @@ func (h *httpHandler) AuthHTTP(w http.ResponseWriter, r *http.Request) bool {
 			}
 			w.Header().Set(ResponseHeaderUDPEnabled, strconv.FormatBool(h.validator != nil))
 			w.Header().Set(CommonHeaderCCRX, strconv.FormatUint(h.quicParams.BrutalDown, 10))
-			w.Header().Set(CommonHeaderPadding, AuthResponsePadding.String())
+			setPadding(w.Header(), AuthResponsePadding, h.config)
 			w.WriteHeader(StatusAuthOK)
 			return true
 		}
@@ -202,7 +202,8 @@ func (h *httpHandler) StreamDispatcher(ft http3.FrameType, stream *quic.Stream, 
 			local:  h.conn.LocalAddr(),
 			remote: h.conn.RemoteAddr(),
 
-			user: h.user,
+			user:      h.user,
+			noPadding: h.config.GetDisablePadding(), // the inbound's setting (spec025 R3)
 		})
 		return true, nil
 	case FrameTypeTCPRelayRequest:
@@ -226,7 +227,8 @@ func (h *httpHandler) StreamDispatcher(ft http3.FrameType, stream *quic.Stream, 
 			local:  h.conn.LocalAddr(),
 			remote: h.conn.RemoteAddr(),
 
-			user: user,
+			user:      user,
+			noPadding: h.config.GetDisablePadding(),
 		})
 		return true, nil
 	default:

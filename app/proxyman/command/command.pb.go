@@ -1290,7 +1290,7 @@ func (x *GetQuicStatsRequest) GetConnections() bool {
 	return false
 }
 
-// The loss recovery and copy settings after defaults, as the connections use them.
+// The loss recovery, copy (spec021) and padding (spec025) settings after defaults, as the connections use them.
 type QuicEffective struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	MaxAckDelayMs         uint32                 `protobuf:"varint,1,opt,name=max_ack_delay_ms,json=maxAckDelayMs,proto3" json:"max_ack_delay_ms,omitempty"`
@@ -1304,8 +1304,11 @@ type QuicEffective struct {
 	DuplicateMaxSize uint32 `protobuf:"varint,7,opt,name=duplicate_max_size,json=duplicateMaxSize,proto3" json:"duplicate_max_size,omitempty"`
 	DuplicateTail    bool   `protobuf:"varint,8,opt,name=duplicate_tail,json=duplicateTail,proto3" json:"duplicate_tail,omitempty"`
 	DuplicateDelayMs uint32 `protobuf:"varint,9,opt,name=duplicate_delay_ms,json=duplicateDelayMs,proto3" json:"duplicate_delay_ms,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// spec025 R4: "random" (Hy2's random padding) or "off" (hysteriaSettings.disablePadding), from the handler's
+	// loaded Hy2 settings; empty from a Core before spec025, which consumers show as unavailable.
+	Padding       string `protobuf:"bytes,10,opt,name=padding,proto3" json:"padding,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *QuicEffective) Reset() {
@@ -1399,6 +1402,13 @@ func (x *QuicEffective) GetDuplicateDelayMs() uint32 {
 		return x.DuplicateDelayMs
 	}
 	return 0
+}
+
+func (x *QuicEffective) GetPadding() string {
+	if x != nil {
+		return x.Padding
+	}
+	return ""
 }
 
 type QuicCounters struct {
@@ -2167,7 +2177,7 @@ const file_app_proxyman_command_command_proto_rawDesc = "" +
 	"\binbounds\x18\x01 \x03(\v2*.xray.app.proxyman.command.InboundMuxStatsR\binbounds\"I\n" +
 	"\x13GetQuicStatsRequest\x12\x10\n" +
 	"\x03tag\x18\x01 \x01(\tR\x03tag\x12 \n" +
-	"\vconnections\x18\x02 \x01(\bR\vconnections\"\xa9\x03\n" +
+	"\vconnections\x18\x02 \x01(\bR\vconnections\"\xc3\x03\n" +
 	"\rQuicEffective\x12'\n" +
 	"\x10max_ack_delay_ms\x18\x01 \x01(\rR\rmaxAckDelayMs\x126\n" +
 	"\x17ack_eliciting_threshold\x18\x02 \x01(\rR\x15ackElicitingThreshold\x12$\n" +
@@ -2177,7 +2187,9 @@ const file_app_proxyman_command_command_proto_rawDesc = "" +
 	"\x15loss_packet_threshold\x18\x06 \x01(\rR\x13lossPacketThreshold\x12,\n" +
 	"\x12duplicate_max_size\x18\a \x01(\rR\x10duplicateMaxSize\x12%\n" +
 	"\x0eduplicate_tail\x18\b \x01(\bR\rduplicateTail\x12,\n" +
-	"\x12duplicate_delay_ms\x18\t \x01(\rR\x10duplicateDelayMs\"\xcb\x03\n" +
+	"\x12duplicate_delay_ms\x18\t \x01(\rR\x10duplicateDelayMs\x12\x18\n" +
+	"\apadding\x18\n" +
+	" \x01(\tR\apadding\"\xcb\x03\n" +
 	"\fQuicCounters\x12!\n" +
 	"\fpackets_sent\x18\x01 \x01(\x04R\vpacketsSent\x12\x1d\n" +
 	"\n" +

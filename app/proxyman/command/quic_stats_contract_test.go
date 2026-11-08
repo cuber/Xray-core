@@ -22,9 +22,12 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 
+	"github.com/xtls/xray-core/app/proxyman"
 	handlercmd "github.com/xtls/xray-core/app/proxyman/command"
 	"github.com/xtls/xray-core/core"
 	_ "github.com/xtls/xray-core/main/distro/all"
+	"github.com/xtls/xray-core/transport/internet"
+	"github.com/xtls/xray-core/transport/internet/hysteria"
 )
 
 // Core spec021 FR-007 (CP-7): GetQuicStats on a started instance through a real gRPC server.
@@ -344,4 +347,181 @@ func TestQuicStatsContract(t *testing.T) {
 	if restarted := f.stats(t, "hy2-in", false)["inbound/hy2-in"]; restarted.ConnectionsTotal != 1 {
 		t.Errorf("a restarted inbound starts its own totals: %v", restarted)
 	}
+}
+
+// Core spec025 FR-007 (CP-7, R4), FR-002: effective.padding on a started instance through a real gRPC server.
+// hy2-in and hy2-plain are default; hy2-quiet-in, hy2-quiet and the session owner set disablePadding, and relay
+// rides the owner. door-quiet and door-owner reach an echo with the field at both ends.
+func TestQuicStatsPaddingContract(t *testing.T) {
+	echo, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { echo.Close() })
+	go func() {
+		for {
+			conn, err := echo.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer conn.Close()
+				io.Copy(conn, conn)
+			}()
+		}
+	}()
+	ca, cert, key := quicStatsPKI(t)
+	serverTLS := map[string]any{"alpn": []string{"h3"}, "certificates": []any{map[string]any{"certificate": cert, "key": key}}}
+	clientTLS := map[string]any{
+		"alpn": []string{"h3"}, "serverName": "quic-stats.test", "disableSystemRoot": true,
+		"certificates": []any{map[string]any{"usage": "verify", "certificate": ca}},
+	}
+	apiPort, plainPort, quietPort := quicStatsPort(t), quicStatsUDPPort(t), quicStatsUDPPort(t)
+	doors := map[string]int{"door-quiet": quicStatsPort(t), "door-owner": quicStatsPort(t)}
+	hy2In := func(tag string, port int, settings map[string]any, clients ...map[string]any) map[string]any {
+		return map[string]any{
+			"tag": tag, "protocol": "hysteria", "listen": "127.0.0.1", "port": port,
+			"settings":       map[string]any{"version": 2, "clients": clients},
+			"streamSettings": map[string]any{"network": "hysteria", "security": "tls", "tlsSettings": serverTLS, "hysteriaSettings": settings},
+		}
+	}
+	hy2Out := func(tag string, port int, settings map[string]any) map[string]any {
+		return map[string]any{
+			"tag": tag, "protocol": "hysteria", "sendThrough": "127.0.0.1",
+			"settings": map[string]any{"version": 2, "address": "127.0.0.1", "port": port},
+			"streamSettings": map[string]any{
+				"network": "hysteria", "security": "tls", "tlsSettings": clientTLS, "hysteriaSettings": settings,
+				"finalmask": map[string]any{"quicParams": map[string]any{"keepAlivePeriod": 10}},
+			},
+		}
+	}
+	door := func(tag string) map[string]any {
+		return map[string]any{
+			"tag": tag, "protocol": "dokodemo-door", "listen": "127.0.0.1", "port": doors[tag],
+			"settings": map[string]any{"address": "127.0.0.1", "port": echo.Addr().(*net.TCPAddr).Port, "network": "tcp"},
+		}
+	}
+	raw, err := json.Marshal(map[string]any{
+		"log": map[string]any{"loglevel": "error", "access": "none"},
+		"api": map[string]any{"tag": "api", "listen": fmt.Sprintf("127.0.0.1:%d", apiPort), "services": []string{"HandlerService"}},
+		"inbounds": []any{
+			door("door-quiet"), door("door-owner"),
+			hy2In("hy2-in", plainPort, map[string]any{"version": 2}, map[string]any{"auth": "plain-secret", "email": "plain@quic-stats.test"}),
+			hy2In("hy2-quiet-in", quietPort, map[string]any{"version": 2, "disablePadding": true},
+				map[string]any{"auth": "quiet-secret", "email": "quiet@quic-stats.test"},
+				map[string]any{"auth": "owner-secret", "email": "owner@quic-stats.test", "relay": []string{"relay@quic-stats.test"}},
+				map[string]any{"auth": "relay-secret", "email": "relay@quic-stats.test"}),
+		},
+		"outbounds": []any{
+			map[string]any{
+				"tag": "direct", "protocol": "freedom", "sendThrough": "127.0.0.1",
+				"settings": map[string]any{"finalRules": []any{map[string]any{"action": "allow", "ip": []string{"127.0.0.1/32"}}}},
+			},
+			hy2Out("hy2-plain", plainPort, map[string]any{"version": 2, "auth": "plain-secret"}),
+			hy2Out("hy2-quiet", quietPort, map[string]any{"version": 2, "auth": "quiet-secret", "disablePadding": true}),
+			hy2Out("owner", quietPort, map[string]any{"version": 2, "auth": "owner-secret", "disablePadding": true, "session": map[string]any{
+				"minConnections": 1, "maxConnections": 2, "streamsPerConnection": 64, "scaleUpStreams": 32,
+			}}),
+			map[string]any{"tag": "relay", "protocol": "hysteria", "settings": map[string]any{
+				"version": 2, "relay": map[string]any{"session": "owner", "auth": "relay-secret"},
+			}},
+		},
+		"routing": map[string]any{"rules": []any{
+			map[string]any{"type": "field", "inboundTag": []string{"door-quiet"}, "outboundTag": "hy2-quiet"},
+			map[string]any{"type": "field", "inboundTag": []string{"door-owner"}, "outboundTag": "relay"},
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	x, err := core.StartInstance("json", raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { x.Close() })
+	conn, err := grpc.NewClient(fmt.Sprintf("127.0.0.1:%d", apiPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	f := &quicStatsFixture{api: handlercmd.NewHandlerServiceClient(conn), doors: doors}
+	f.echo(t, "door-quiet", 100)
+	f.echo(t, "door-owner", 100) // the relay's stream, on the owner's connection
+
+	all := f.stats(t, "", false)
+	for key, want := range map[string]string{
+		"inbound/hy2-in": "random", "outbound/hy2-plain": "random",
+		"inbound/hy2-quiet-in": "off", "outbound/hy2-quiet": "off", "outbound/owner": "off",
+	} {
+		h := all[key]
+		if h == nil || h.Effective == nil || h.Effective.Padding != want {
+			t.Errorf("%s: effective %v, want padding %s", key, h.GetEffective(), want)
+		}
+	}
+	if relay := all["outbound/relay"]; relay == nil || relay.Effective != nil || relay.Relay.GetSession() != "owner" || relay.Relay.GetStatus() != "bound" {
+		t.Errorf("relay: %v; a relay outbound has no effective, its owner's applies", relay)
+	}
+	if len(all) != 6 {
+		t.Errorf("%d handlers: %v", len(all), all)
+	}
+	one := f.stats(t, "hy2-quiet", false)
+	if len(one) != 1 || one["outbound/hy2-quiet"].GetEffective().GetPadding() != "off" {
+		t.Errorf("one tag: %v", one)
+	}
+	if _, err := f.api.GetQuicStats(context.Background(), &handlercmd.GetQuicStatsRequest{Tag: "missing"}); status.Code(err) != codes.NotFound {
+		t.Errorf("missing: want NotFound, got %v", err)
+	}
+
+	// FR-002, CP-2: the field comes back with the stream settings through ListInbounds and ListOutbounds.
+	listed := map[string]bool{}
+	inbounds, err := f.api.ListInbounds(context.Background(), &handlercmd.ListInboundsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, h := range inbounds.Inbounds {
+		receiver, err := h.ReceiverSettings.GetInstance()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ss := receiver.(*proxyman.ReceiverConfig).StreamSettings; ss != nil {
+			listed["inbound/"+h.Tag] = hysteriaDisablePadding(t, ss)
+		}
+	}
+	outbounds, err := f.api.ListOutbounds(context.Background(), &handlercmd.ListOutboundsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, h := range outbounds.Outbounds {
+		sender, err := h.SenderSettings.GetInstance()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ss := sender.(*proxyman.SenderConfig).StreamSettings; ss != nil {
+			listed["outbound/"+h.Tag] = hysteriaDisablePadding(t, ss)
+		}
+	}
+	for key, want := range map[string]bool{
+		"inbound/hy2-in": false, "inbound/hy2-quiet-in": true,
+		"outbound/hy2-plain": false, "outbound/hy2-quiet": true, "outbound/owner": true,
+	} {
+		if got, ok := listed[key]; !ok || got != want {
+			t.Errorf("%s: disablePadding listed %v (%v), want %v", key, got, ok, want)
+		}
+	}
+}
+
+// hysteriaDisablePadding reads disable_padding from a handler's Hy2 transport settings.
+func hysteriaDisablePadding(t *testing.T, ss *internet.StreamConfig) bool {
+	t.Helper()
+	for _, ts := range ss.TransportSettings {
+		if ts.ProtocolName != "hysteria" {
+			continue
+		}
+		instance, err := ts.Settings.GetInstance()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return instance.(*hysteria.Config).GetDisablePadding()
+	}
+	return false
 }

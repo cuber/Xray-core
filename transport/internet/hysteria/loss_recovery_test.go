@@ -1,6 +1,7 @@
 package hysteria
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/apernet/quic-go"
+	"github.com/apernet/quic-go/quicvarint"
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/transport/internet"
 	"github.com/xtls/xray-core/transport/internet/quicrecovery"
@@ -22,11 +24,13 @@ import (
 
 // spec021 FR-006: a Hy2 connection whose client loses chosen datagrams on the way to the server.
 
-// lossyPacketConn drops the short-header datagrams its drop function picks, as a lossy path would.
+// lossyPacketConn drops the short-header datagrams its drop function picks, as a lossy path would, and can
+// record the size of each distinct one it is asked to send (a copy is the same datagram).
 type lossyPacketConn struct {
 	stdnet.PacketConn
-	mu   sync.Mutex
-	drop func(b []byte) bool
+	mu     sync.Mutex
+	drop   func(b []byte) bool
+	record map[string]int
 }
 
 func (p *lossyPacketConn) setDrop(drop func([]byte) bool) {
@@ -35,9 +39,30 @@ func (p *lossyPacketConn) setDrop(drop func([]byte) bool) {
 	p.mu.Unlock()
 }
 
+// startRecording records the short-header datagrams from now on.
+func (p *lossyPacketConn) startRecording() {
+	p.mu.Lock()
+	p.record = map[string]int{}
+	p.mu.Unlock()
+}
+
+// recorded returns the sizes of the distinct short-header datagrams sent since startRecording.
+func (p *lossyPacketConn) recorded() []int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	sizes := make([]int, 0, len(p.record))
+	for _, size := range p.record {
+		sizes = append(sizes, size)
+	}
+	return sizes
+}
+
 func (p *lossyPacketConn) WriteTo(b []byte, addr stdnet.Addr) (int, error) {
 	p.mu.Lock()
 	drop := p.drop
+	if p.record != nil && len(b) > 0 && b[0]&0x80 == 0 {
+		p.record[string(b)] = len(b)
+	}
 	p.mu.Unlock()
 	if len(b) > 0 && b[0]&0x80 == 0 && drop != nil && drop(b) {
 		return len(b), nil
@@ -49,11 +74,34 @@ type lossyHy2 struct {
 	conn   stat.Connection
 	client *client
 	loss   *lossyPacketConn
+	// With lossyOptions.headers: the server's own lossy socket and its connections' counters.
+	serverLoss  *lossyPacketConn
+	serverStats *internet.QuicStatsSet
+}
+
+// lossyOptions vary the fixture for spec025 FR-006.
+type lossyOptions struct {
+	// The two ends' Hy2 settings; Auth "fixture" alone when nil.
+	client, server *Config
+	// headers: each request is a lone one on a new stream, with Hy2's TCP request and response headers as the
+	// proxy writes them (serveHeaders), and the server sends through a lossy socket too. No stream is opened
+	// before the test's first request.
+	headers bool
 }
 
 // newLossyHy2 starts a Hy2 listener that echoes each stream back, and connects a client to it.
 func newLossyHy2(t *testing.T, clientParams, serverParams *internet.QuicParams) *lossyHy2 {
+	return newLossyHy2With(t, clientParams, serverParams, lossyOptions{})
+}
+
+func newLossyHy2With(t *testing.T, clientParams, serverParams *internet.QuicParams, opts lossyOptions) *lossyHy2 {
 	t.Helper()
+	if opts.client == nil {
+		opts.client = &Config{Auth: "fixture"}
+	}
+	if opts.server == nil {
+		opts.server = &Config{Auth: "fixture"}
+	}
 	cert := httptest.NewTLSServer(nil)
 	serverTLS := cert.TLS.Clone()
 	serverTLS.NextProtos = []string{"h3"}
@@ -74,7 +122,21 @@ func newLossyHy2(t *testing.T, clientParams, serverParams *internet.QuicParams) 
 		AssumePeerMaxDatagramFrameSize: MaxDatagramFrameSize, DisablePathManager: true,
 	}
 	quicrecovery.Apply(serverConfig, serverParams)
-	tr := &quic.Transport{Conn: packet}
+	var serverConn stdnet.PacketConn = packet
+	var serverLoss *lossyPacketConn
+	serve := func(conn stat.Connection) {
+		go func() {
+			defer conn.Close()
+			io.Copy(conn, conn)
+		}()
+	}
+	if opts.headers {
+		serverLoss = &lossyPacketConn{PacketConn: packet}
+		serverConn, serve = serverLoss, serveHeaders
+		// No MTU probes from the server either: a probe is no datagram of the exchange the test measures.
+		serverConfig.DisablePathMTUDiscovery = true
+	}
+	tr := &quic.Transport{Conn: serverConn}
 	ql, err := tr.Listen(serverTLS, serverConfig)
 	if err != nil {
 		tr.Close()
@@ -83,14 +145,9 @@ func newLossyHy2(t *testing.T, clientParams, serverParams *internet.QuicParams) 
 	}
 	l := &Listener{
 		acceptDone: make(chan struct{}), pktConn: packet, tr: tr, listener: ql,
-		config: &Config{Auth: "fixture"}, quicParams: &internet.QuicParams{}, masqHandler: http.NotFoundHandler(),
+		config: opts.server, quicParams: &internet.QuicParams{}, masqHandler: http.NotFoundHandler(),
 		quicStats: &internet.QuicStatsSet{},
-		addConn: func(conn stat.Connection) {
-			go func() {
-				defer conn.Close()
-				io.Copy(conn, conn)
-			}()
-		},
+		addConn:   serve,
 	}
 	go l.keepAccepting()
 	t.Cleanup(func() { l.Close() })
@@ -107,7 +164,14 @@ func newLossyHy2(t *testing.T, clientParams, serverParams *internet.QuicParams) 
 
 	c := &client{
 		lock: make(chan struct{}, 1), dest: net.UDPDestination(net.LocalHostIP, net.Port(packet.LocalAddr().(*stdnet.UDPAddr).Port)),
-		config: &Config{Auth: "fixture"}, tlsConfig: clientTLS, quicParams: clientParams, quicStats: &internet.QuicStatsSet{},
+		config: opts.client, tlsConfig: clientTLS, quicParams: clientParams, quicStats: &internet.QuicStatsSet{},
+	}
+	if opts.headers {
+		t.Cleanup(func() {
+			c.clean(true)
+			loss.Close()
+		})
+		return &lossyHy2{client: c, loss: loss, serverLoss: serverLoss, serverStats: l.quicStats}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
@@ -246,5 +310,143 @@ func TestHy2LossRecoveryPTOBackoffLimit(t *testing.T) {
 	}
 	if unlimited < blackout+50*time.Millisecond {
 		t.Errorf("the doubling PTO overshoots the blackout, took %s", unlimited)
+	}
+}
+
+// tcpHeader is a Hy2 TCP request header as proxy/hysteria writes it (Core spec025 FR-001 holds the two equal).
+func tcpHeader(addr, padding string) []byte {
+	b := quicvarint.Append(nil, uint64(len(addr)))
+	b = append(b, addr...)
+	b = quicvarint.Append(b, uint64(len(padding)))
+	return append(b, padding...)
+}
+
+// serveHeaders answers each stream as the Hy2 inbound's proxy does: it reads the TCP request header, writes the
+// response header alone, padded as the stream says, and echoes.
+func serveHeaders(conn stat.Connection) {
+	go func() {
+		defer conn.Close()
+		r := quicvarint.NewReader(conn)
+		for range 2 { // the address, then the padding
+			n, err := quicvarint.Read(r)
+			if err != nil {
+				return
+			}
+			if _, err := io.CopyN(io.Discard, conn, int64(n)); err != nil {
+				return
+			}
+		}
+		padding := ""
+		if conn.(*interConn).HysteriaPadding() {
+			padding = TcpResponsePadding.String()
+		}
+		response := append(quicvarint.Append([]byte{0, 0}, uint64(len(padding))), padding...)
+		if _, err := conn.Write(response); err != nil {
+			return
+		}
+		io.Copy(conn, conn)
+	}()
+}
+
+// lone sends a lone 64-byte request on a new stream, as the burst observatory's probe does: the TCP request header
+// alone, padded as the stream says, then the payload; it reads the response header and the echo.
+func (h *lossyHy2) lone(t *testing.T) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	conn, err := h.client.tcpOpen(ctx, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(4 * time.Second))
+	padding := ""
+	if conn.HysteriaPadding() {
+		padding = TcpRequestPadding.String()
+	}
+	if _, err := conn.Write(tcpHeader("example.com:443", padding)); err != nil {
+		t.Fatal(err)
+	}
+	payload := bytes.Repeat([]byte{'q'}, 64)
+	if _, err := conn.Write(payload); err != nil {
+		t.Fatal(err)
+	}
+	r := quicvarint.NewReader(conn)
+	head := make([]byte, 2) // status and an empty message
+	if _, err := io.ReadFull(conn, head); err != nil || head[0] != 0 || head[1] != 0 {
+		t.Fatalf("response %x, %v", head, err)
+	}
+	n, err := quicvarint.Read(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := io.CopyN(io.Discard, conn, int64(n)); err != nil {
+		t.Fatal(err)
+	}
+	got := make([]byte, len(payload))
+	if _, err := io.ReadFull(conn, got); err != nil || !bytes.Equal(got, payload) {
+		t.Fatalf("echo %q, %v", got, err)
+	}
+}
+
+// Core spec025 FR-006, on spec021 FR-006's loss relay with parroting off, as on the rollout path. With padding off
+// at both ends, every 1-RTT datagram of a lone 64-byte request and its echoed response on an established connection
+// is at most 512 bytes; with duplicateMaxSize 512 at both ends and the first instance of each datagram dropped in
+// both directions, 50 such requests complete without a PTO. With padding on, the datagrams above 512 bytes are
+// counted and logged, not asserted (without a copy they would be lost every time, so that run drops nothing).
+func TestHy2PaddingOffFitsCopies(t *testing.T) {
+	params := &internet.QuicParams{DisableChromeParrot: true, DuplicateMaxSize: 512}
+	for _, off := range []bool{true, false} {
+		h := newLossyHy2With(t, params, params, lossyOptions{
+			client:  &Config{Auth: "fixture", DisablePadding: off},
+			server:  &Config{Auth: "fixture", DisablePadding: off},
+			headers: true,
+		})
+		for range 10 {
+			h.lone(t)
+		}
+		time.Sleep(50 * time.Millisecond) // the delayed ACKs of the warm-up
+		h.loss.startRecording()
+		h.serverLoss.startRecording()
+		for range 50 {
+			h.lone(t)
+		}
+		time.Sleep(50 * time.Millisecond)
+		count := func(sizes []int) (over, largest int) {
+			for _, size := range sizes {
+				if size > 512 {
+					over++
+				}
+				largest = max(largest, size)
+			}
+			return over, largest
+		}
+		up, down := h.loss.recorded(), h.serverLoss.recorded()
+		upOver, upLargest := count(up)
+		downOver, downLargest := count(down)
+		t.Logf("disablePadding %v, 50 lone requests: client %d datagrams, %d above 512 B (largest %d B); server %d, %d above 512 B (largest %d B)",
+			off, len(up), upOver, upLargest, len(down), downOver, downLargest)
+		if !off {
+			continue
+		}
+		if upOver != 0 || downOver != 0 {
+			t.Fatalf("with padding off, datagrams above 512 B: client %d (largest %d), server %d (largest %d)", upOver, upLargest, downOver, downLargest)
+		}
+
+		client, server := h.stats(), h.serverStats.Report(false).Totals
+		h.loss.setDrop(dropOriginals())
+		h.serverLoss.setDrop(dropOriginals())
+		start := time.Now()
+		for range 50 {
+			h.lone(t)
+		}
+		elapsed := time.Since(start)
+		clientAfter, serverAfter := h.stats(), h.serverStats.Report(false).Totals
+		t.Logf("50 lone requests with every original dropped took %s; copies sent: client %d, server %d", elapsed,
+			clientAfter.CopiesSent-client.CopiesSent, serverAfter.CopiesSent-server.CopiesSent)
+		if clientAfter.PTOCount != client.PTOCount || serverAfter.PTOCount != server.PTOCount ||
+			clientAfter.PacketsLost != client.PacketsLost || serverAfter.PacketsLost != server.PacketsLost {
+			t.Errorf("the copies carry every datagram, no PTO and no loss: client %+v -> %+v, server %+v -> %+v", client, clientAfter, server, serverAfter)
+		}
 	}
 }

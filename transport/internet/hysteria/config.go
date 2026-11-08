@@ -3,6 +3,7 @@ package hysteria
 import (
 	"context"
 	"math/rand"
+	"net/http"
 	"time"
 
 	"github.com/xtls/xray-core/common"
@@ -50,6 +51,15 @@ var (
 	TcpRequestPadding   = padding{Min: 64, Max: 512}
 	TcpResponsePadding  = padding{Min: 128, Max: 1024}
 )
+
+// setPadding pads an authentication message's header as Hy2 does, unless this end disables padding
+// (Core spec025 R2): then the header is left out, not sent empty.
+func setPadding(h http.Header, p padding, c *Config) {
+	if c.GetDisablePadding() {
+		return
+	}
+	h.Set(CommonHeaderPadding, p.String())
+}
 
 type datagramKey struct{}
 

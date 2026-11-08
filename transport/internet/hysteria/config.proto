@@ -27,6 +27,11 @@ message Config {
 
   // A session owner's connection pool (spec024 R1, R4); unset keeps one connection per outbound.
   Session session = 13;
+
+  // spec025 R1, R2: this end sends its Hy2 messages without random padding (an outbound: the authentication
+  // request and TCP request headers; an inbound: the authentication responses and TCP response headers). Only
+  // inside a WireGuard tunnel; false keeps today's padding.
+  bool disable_padding = 14;
 }
 
 message Session {

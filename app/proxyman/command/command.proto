@@ -126,7 +126,7 @@ message GetQuicStatsRequest {
   bool connections = 2;
 }
 
-// The loss recovery and copy settings after defaults, as the connections use them.
+// The loss recovery, copy (spec021) and padding (spec025) settings after defaults, as the connections use them.
 message QuicEffective {
   uint32 max_ack_delay_ms = 1;
   uint32 ack_eliciting_threshold = 2;
@@ -139,6 +139,9 @@ message QuicEffective {
   uint32 duplicate_max_size = 7;
   bool duplicate_tail = 8;
   uint32 duplicate_delay_ms = 9;
+  // spec025 R4: "random" (Hy2's random padding) or "off" (hysteriaSettings.disablePadding), from the handler's
+  // loaded Hy2 settings; empty from a Core before spec025, which consumers show as unavailable.
+  string padding = 10;
 }
 
 message QuicCounters {

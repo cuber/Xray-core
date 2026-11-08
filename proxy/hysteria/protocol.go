@@ -8,7 +8,9 @@ import (
 
 	"github.com/apernet/quic-go/quicvarint"
 	"github.com/xtls/xray-core/common/errors"
+	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/transport/internet/hysteria"
+	"github.com/xtls/xray-core/transport/internet/stat"
 )
 
 const (
@@ -60,8 +62,13 @@ func ReadTCPRequest(r io.Reader) (string, error) {
 	return string(addrBuf), nil
 }
 
-func WriteTCPRequest(w io.Writer, addr string) error {
-	padding := hysteria.TcpRequestPadding.String()
+// WriteTCPRequest writes a TCP request header, padded as Hy2 does unless padding is false: then its padding
+// length is 0 and no padding follows (Core spec025 R2).
+func WriteTCPRequest(w io.Writer, addr string, padding bool) error {
+	return writeTCPRequest(w, addr, paddingString(hysteria.TcpRequestPadding, padding))
+}
+
+func writeTCPRequest(w io.Writer, addr, padding string) error {
 	paddingLen := len(padding)
 	addrLen := len(addr)
 	sz := int(quicvarint.Len(uint64(addrLen))) + addrLen +
@@ -120,8 +127,13 @@ func ReadTCPResponse(r io.Reader) (bool, string, error) {
 	return status[0] == 0, string(msgBuf), nil
 }
 
-func WriteTCPResponse(w io.Writer, ok bool, msg string) error {
-	padding := hysteria.TcpResponsePadding.String()
+// WriteTCPResponse writes a TCP response header, padded as Hy2 does unless padding is false (Core spec025
+// R2).
+func WriteTCPResponse(w io.Writer, ok bool, msg string, padding bool) error {
+	return writeTCPResponse(w, ok, msg, paddingString(hysteria.TcpResponsePadding, padding))
+}
+
+func writeTCPResponse(w io.Writer, ok bool, msg, padding string) error {
 	paddingLen := len(padding)
 	msgLen := len(msg)
 	sz := 1 + int(quicvarint.Len(uint64(msgLen))) + msgLen +
@@ -138,6 +150,23 @@ func WriteTCPResponse(w io.Writer, ok bool, msg string) error {
 	copy(buf[1+i:], padding)
 	_, err := w.Write(buf)
 	return err
+}
+
+// paddingString draws a header's padding exactly as before spec025, or none.
+func paddingString(p interface{ String() string }, padding bool) string {
+	if !padding {
+		return ""
+	}
+	return p.String()
+}
+
+// sendsPadding says whether this end pads the TCP header it writes on conn (Core spec025 R2, R3): the Hy2
+// stream says so; a connection without that method keeps padding.
+func sendsPadding(conn net.Conn) bool {
+	if p, ok := stat.TryUnwrapStatsConn(conn).(interface{ HysteriaPadding() bool }); ok {
+		return p.HysteriaPadding()
+	}
+	return true
 }
 
 // UDPMessage format:

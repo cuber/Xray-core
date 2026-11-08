@@ -156,7 +156,7 @@ func (s *Server) Process(ctx context.Context, network net.Network, conn stat.Con
 		errors.LogInfo(ctx, "tunnelling request to ", dest)
 
 		bufferedWriter := buf.NewBufferedWriter(buf.NewWriter(conn))
-		err = WriteTCPResponse(bufferedWriter, true, "")
+		err = WriteTCPResponse(bufferedWriter, true, "", sendsPadding(conn))
 		if err != nil {
 			return errors.New("failed to write response").Base(err)
 		}

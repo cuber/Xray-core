@@ -117,7 +117,7 @@ func newHy2CountsPeer(t *testing.T, pair tls.Certificate, target string) *hy2Cou
 						return
 					}
 					defer upstream.Close()
-					if err := hyproxy.WriteTCPResponse(stream, true, ""); err != nil {
+					if err := hyproxy.WriteTCPResponse(stream, true, "", true); err != nil {
 						t.Error(err)
 						return
 					}
