@@ -49,11 +49,21 @@ type BalancerMember struct {
 }
 
 // BalancerStatus is a balancer's availability and delay as the level above reads them (Core spec019
-// M4); Known is false at a fresh start, before an observation below it.
+// M4), or a candidate's status as its level reads it (Core spec020 P1); Known is false at a fresh start,
+// before an observation below it.
 type BalancerStatus struct {
 	Known bool
 	Alive bool
+	// Delay in milliseconds as the observation has it: a dead status can keep a non-zero one (spec020 P7).
 	Delay int64
+	// TrackedFrom is the probe whose result an outbound candidate carries through track (Core spec014);
+	// empty when it is probed itself or not observed, and on a balancer's own status (spec020 P6).
+	TrackedFrom string
+	// Reason is why a dead status is dead: the observation's last error, or for a balancer the reason of
+	// the status it bubbles up; empty while alive (spec020 P6).
+	Reason string
+	// Provenance: this Core reports TrackedFrom and Reason (spec020 P6); always true here.
+	Provenance bool
 }
 
 // BalancerMembers reports a balancer's candidates and its bubbled-up status (Core spec019), and its

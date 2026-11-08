@@ -25,8 +25,9 @@ import (
 
 // Core spec019 FR-006 (CP-7), FR-003: the shape of xray-config spec021 through a real gRPC server.
 // route (weightedLeastPing) has the outbound x-main and the node balancers a and b (leastPing over a
-// node's two protocols); every outbound reaches a local 204 endpoint.
-func newMembersFixture(t *testing.T) (*trackFixture, handlercmd.HandlerServiceClient) {
+// node's two protocols); every outbound reaches a local 204 endpoint. With track, a-anytls is not probed
+// but carries a-hy2's result (spec014; spec020 FR-009).
+func newMembersFixture(t *testing.T, track bool) (*trackFixture, handlercmd.HandlerServiceClient) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
@@ -45,6 +46,16 @@ func newMembersFixture(t *testing.T) (*trackFixture, handlercmd.HandlerServiceCl
 			"strategy": map[string]any{"type": "leastping"}, "fallbackTag": tag + "-hy2",
 		}
 	}
+	probed := []string{"a-", "b-", "x-main"}
+	burst := map[string]any{}
+	if track {
+		probed = []string{"a-hy2", "b-", "x-main"}
+		burst["track"] = []any{map[string]any{"probe": "a-hy2", "outbounds": []string{"a-anytls"}}}
+	}
+	burst["pingGroups"] = []any{map[string]any{
+		"subjectSelector": probed,
+		"pingConfig":      map[string]any{"destination": server.URL + "/generate_204", "interval": "1s", "sampling": 1, "timeout": "1s"},
+	}}
 	raw, err := json.Marshal(map[string]any{
 		"api": map[string]any{
 			"tag": "api", "listen": fmt.Sprintf("127.0.0.1:%d", apiPort),
@@ -70,10 +81,7 @@ func newMembersFixture(t *testing.T) (*trackFixture, handlercmd.HandlerServiceCl
 			},
 			"rules": []any{map[string]any{"type": "field", "domain": []string{"full:route.test"}, "balancerTag": "route"}},
 		},
-		"burstObservatory": map[string]any{"pingGroups": []any{map[string]any{
-			"subjectSelector": []string{"a-", "b-", "x-main"},
-			"pingConfig":      map[string]any{"destination": server.URL + "/generate_204", "interval": "1s", "sampling": 1, "timeout": "1s"},
-		}}},
+		"burstObservatory": burst,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -123,6 +131,40 @@ func picks(msg *routercmd.BalancerMsg) string {
 	return strings.Join(out, " ")
 }
 
+// provenanceOf renders a status as spec020 P6 reports it: its state, the probe it tracks (<), its reason
+// in parentheses, and ? when the Core does not report provenance.
+func provenanceOf(s *routercmd.BalancerStatus) string {
+	if s == nil {
+		return "absent"
+	}
+	out := "unknown"
+	if s.Known {
+		out = "down"
+		if s.Alive {
+			out = "alive"
+		}
+	}
+	if s.TrackedFrom != "" {
+		out += " <" + s.TrackedFrom
+	}
+	if s.Reason != "" {
+		out += " (" + s.Reason + ")"
+	}
+	if !s.Provenance {
+		out += " ?"
+	}
+	return out
+}
+
+// provenance renders a level's own status, then each candidate's.
+func provenance(msg *routercmd.BalancerMsg) string {
+	out := []string{"level: " + provenanceOf(msg.Status)}
+	for _, m := range msg.Members {
+		out = append(out, m.Tag+": "+provenanceOf(m.Status))
+	}
+	return strings.Join(out, "; ")
+}
+
 func memberStatus(msg *routercmd.BalancerMsg) string {
 	s := msg.Status
 	switch {
@@ -135,7 +177,7 @@ func memberStatus(msg *routercmd.BalancerMsg) string {
 }
 
 func TestBalancerMembersContract(t *testing.T) {
-	f, handlers := newMembersFixture(t)
+	f, handlers := newMembersFixture(t, false)
 	eventually(t, "every outbound measured", 15*time.Second, func() bool {
 		return memberStatus(f.balancer(t, "route")) == "alive" && memberStatus(f.balancer(t, "a")) == "alive" &&
 			memberStatus(f.balancer(t, "b")) == "alive"
@@ -156,6 +198,13 @@ func TestBalancerMembersContract(t *testing.T) {
 	// The selector's outbounds come in the outbound manager's order, by tag.
 	if got := members(f.balancer(t, "a")); got != "a-anytls:outbound a-hy2:outbound" {
 		t.Fatalf("a members = %s", got)
+	}
+	// spec020 P6 (FR-009), a default configuration: every status of every level, from probed outbounds,
+	// reports its provenance and carries no tracked_from and no reason while alive.
+	for _, item := range list.Balancers {
+		if got := provenance(item.Balancer); strings.Contains(got, "<") || strings.Contains(got, "?") || strings.Contains(got, "(") {
+			t.Fatalf("%s's provenance with every outbound probed and alive: %s", item.Tag, got)
+		}
 	}
 	// spec020 P2, P3: weights 2, 1, 1 over a healthy pool.
 	route := f.balancer(t, "route")
@@ -245,5 +294,69 @@ func TestBalancerMembersContract(t *testing.T) {
 	}
 	if got := len(f.listBalancers(t).Balancers); got != 3 {
 		t.Fatalf("balancers after the refusals = %d", got)
+	}
+}
+
+// Core spec020 FR-009 (CP-7, P6): spec021's shape with a track group, a-anytls carrying a-hy2's result,
+// through ListBalancers and GetBalancerInfo, while a-hy2 and then every probe are forced down. GetOutboundStatus
+// and GetTrack stay as they were (P8).
+func TestBalancerProvenanceContract(t *testing.T) {
+	f, _ := newMembersFixture(t, true)
+	eventually(t, "every outbound measured", 15*time.Second, func() bool {
+		return memberStatus(f.balancer(t, "route")) == "alive" && memberStatus(f.balancer(t, "a")) == "alive" &&
+			memberStatus(f.balancer(t, "b")) == "alive"
+	})
+	const reason = "force down: cdt quota 190/190 GiB"
+	for _, step := range []struct {
+		down     []string
+		a, route string
+	}{
+		{
+			nil,
+			"level: alive; a-anytls: alive <a-hy2; a-hy2: alive",
+			"level: alive; x-main: alive; a: alive; b: alive",
+		},
+		// The probe forced down: a-anytls follows it with its reason, and a bubbles the reason up without
+		// tracked_from; route stays alive on its other candidates.
+		{
+			[]string{"a-hy2"},
+			"level: down (" + reason + "); a-anytls: down <a-hy2 (" + reason + "); a-hy2: down (" + reason + ")",
+			"level: alive; x-main: alive; a: down (" + reason + "); b: alive",
+		},
+		// Every probe: route is down with its first down candidate's reason.
+		{
+			[]string{"a-hy2", "b-hy2", "b-anytls", "x-main"},
+			"level: down (" + reason + "); a-anytls: down <a-hy2 (" + reason + "); a-hy2: down (" + reason + ")",
+			"level: down (" + reason + "); x-main: down (" + reason + "); a: down (" + reason + "); b: down (" + reason + ")",
+		},
+	} {
+		if _, err := f.setForceDown(step.down...); err != nil {
+			t.Fatal(err)
+		}
+		listed := map[string]*routercmd.BalancerMsg{}
+		for _, item := range f.listBalancers(t).Balancers {
+			listed[item.Tag] = item.Balancer
+		}
+		for tag, want := range map[string]string{"a": step.a, "route": step.route} {
+			if got := provenance(f.balancer(t, tag)); got != want {
+				t.Errorf("forced %v: GetBalancerInfo %s:\n  %s\n  want %s", step.down, tag, got, want)
+			}
+			if got := provenance(listed[tag]); got != want {
+				t.Errorf("forced %v: ListBalancers %s:\n  %s\n  want %s", step.down, tag, got, want)
+			}
+		}
+		// A dead candidate keeps the delay the observation has (P7): a-anytls carries a-hy2's.
+		a := f.balancer(t, "a")
+		if a.Members[0].Status.Delay != a.Members[1].Status.Delay {
+			t.Errorf("forced %v: a-anytls delay %d, a-hy2 %d", step.down, a.Members[0].Status.Delay, a.Members[1].Status.Delay)
+		}
+	}
+	// P8: GetOutboundStatus reports measured statuses only, and GetTrack the group as loaded.
+	if got := f.probed(t); fmt.Sprint(got) != "[a-hy2 b-anytls b-hy2 x-main]" {
+		t.Fatalf("GetOutboundStatus = %v", got)
+	}
+	if groups := f.track(t).Groups; len(groups) != 1 || groups[0].Probe != "a-hy2" || fmt.Sprint(groups[0].Outbounds) != "[a-anytls]" ||
+		!groups[0].ProbeStatus.GetForceDown() {
+		t.Fatalf("GetTrack = %v", groups)
 	}
 }

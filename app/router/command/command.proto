@@ -113,13 +113,24 @@ message BalancerMember {
   double share = 5;
 }
 
-// spec019 M4: a balancer's availability and delay as the level above it reads them.
+// spec019 M4: a balancer's availability and delay as the level above it reads them; spec020 P1: a candidate's
+// status as its level reads it.
 message BalancerStatus {
   // false: unknown, a fresh start with no observation below it yet.
   bool known = 1;
   bool alive = 2;
-  // Milliseconds; 0 when not alive.
+  // Milliseconds, as the observation has it (spec020 P7): a dead status can carry a non-zero delay (a refused
+  // relay outbound keeps its probe's, a recovering probe its recent average); show none for a dead status.
   int64 delay = 3;
+  // spec020 P6: the probe whose result an outbound candidate carries through track (spec014). Empty when it is
+  // probed itself or not observed, and on a member balancer's or a level's own status.
+  string tracked_from = 4;
+  // spec020 P6: why a dead status is dead, empty while alive: the observation's last error (a refused relay, a
+  // force down, a classic probe error) or, for a balancer, the reason of the status it bubbles up.
+  string reason = 5;
+  // spec020 P6: true from a Core that reports tracked_from and reason, known or not; false from an older Core,
+  // whose tracked_from and reason say nothing.
+  bool provenance = 6;
 }
 
 message BalancerMsg {

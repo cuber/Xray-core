@@ -93,7 +93,8 @@ func newStatusReader(m map[string]*Balancer, statuses []*observatory.OutboundSta
 
 // balancer is a balancer's status as the level above reads it (M4), nil when unknown: its override
 // target's, else its best available candidate's, else unknown while a candidate has no observation,
-// else its fallback's. The status keeps the measurement it bubbles up from, under the balancer's tag.
+// else its fallback's. The status keeps the measurement it bubbles up from and its last error reason,
+// under the balancer's tag and without tracked_from: it is the balancer's own (spec020 P6).
 func (r *statusReader) balancer(tag string) *observatory.OutboundStatus {
 	if r.done[tag] {
 		return r.memo[tag]
@@ -219,11 +220,16 @@ func (v balancerView) GetStatus(tag string) (routing.BalancerStatus, error) {
 	if err != nil {
 		return routing.BalancerStatus{}, err
 	}
-	statuses := observationOf(b)
+	return v.status(b, observationOf(b)), nil
+}
+
+// status is GetStatus over the given observation: unknown without one, still reported with its
+// provenance (spec020 P6).
+func (v balancerView) status(b *Balancer, statuses []*observatory.OutboundStatus) routing.BalancerStatus {
 	if statuses == nil {
-		return routing.BalancerStatus{}, nil
+		return routing.BalancerStatus{Provenance: true}
 	}
-	return balancerStatus(newStatusReader(map[string]*Balancer(v), statuses, b.ohm).balancer(tag)), nil
+	return balancerStatus(newStatusReader(map[string]*Balancer(v), statuses, b.ohm).balancer(b.tag))
 }
 
 // GetStrategy implements routing.BalancerMembers (spec020 P3).
@@ -282,11 +288,23 @@ func reportedWeight(w float64) float64 {
 	return v
 }
 
+// balancerStatus reports a status as the report path reads it (spec019 M4, spec020 P1, P6, P7): an
+// outbound's observation, where createResult has already marked a refused relay outbound and a forced
+// probe's followers dead with their reasons, or a balancer's bubbled status, whose tracked_from
+// statusReader.balancer has cleared. The delay stays as observed, a dead one's included; the reason only
+// while dead. Strategies read memberObservatory, never this.
 func balancerStatus(status *observatory.OutboundStatus) routing.BalancerStatus {
 	if status == nil {
-		return routing.BalancerStatus{}
+		return routing.BalancerStatus{Provenance: true}
 	}
-	return routing.BalancerStatus{Known: true, Alive: status.Alive, Delay: status.Delay}
+	s := routing.BalancerStatus{
+		Known: true, Alive: status.Alive, Delay: status.Delay,
+		TrackedFrom: status.TrackedFrom, Provenance: true,
+	}
+	if !status.Alive {
+		s.Reason = status.LastErrorReason
+	}
+	return s
 }
 
 // GetMembers implements routing.BalancerMembers on the current map.

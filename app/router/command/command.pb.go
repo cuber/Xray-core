@@ -637,14 +637,25 @@ func (x *BalancerMember) GetShare() float64 {
 	return 0
 }
 
-// spec019 M4: a balancer's availability and delay as the level above it reads them.
+// spec019 M4: a balancer's availability and delay as the level above it reads them; spec020 P1: a candidate's
+// status as its level reads it.
 type BalancerStatus struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// false: unknown, a fresh start with no observation below it yet.
 	Known bool `protobuf:"varint,1,opt,name=known,proto3" json:"known,omitempty"`
 	Alive bool `protobuf:"varint,2,opt,name=alive,proto3" json:"alive,omitempty"`
-	// Milliseconds; 0 when not alive.
-	Delay         int64 `protobuf:"varint,3,opt,name=delay,proto3" json:"delay,omitempty"`
+	// Milliseconds, as the observation has it (spec020 P7): a dead status can carry a non-zero delay (a refused
+	// relay outbound keeps its probe's, a recovering probe its recent average); show none for a dead status.
+	Delay int64 `protobuf:"varint,3,opt,name=delay,proto3" json:"delay,omitempty"`
+	// spec020 P6: the probe whose result an outbound candidate carries through track (spec014). Empty when it is
+	// probed itself or not observed, and on a member balancer's or a level's own status.
+	TrackedFrom string `protobuf:"bytes,4,opt,name=tracked_from,json=trackedFrom,proto3" json:"tracked_from,omitempty"`
+	// spec020 P6: why a dead status is dead, empty while alive: the observation's last error (a refused relay, a
+	// force down, a classic probe error) or, for a balancer, the reason of the status it bubbles up.
+	Reason string `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
+	// spec020 P6: true from a Core that reports tracked_from and reason, known or not; false from an older Core,
+	// whose tracked_from and reason say nothing.
+	Provenance    bool `protobuf:"varint,6,opt,name=provenance,proto3" json:"provenance,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -698,6 +709,27 @@ func (x *BalancerStatus) GetDelay() int64 {
 		return x.Delay
 	}
 	return 0
+}
+
+func (x *BalancerStatus) GetTrackedFrom() string {
+	if x != nil {
+		return x.TrackedFrom
+	}
+	return ""
+}
+
+func (x *BalancerStatus) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *BalancerStatus) GetProvenance() bool {
+	if x != nil {
+		return x.Provenance
+	}
+	return false
 }
 
 type BalancerMsg struct {
@@ -1591,11 +1623,16 @@ const file_app_router_command_command_proto_rawDesc = "" +
 	"\bbalancer\x18\x02 \x01(\bR\bbalancer\x12?\n" +
 	"\x06status\x18\x03 \x01(\v2'.xray.app.router.command.BalancerStatusR\x06status\x12\x16\n" +
 	"\x06weight\x18\x04 \x01(\x01R\x06weight\x12\x14\n" +
-	"\x05share\x18\x05 \x01(\x01R\x05share\"R\n" +
+	"\x05share\x18\x05 \x01(\x01R\x05share\"\xad\x01\n" +
 	"\x0eBalancerStatus\x12\x14\n" +
 	"\x05known\x18\x01 \x01(\bR\x05known\x12\x14\n" +
 	"\x05alive\x18\x02 \x01(\bR\x05alive\x12\x14\n" +
-	"\x05delay\x18\x03 \x01(\x03R\x05delay\"\x8c\x03\n" +
+	"\x05delay\x18\x03 \x01(\x03R\x05delay\x12!\n" +
+	"\ftracked_from\x18\x04 \x01(\tR\vtrackedFrom\x12\x16\n" +
+	"\x06reason\x18\x05 \x01(\tR\x06reason\x12\x1e\n" +
+	"\n" +
+	"provenance\x18\x06 \x01(\bR\n" +
+	"provenance\"\x8c\x03\n" +
 	"\vBalancerMsg\x12A\n" +
 	"\boverride\x18\x05 \x01(\v2%.xray.app.router.command.OverrideInfoR\boverride\x12W\n" +
 	"\x10principle_target\x18\x06 \x01(\v2,.xray.app.router.command.PrincipleTargetInfoR\x0fprincipleTarget\x12A\n" +

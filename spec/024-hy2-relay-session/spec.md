@@ -204,7 +204,9 @@ two connections hold.
 - **Consumers (CP-8).**
   - Sidecar spec020: `/xray-debug` `quic` passes the new fields through and exports pool and relay metrics.
   - xray-config spec026: renderer, the `hy2_relay` acceptance item and the Grafana session panel where deployed.
-  - The Portal and xray-tui do not show sessions (dated non-goal below).
+  - The Portal and xray-tui do not show sessions (dated non-goal below). Revised 2026-11-08: the Portal shows them in
+    xray-config [spec027](../../../xray-config/spec/027-portal-relay-track/spec.md) (relay outbounds, owners' pools and the
+    server's relay lists, from Sidecar spec020 S4–S6); xray-tui stays a non-goal.
 
 ## Non-goals (2026-11-08)
 
@@ -217,7 +219,8 @@ two connections hold.
 - Relaying for other Hy2 implementations, and relaying over other transports.
 - A default pool or relay for unconfigured outbounds.
 - Portal and xray-tui presentation: Grafana and `/xray-debug` carry it. Revisit when an operator needs it per node in the
-  Portal.
+  Portal. Revisited 2026-11-08 for the Portal (xray-config spec027, from the fields R7 already reports; no Core change);
+  xray-tui remains a non-goal.
 
 ## Edge cases
 

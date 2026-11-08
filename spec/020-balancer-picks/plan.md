@@ -32,3 +32,42 @@
 ## Rollback
 
 - `switch revert`; an older Core leaves the fields empty and the Sidecar shows them as unavailable.
+
+## 2026-11-08 amendment (P6–P9)
+
+### Code
+
+- `app/router/command/command.proto`: `BalancerStatus.tracked_from` (4), `.reason` (5), `.provenance` (6); the `delay`
+  comment says what P7 says. Regenerated with the protoc the file names.
+- `features/routing/balancer.go`: `routing.BalancerStatus` gains `TrackedFrom`, `Reason`, `Provenance`.
+- `app/router/member_status.go`:
+  - `balancerStatus(status)` sets `Provenance`, copies `status.TrackedFrom`, and copies `status.LastErrorReason`
+    only while `!status.Alive`. It reads the selection view (`GetObservation`), where `createResult` has already
+    marked a refused relay outbound and a forced probe's followers dead with their reasons.
+  - `statusReader.balancer` already clears `TrackedFrom` under the balancer's tag and keeps the bubbled status's
+    `LastErrorReason`, which is P6 for member balancers and levels.
+  - `GetStatus` without an observatory returns `Provenance` true and nothing else.
+  - `balancerStatus` is called only by `members` and `GetStatus`, the report path; strategies read
+    `memberObservatory`, which is unchanged.
+- `app/router/command/command.go`: copies the three fields into both `BalancerMember.status` and `BalancerMsg.status`.
+- `main/commands/all/api/balancer_info.go`: P9's `source` column, row and level reasons.
+
+### Tests
+
+- `app/router/picks_test.go`: FR-006–FR-008, with a fake observatory whose observation carries tracked copies (a
+  refused one among them) and forced statuses, and a classic observatory error.
+- `app/observatory/command/members_contract_test.go`: FR-009 on spec021's shape, a track group and `SetForceDown`;
+  a default configuration.
+- `proxy/hysteria/relay_session_test.go`: FR-009 with a denied relay outbound tracking its owner under a balancer,
+  read through `RoutingService` on the started client.
+- `main/commands/all/api/balancer_info_test.go`: FR-010 against the fake routing server, a Core without P6 included.
+
+### Gate and rollout
+
+- Report path only (cold for picks); `xrayctl gate plan` is expected to choose L0. Rollout with Sidecar spec020 S7 and
+  xray-config spec027 phase 2, on the nodes' next Core release (spec024 T014's nodes first).
+
+### Rollback
+
+- `switch revert`; the older Core leaves `provenance` false, and the Sidecar and the Portal show provenance as
+  unavailable or take it from `GetTrack` (xray-config spec027 phase 1).

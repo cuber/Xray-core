@@ -64,12 +64,12 @@ func balancerMsg(ctx context.Context, r any, tag string) (*BalancerMsg, error) {
 			for _, member := range members {
 				msg.Members = append(msg.Members, &BalancerMember{
 					Tag: member.Tag, Balancer: member.Balancer, Weight: member.Weight, Share: member.Share, // spec020
-					Status: &BalancerStatus{Known: member.Status.Known, Alive: member.Status.Alive, Delay: member.Status.Delay},
+					Status: balancerStatusMsg(member.Status),
 				})
 			}
 		}
 		if status, err := bm.GetStatus(tag); err == nil {
-			msg.Status = &BalancerStatus{Known: status.Known, Alive: status.Alive, Delay: status.Delay}
+			msg.Status = balancerStatusMsg(status)
 		}
 		if strategy, err := bm.GetStrategy(tag); err == nil {
 			msg.Strategy = strategy // spec020 P3
@@ -98,6 +98,14 @@ func balancerMsg(ctx context.Context, r any, tag string) (*BalancerMsg, error) {
 		}
 	}
 	return msg, nil
+}
+
+// balancerStatusMsg is a status as reported: spec019 M4, spec020 P1 and its provenance (P6).
+func balancerStatusMsg(s routing.BalancerStatus) *BalancerStatus {
+	return &BalancerStatus{
+		Known: s.Known, Alive: s.Alive, Delay: s.Delay,
+		TrackedFrom: s.TrackedFrom, Reason: s.Reason, Provenance: s.Provenance,
+	}
 }
 
 // ListBalancers returns every balancer of one balancer map (spec017).

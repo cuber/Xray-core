@@ -90,6 +90,8 @@ Then 记录实际通过、失败和跳过；不能把未启用公网测试算成
   成员必须有兜底，嵌套时所有出站都要被观测，成员边与兜底边同图无环（[spec019](../019-balancer-members/spec.md)）。
   同日起 `RoutingService` 逐层报告每个候选的状态（本层读到的）、权重和新连接份额，以及策略名；`xray api bi` 不带 tag
   列出全部，多个 tag 逐个列出（[spec020](../020-balancer-picks/spec.md)）。
+  2026-11-09 起每个状态还带来源：`tracked_from`（经 track 复制来的探测出站）、`reason`（死亡原因）和 `provenance`，
+  只读同一份观测，不改选路；`xray api bi` 多一列 `source`（spec020 修订 P6–P9）。
 - FR-007: user-domain 匹配及 ListRule 详细规则支持静态/动态配置，返回对象不得改写内部状态。
 - FR-008: DomainTraffic 可选开启，用户×域名、字节口径、LRU、窗口、cursor 和饱和计数保持。
 - FR-009: 与 Sidecar 的十分钟聚合、快照恢复、跨 boot 合并及匿名历史保持兼容。

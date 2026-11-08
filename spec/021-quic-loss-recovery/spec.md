@@ -154,7 +154,8 @@ Totals read quic-go's atomic counters. The handler's connection set is held unde
   - Sidecar spec019 puts the response under `/xray-debug` `quic` and exports per-handler metrics.
   - xray-config spec024 adds the Grafana loss and copy panels and an acceptance item where the fields are
     deployed.
-  - The Portal does not show QUIC stats (dated non-goal below).
+  - The Portal does not show QUIC stats (dated non-goal below). Revised 2026-11-08: the Portal's QUIC tab shows them
+    (xray-config [spec027](../../../xray-config/spec/027-portal-relay-track/spec.md)); xray-tui stays a non-goal.
 
 ## Non-goals (2026-11-07)
 
@@ -166,4 +167,5 @@ Totals read quic-go's atomic counters. The handler's connection set is held unde
   `AfterFunc` that already watches it, the listener in `QListener.Accept`; the RPC then reports `splithttp` handlers
   that dial HTTP/3, with a second entry for `downloadSettings`, and no user column (VLESS users share a connection).
 - Portal and xray-tui presentation of QUIC stats: Grafana carries the time series. Revisit when an operator needs
-  them per node in the Portal.
+  them per node in the Portal. Revisited 2026-11-08 for the Portal (xray-config spec027, the current values from
+  `/xray-debug` `quic`, no time series); xray-tui remains a non-goal.

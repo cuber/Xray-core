@@ -13,6 +13,8 @@ import (
 	"io"
 	"math/big"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -21,6 +23,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	handlercmd "github.com/xtls/xray-core/app/proxyman/command"
+	routercmd "github.com/xtls/xray-core/app/router/command"
 	statscmd "github.com/xtls/xray-core/app/stats/command"
 	"github.com/xtls/xray-core/common/serial"
 	"github.com/xtls/xray-core/core"
@@ -136,11 +139,18 @@ type relayFixture struct {
 	client  handlercmd.HandlerServiceClient
 	// clientStats reads the client's outbound traffic counters.
 	clientStats statscmd.StatsServiceClient
+	// routing reads the client's balancers, when a hook enabled RoutingService.
+	routing routercmd.RoutingServiceClient
 }
 
 var relayUsers = []string{"trunk", "a", "b", "c"}
 
 func newRelayFixture(t *testing.T) *relayFixture {
+	return newRelayFixtureWith(t, nil)
+}
+
+// newRelayFixtureWith starts the fixture after hook changed the server's and the client's configurations.
+func newRelayFixtureWith(t *testing.T, hook func(server, client map[string]any)) *relayFixture {
 	t.Helper()
 	ca, cert, key := relayPKI(t)
 	serverTLS := map[string]any{"alpn": []string{"h3"}, "certificates": []any{map[string]any{"certificate": cert, "key": key}}}
@@ -168,7 +178,7 @@ func newRelayFixture(t *testing.T) *relayFixture {
 			},
 		})
 	}
-	server, err := json.Marshal(map[string]any{
+	serverConfig := map[string]any{
 		"log":    map[string]any{"loglevel": "error", "access": "none"},
 		"stats":  map[string]any{},
 		"api":    map[string]any{"tag": "api", "listen": fmt.Sprintf("127.0.0.1:%d", serverAPI), "services": []string{"HandlerService", "StatsService"}},
@@ -180,9 +190,6 @@ func newRelayFixture(t *testing.T) *relayFixture {
 		}},
 		"outbounds": outbounds,
 		"routing":   map[string]any{"rules": rules},
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	f := &relayFixture{doors: map[string]int{}}
@@ -226,7 +233,7 @@ func newRelayFixture(t *testing.T) *relayFixture {
 			})
 		}
 	}
-	client, err := json.Marshal(map[string]any{
+	clientConfig := map[string]any{
 		"log":       map[string]any{"loglevel": "error", "access": "none"},
 		"stats":     map[string]any{},
 		"api":       map[string]any{"tag": "api", "listen": fmt.Sprintf("127.0.0.1:%d", clientAPI), "services": []string{"HandlerService", "StatsService"}},
@@ -234,7 +241,15 @@ func newRelayFixture(t *testing.T) *relayFixture {
 		"inbounds":  doors,
 		"outbounds": clientOutbounds,
 		"routing":   map[string]any{"rules": doorRules},
-	})
+	}
+	if hook != nil {
+		hook(serverConfig, clientConfig)
+	}
+	server, err := json.Marshal(serverConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := json.Marshal(clientConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,6 +272,7 @@ func newRelayFixture(t *testing.T) *relayFixture {
 	f.client = handlercmd.NewHandlerServiceClient(dial(clientAPI))
 	f.stats = statscmd.NewStatsServiceClient(dial(serverAPI))
 	f.clientStats = statscmd.NewStatsServiceClient(dial(clientAPI))
+	f.routing = routercmd.NewRoutingServiceClient(dial(clientAPI))
 	return f
 }
 
@@ -491,4 +507,108 @@ func TestRelaySessionRoutesEachStreamAsItsUser(t *testing.T) {
 	if got, err := f.mark("relay-a"); err != nil || got != "A" {
 		t.Errorf("relay-a after removing b: %q, %v", got, err)
 	}
+}
+
+// relayProbe has the client probe its session owner through the server to a local 204 endpoint and track the
+// owner's result on three relay outbounds under a leastPing balancer, relays (Core spec020 FR-009): relay-a is
+// bound, relay-c denied, relay-u unknown.
+func relayProbe(t *testing.T) func(server, client map[string]any) {
+	endpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(endpoint.Close)
+	port := endpoint.Listener.Addr().(*net.TCPAddr).Port
+	return func(server, client map[string]any) {
+		server["outbounds"] = append(server["outbounds"].([]any), map[string]any{
+			"tag": "probe-204", "protocol": "freedom", "sendThrough": "127.0.0.1",
+			"settings": map[string]any{"finalRules": []any{map[string]any{"action": "allow", "ip": []string{"127.0.0.1/32"}}}},
+		})
+		routing := server["routing"].(map[string]any)
+		routing["rules"] = append([]any{map[string]any{
+			"type": "field", "inboundTag": []string{"hy2-in"}, "port": port, "outboundTag": "probe-204",
+		}}, routing["rules"].([]any)...)
+
+		api := client["api"].(map[string]any)
+		api["services"] = append(api["services"].([]string), "RoutingService")
+		relays := []string{"relay-a", "relay-c", "relay-u"}
+		client["burstObservatory"] = map[string]any{
+			"pingGroups": []any{map[string]any{
+				"subjectSelector": []string{"owner"},
+				"pingConfig": map[string]any{
+					"destination": fmt.Sprintf("http://127.0.0.1:%d/generate_204", port), "interval": "1s", "sampling": 1, "timeout": "3s",
+				},
+			}},
+			"track": []any{map[string]any{"probe": "owner", "outbounds": relays}},
+		}
+		client["routing"].(map[string]any)["balancers"] = []any{map[string]any{
+			"tag": "relays", "selector": relays, "strategy": map[string]any{"type": "leastPing"}, "fallbackTag": "owner",
+		}}
+	}
+}
+
+// Core spec020 FR-009 (CP-7, P6): relay outbounds under a balancer track their session owner. Through RoutingService
+// on the started client, each carries tracked_from the owner, and the ones the server refuses are dead with the
+// relay's reason (spec024 R6) while the bound one is alive with the owner's delay.
+func TestRelayProvenanceContract(t *testing.T) {
+	f := newRelayFixtureWith(t, relayProbe(t))
+	render := func() string {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		resp, err := f.routing.GetBalancerInfo(ctx, &routercmd.GetBalancerInfoRequest{Tag: "relays"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, s := range append([]*routercmd.BalancerStatus{resp.Balancer.Status}, statusesOfMembers(resp.Balancer)...) {
+			state := "unknown"
+			switch {
+			case s == nil:
+				state = "absent"
+			case s.Known && s.Alive:
+				state = "alive"
+			case s.Known:
+				state = "down"
+			}
+			if s != nil {
+				if s.TrackedFrom != "" {
+					state += " <" + s.TrackedFrom
+				}
+				if s.Reason != "" {
+					state += " (" + s.Reason + ")"
+				}
+				if !s.Provenance {
+					state += " ?"
+				}
+			}
+			out = append(out, state)
+		}
+		return strings.Join(out, "; ")
+	}
+	const want = "alive; alive <owner; down <owner (hysteria relay denied); down <owner (hysteria relay unknown)"
+	deadline := time.Now().Add(15 * time.Second)
+	got := render()
+	for got != want {
+		if time.Now().After(deadline) {
+			t.Fatalf("relays:\n  %s\n  want %s", got, want)
+		}
+		time.Sleep(100 * time.Millisecond)
+		got = render()
+	}
+	resp, err := f.routing.GetBalancerInfo(context.Background(), &routercmd.GetBalancerInfoRequest{Tag: "relays"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// P7: a refused relay keeps the probe's delay, as the bound one does.
+	if members := resp.Balancer.Members; members[1].Status.Delay != members[0].Status.Delay ||
+		members[2].Status.Delay != members[0].Status.Delay || members[0].Share != 1 {
+		t.Errorf("relays: %v", members)
+	}
+}
+
+func statusesOfMembers(b *routercmd.BalancerMsg) []*routercmd.BalancerStatus {
+	var out []*routercmd.BalancerStatus
+	for _, m := range b.Members {
+		out = append(out, m.Status)
+	}
+	return out
 }
