@@ -23,8 +23,8 @@ Grafana 入站枚举仍由 xrayctl 生成和部署。以下旧端口/版本记�
 验收：五台远端 `Configuration OK`、服务 active、配置 SHA-256 与本地一致；
 Core 审计均为 `e7a2197`，phk.nano Sidecar 审计为 `7c2b55b`。
 TCP 443 全账户 54/54 返回 204，TCP 2083 五台 admin 5/5 返回 204。
-两台 TK 的 GLBB trace 均为 `123.100.136.215`，五台 ATT trace 均为
-`75.229.215.15`；phk.nano admin trace 为 `119.28.88.143`。
+两台 TK 的 GLBB trace 均为 `<exit public IPv4>`，五台 ATT trace 均为
+`<exit public IPv4>`；phk.nano admin trace 为 `<phk.nano public IPv4>`。
 仅验证上述代表性最终出口，不将全账户 204 等同于所有出口业务验收。
 Grafana 已经 `xrayctl grafana check/deploy --dashboards-only` 生成并部署。
 本次 phk.nano 因 pgz.nano SSH 不通，部署临时经 pgz.luck 内网进入；
@@ -41,8 +41,8 @@ Core 需先从旧版升级到 `aab372dd`，Sidecar 已为 `2da764d`。
 `test/tools/anytls_routes.py` 支持这两台的独立 sing-box 全账户烟测。
 
 验收：两台 Core `aab372dd`，远端配置测试及安装后 SHA-256 核对通过；
-20/20 用户返回 204。两台 ATT 用户均回显 `75.229.215.15`，admin 分别回显
-MINI `23.249.19.253`、VGD `177.2.20.211`。这只验证代表性出口，未对全部
+20/20 用户返回 204。两台 ATT 用户均回显 `<exit public IPv4>`，admin 分别回显
+MINI `<hk.rfc.co.mini public IPv4>`、VGD `<hk.rfc.co.vgd public IPv4>`。这只验证代表性出口，未对全部
 业务用户逐个验证最终出口。Grafana 入站枚举通过生成器同步。
 
 ## Surge 间歇失败调查（2026-09-26）
@@ -89,7 +89,7 @@ MINI `23.249.19.253`、VGD `177.2.20.211`。这只验证代表性出口，未对
   `da491c76a0bb19d70364dd80250b413e64d598358f343ed5be2f5d401333923c`。
 - 线上真实 TLS 连接只发送 AnyTLS 心跳，收到 29 次响应后在 30.94 秒关闭，
   随后新连接认证并收到 ServerSettings。证明心跳不阻止回收，重新连接可用。
-- 独立 sing-box 经 SHI 的 ATT 用户连续 5 次出口为 `75.229.215.15`；
+- 独立 sing-box 经 SHI 的 ATT 用户连续 5 次出口为 `<exit public IPv4>`；
   服务端 Core/Sidecar 均 active，观察期间未出现新的 user session limit 日志。
 - 四台 RFC CO（SHI、ZDS、HK MINI、HK VGD）均已通过 xrayctl 部署 Core
   和配置，最终 `xrayctl version` 全部 CURRENT `e7a2197`。四台配置均移除
@@ -101,7 +101,7 @@ MINI `23.249.19.253`、VGD `177.2.20.211`。这只验证代表性出口，未对
   共 40/40 成功。此前 30 轮测试的最终汇总输出未保留，不将其计入成功总数。
   VGD ATT 仍有约 1.2s 的偶发 RTT 峰值，未定位原因，不宣称延迟问题已解决。
 - HK MINI 的 Surge ATT policy 仍是 Hy2，不能当作 AnyTLS 验收；改用独立
-  sing-box AnyTLS 连续 20/20 成功，HTTP 204 及 ATT 出口 `75.229.215.15`
+  sing-box AnyTLS 连续 20/20 成功，HTTP 204 及 ATT 出口 `<exit public IPv4>`
   均符合预期，未为此修改 Surge 配置。
 - 真实 TLS 上同一个 AnyTLS stream 在 0/20/40/60 秒发送 HTTP 请求，4/4
   返回 204，跨越两个回收周期未被误杀。发送 FIN 后继续心跳，在 60.71 秒
@@ -114,7 +114,7 @@ MINI `23.249.19.253`、VGD `177.2.20.211`。这只验证代表性出口，未对
 | 项目 | 约定 |
 |---|---|
 | 服务端 | `tk.rfc.co.micro.shi`，另一台 `tk.rfc.co.micro.zds` 不变更 |
-| 连接地址 / TLS SNI | `shadow.tk.rfc.co.micro.shi.hourui.de` |
+| 连接地址 / TLS SNI | `<tk.rfc.co.micro.shi public hostname>` |
 | AnyTLS 入站 | `anytls-in`，监听 TCP 2083；静态用户为空，首条规则默认阻断 |
 | 保留服务 | Hy2 UDP 443/2083、所有备用入站和 SS-2022 TCP/UDP 2053 均不迁移 |
 | 测试客户端 | 本机独立 sing-box 进程，不使用本地 Xray AnyTLS outbound |
@@ -126,8 +126,8 @@ MINI `23.249.19.253`、VGD `177.2.20.211`。这只验证代表性出口，未对
 服务端复用当前节点证书，不新增 DNS 或另签测试公网证书：
 
 ```text
-/etc/letsencrypt/live/shadow.tk.rfc.co.micro.shi.hourui.de/fullchain.pem
-/etc/letsencrypt/live/shadow.tk.rfc.co.micro.shi.hourui.de/privkey.pem
+/etc/letsencrypt/live/<tk.rfc.co.micro.shi public hostname>/fullchain.pem
+/etc/letsencrypt/live/<tk.rfc.co.micro.shi public hostname>/privkey.pem
 ```
 
 以上路径来自仓库节点配置，已通过配置加载和独立客户端实际 TLS 验证；到期 2026-11-08。
@@ -224,7 +224,7 @@ python3 test/tools/anytls_pilot.py --apply --duration 600
 
 - P-001/P-002：预检、私有备份、四平台/组件产物校验及 xrayctl 部署通过。
 - P-003/P-004/P-006：双用户 A/B marker、正常 TLS、错误密码/SNI 拒绝、删除旧流
-  立即关闭、换密码重加和另一用户不受影响通过。HTTPS trace 出口 82.40.33.214 / JP。
+  立即关闭、换密码重加和另一用户不受影响通过。HTTPS trace 出口 <tk.rfc.co.micro.shi public IPv4> / JP。
 - P-005：用户 TCP 固定 payload 精确 13 上行/14 下行，inbound 同时包含两用户
   payload 和协议开销；Sidecar 初次被旧 Core 能力缓存阻塞，已修复为限频重试。
   新一轮独立身份的用户/域名明细返回成功，10m 聚合；纯 IP DNS 流量归入 unknown。
@@ -240,7 +240,7 @@ python3 test/tools/anytls_pilot.py --apply --duration 600
   回环回显和本地 sing-box/隧道进程退出；永久首条默认拒绝规则保留。
 - 回归：2083 TCP AnyTLS / UDP Hy2 并存；2053 TCP/UDP 未变。原 SS2 管理链路
   `xrayctl sidecar probe-ip --config-node asz.lite --node tk.rfc.co.micro.shi --spec dns:google`
-  返回 82.40.33.214，123ms。Core/Sidecar 版本审计均 CURRENT，配置 hash MATCH。
+  返回 <tk.rfc.co.micro.shi public IPv4>，123ms。Core/Sidecar 版本审计均 CURRENT，配置 hash MATCH。
 - Grafana：通过 `xrayctl grafana deploy --dashboards-only` 同步生成的 SHI AnyTLS
   inbound 枚举；无手改 JSON、无订阅或其他节点的协议部署。
 
@@ -255,7 +255,7 @@ python3 test/tools/anytls_pilot.py --apply --duration 600
   `187bf0ab`、Sidecar `663362e`；两端配置测试通过，产物 SHA 见 implementation.md。
 - `shi-convergence-pilot.log`：P-003 至 P-008 完整通过，包括公共证书/SNI、
   两账户不同 marker、回环和外部 UoT DNS、精确 TCP 13 上行/14 下行、删除旧
-  generation 断流及另一账户继续可用。HTTPS trace 为 `82.40.33.214 / JP / TLSv1.3`。
+  generation 断流及另一账户继续可用。HTTPS trace 为 `<tk.rfc.co.micro.shi public IPv4> / JP / TLSv1.3`。
 - 600 秒低负载访问全部成功，Sidecar 返回两账户 `pilot-anytls.test` 和 UDP
   域名明细，bucket interval 为 10m；纯 IP DNS 归 unknown，未改聚合语义。
 - 十次资源采样：Core PID 580331、RSS 45.05-51.15 MiB、FD 33-37；Sidecar
@@ -264,7 +264,7 @@ python3 test/tools/anytls_pilot.py --apply --duration 600
   `spec003-anytls-` routes/outbounds 均为 0，恢复清理 manifest 不存在。
   不删除已采集测试历史，保留空用户和默认拒绝的受管配置。
 - Core/Sidecar 审计均 CURRENT、配置 SHA MATCH；SS2 原管理链路
-  `dns:google` 回显 `82.40.33.214`，135ms。2083 TCP/UDP 和 2053 TCP/UDP 保留。
+  `dns:google` 回显 `<tk.rfc.co.micro.shi public IPv4>`，135ms。2083 TCP/UDP 和 2053 TCP/UDP 保留。
 - 最终相关 Core race 使用 `-count=1` 重跑通过；Sidecar 全量 race/vet、Python
   252 项（opt-in 二进制另跑通过）通过。公开许可待办及基线失败见 implementation.md。
 
@@ -295,14 +295,14 @@ SHA 均 MATCH；SHI 为 `929ee5d98b0a69e6c2689778115afc98d5bdbf8c75983a5d1836d3b
 ZDS 为 `9147adb444862f1dcc36400064ce3cbd574a32ab2f3fc2daff7ee5c1365cea21`。
 两台 API 用户数都是 12，逐用户经 AnyTLS 请求 sidecar 204 全部成功，实际入站
 流量计数非零；2083 TCP/UDP 并存，两服务 active、NRestarts=0。
-ATT 代表用户经两台都返回 `75.229.215.15 / US`；admin 分别为
-`82.40.33.214 / JP`、`82.40.35.243 / JP`；SHI SS2 对照出口一致。
+ATT 代表用户经两台都返回 `<exit public IPv4> / US`；admin 分别为
+`<tk.rfc.co.micro.shi public IPv4> / JP`、`<tk.rfc.co.micro.zds public IPv4> / JP`；SHI SS2 对照出口一致。
 Grafana 已通过生成脚本及 `grafana deploy --dashboards-only` 同步 ZDS 新入站枚举。
 本地 Python 全量 253 项通过（1 项原有 opt-in 跳过），路由 9 项通过。
 
 GLBB 首次 AnyTLS HTTPS trace 遇到一次 EOF，未修改出站后复测恢复；后续 SHI
 AnyTLS 40/40、SS2 20/20，ZDS AnyTLS 20/20、SS2 20/20 全部成功，均为
-`123.100.136.215 / JP / NRT`。服务日志无可定位报错，不把偶发 EOF 归因为
+`<exit public IPv4> / JP / NRT`。服务日志无可定位报错，不把偶发 EOF 归因为
 AnyTLS 或声称已修复根因。连续测试日志位于 `.cache/anytls/*-glbb-*.log`。
 用 `--protocol ss2 --email bus-tk-glbb-zoro --repeat 20` 可做同路由对照；
 显式清空 curl noproxy，避免本机环境把回环目标绕过代理。临时客户端已退出。

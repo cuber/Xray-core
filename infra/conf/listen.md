@@ -6,7 +6,7 @@ explicit IP addresses:
 ```json
 {
   "tag": "ss2-in",
-  "listen": ["10.77.55.1", "43.248.8.104"],
+  "listen": ["<isz5 wg-ix address>", "<isz5 public IPv4>"],
   "port": 2053,
   "protocol": "shadowsocks"
 }
