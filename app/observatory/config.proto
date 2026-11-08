@@ -70,6 +70,9 @@ message TrackStatus {
   string probe = 1;
   repeated string outbounds = 2;
   OutboundStatus probe_status = 3;
+  // Tracked outbounds that are dead on their own whatever the probe, with the reason: a Hy2 relay outbound
+  // the server refused or cannot relay for (Core spec024 R6).
+  map<string, string> refused = 4;
 }
 
 message ProbeResult{

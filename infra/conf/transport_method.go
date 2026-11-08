@@ -763,10 +763,38 @@ type Masquerade struct {
 }
 
 type HysteriaConfig struct {
-	Version        int32      `json:"version"`
-	Auth           string     `json:"auth"`
-	UdpIdleTimeout int64      `json:"udpIdleTimeout"`
-	Masquerade     Masquerade `json:"masquerade"`
+	Version        int32                  `json:"version"`
+	Auth           string                 `json:"auth"`
+	UdpIdleTimeout int64                  `json:"udpIdleTimeout"`
+	Masquerade     Masquerade             `json:"masquerade"`
+	Session        *HysteriaSessionConfig `json:"session"`
+}
+
+// HysteriaSessionConfig makes a Hy2 outbound a session owner with a connection pool (spec024 R1, R4).
+type HysteriaSessionConfig struct {
+	MinConnections       uint32 `json:"minConnections"`
+	MaxConnections       uint32 `json:"maxConnections"`
+	StreamsPerConnection uint32 `json:"streamsPerConnection"`
+	ScaleUpStreams       uint32 `json:"scaleUpStreams"`
+}
+
+func (c *HysteriaSessionConfig) Build() (*hysteria.Session, error) {
+	switch {
+	case c.MinConnections < 1 || c.MinConnections > 16:
+		return nil, errors.New("hysteria session.minConnections must be between 1 and 16")
+	case c.MaxConnections < c.MinConnections || c.MaxConnections > 16:
+		return nil, errors.New("hysteria session.maxConnections must be between minConnections and 16")
+	case c.StreamsPerConnection < 16 || c.StreamsPerConnection > 4096:
+		return nil, errors.New("hysteria session.streamsPerConnection must be between 16 and 4096")
+	case c.ScaleUpStreams < 1 || c.ScaleUpStreams > c.StreamsPerConnection:
+		return nil, errors.New("hysteria session.scaleUpStreams must be between 1 and streamsPerConnection")
+	}
+	return &hysteria.Session{
+		MinConnections:       c.MinConnections,
+		MaxConnections:       c.MaxConnections,
+		StreamsPerConnection: c.StreamsPerConnection,
+		ScaleUpStreams:       c.ScaleUpStreams,
+	}, nil
 }
 
 func (c *HysteriaConfig) Build() (proto.Message, error) {
@@ -793,6 +821,14 @@ func (c *HysteriaConfig) Build() (proto.Message, error) {
 
 	if config.UdpIdleTimeout == 0 {
 		config.UdpIdleTimeout = 60
+	}
+
+	if c.Session != nil {
+		session, err := c.Session.Build()
+		if err != nil {
+			return nil, err
+		}
+		config.Session = session
 	}
 
 	return config, nil

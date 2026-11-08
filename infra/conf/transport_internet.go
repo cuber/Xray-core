@@ -339,5 +339,11 @@ func (c *StreamConfig) Build() (*internet.StreamConfig, error) {
 		}
 	}
 
+	if c.HysteriaSettings != nil && c.HysteriaSettings.Session != nil {
+		if err := checkHysteriaSessionKeepAlive(config.QuicParams); err != nil {
+			return nil, err
+		}
+	}
+
 	return config, nil
 }

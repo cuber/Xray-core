@@ -14,6 +14,7 @@ import (
 	"github.com/xtls/xray-core/features/extension"
 	"github.com/xtls/xray-core/features/outbound"
 	"github.com/xtls/xray-core/features/routing"
+	"github.com/xtls/xray-core/proxy"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -47,7 +48,46 @@ func (o *Observer) MeasuredObservation() []*observatory.OutboundStatus {
 // GetTrack reports the track groups as loaded, each with its probe's current
 // measured status (spec014), force fields included (spec015).
 func (o *Observer) GetTrack(ctx context.Context) ([]*observatory.TrackStatus, error) {
-	return o.track.statuses(o.MeasuredObservation()), nil
+	statuses := o.track.statuses(o.MeasuredObservation())
+	for _, s := range statuses {
+		for _, tag := range s.Outbounds {
+			if reason := o.relayRefusal(tag); reason != "" {
+				if s.Refused == nil {
+					s.Refused = make(map[string]string)
+				}
+				s.Refused[tag] = reason
+			}
+		}
+	}
+	return statuses, nil
+}
+
+// relayStatusReporter is a Hy2 relay outbound (Core spec024 R6), seen without importing Hy2.
+type relayStatusReporter interface {
+	RelayStatus() (status, user string, ok bool)
+}
+
+// relayRefusal is why a tracked outbound is dead on its own, or empty: a relay outbound the server refused
+// or cannot relay for. no_connection and bound follow the probe.
+func (o *Observer) relayRefusal(tag string) string {
+	if o.ohm == nil {
+		return ""
+	}
+	handler, ok := o.ohm.GetHandler(tag).(interface{ GetOutbound() proxy.Outbound })
+	if !ok {
+		return ""
+	}
+	reporter, ok := handler.GetOutbound().(relayStatusReporter)
+	if !ok {
+		return ""
+	}
+	switch status, _, relay := reporter.RelayStatus(); {
+	case !relay:
+		return ""
+	case status == "unknown" || status == "denied" || status == "unsupported":
+		return "hysteria relay " + status
+	}
+	return ""
 }
 
 // Observes implements extension.ObservedOutbounds (Core spec019 M6): a subject selector of the
@@ -79,7 +119,14 @@ func (o *Observer) Check(tag []string) {
 // copies, which inherit that.
 func (o *Observer) createResult() []*observatory.OutboundStatus {
 	result := o.force.load().apply(o.probeResult(), true)
-	return append(result, o.track.follow(result)...)
+	tracked := o.track.follow(result)
+	for _, s := range tracked {
+		if reason := o.relayRefusal(s.OutboundTag); reason != "" {
+			s.Alive = false
+			s.LastErrorReason = reason
+		}
+	}
+	return append(result, tracked...)
 }
 
 func (o *Observer) probeResult() []*observatory.OutboundStatus {

@@ -24,4 +24,17 @@ message Config {
   string masq_string = 10;
   map<string, string> masq_string_headers = 11;
   int32 masq_string_status_code = 12;
+
+  // A session owner's connection pool (spec024 R1, R4); unset keeps one connection per outbound.
+  Session session = 13;
+}
+
+message Session {
+  uint32 min_connections = 1;
+  uint32 max_connections = 2;
+  uint32 streams_per_connection = 3;
+  uint32 scale_up_streams = 4;
+  // The relay outbounds' credentials, index = position + 1; filled when the configuration is built
+  // (spec024 R2). ListOutbounds already returns each of them in its relay outbound's settings.
+  repeated string relay_auth = 5;
 }

@@ -18,6 +18,9 @@ type selector struct {
 	tags []string
 }
 
+// GetHandler finds no handler: none of these outbounds is a relay (Core spec024 R6 asks every tracked one).
+func (s selector) GetHandler(string) outbound.Handler { return nil }
+
 func (s selector) Select(prefixes []string) []string {
 	var out []string
 	for _, tag := range s.tags {

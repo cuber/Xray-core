@@ -11,6 +11,17 @@ import "common/protocol/user.proto";
 
 message ClientConfig {
   xray.common.protocol.ServerEndpoint server = 1;
+  // A relay outbound sends through its session owner's connections (spec024 R1); server is then unset.
+  Relay relay = 2;
+}
+
+message Relay {
+  // The session owner's outbound tag.
+  string session = 1;
+  // The relayed user's credential; it decides the user.
+  string auth = 2;
+  // 1–255, the outbound's position in its session; set when the configuration is built.
+  uint32 index = 3;
 }
 
 message ServerConfig {

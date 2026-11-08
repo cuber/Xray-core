@@ -23,8 +23,10 @@ const (
 )
 
 type ClientConfig struct {
-	state         protoimpl.MessageState   `protogen:"open.v1"`
-	Server        *protocol.ServerEndpoint `protobuf:"bytes,1,opt,name=server,proto3" json:"server,omitempty"`
+	state  protoimpl.MessageState   `protogen:"open.v1"`
+	Server *protocol.ServerEndpoint `protobuf:"bytes,1,opt,name=server,proto3" json:"server,omitempty"`
+	// A relay outbound sends through its session owner's connections (spec024 R1); server is then unset.
+	Relay         *Relay `protobuf:"bytes,2,opt,name=relay,proto3" json:"relay,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -66,6 +68,76 @@ func (x *ClientConfig) GetServer() *protocol.ServerEndpoint {
 	return nil
 }
 
+func (x *ClientConfig) GetRelay() *Relay {
+	if x != nil {
+		return x.Relay
+	}
+	return nil
+}
+
+type Relay struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The session owner's outbound tag.
+	Session string `protobuf:"bytes,1,opt,name=session,proto3" json:"session,omitempty"`
+	// The relayed user's credential; it decides the user.
+	Auth string `protobuf:"bytes,2,opt,name=auth,proto3" json:"auth,omitempty"`
+	// 1–255, the outbound's position in its session; set when the configuration is built.
+	Index         uint32 `protobuf:"varint,3,opt,name=index,proto3" json:"index,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Relay) Reset() {
+	*x = Relay{}
+	mi := &file_proxy_hysteria_config_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Relay) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Relay) ProtoMessage() {}
+
+func (x *Relay) ProtoReflect() protoreflect.Message {
+	mi := &file_proxy_hysteria_config_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Relay.ProtoReflect.Descriptor instead.
+func (*Relay) Descriptor() ([]byte, []int) {
+	return file_proxy_hysteria_config_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Relay) GetSession() string {
+	if x != nil {
+		return x.Session
+	}
+	return ""
+}
+
+func (x *Relay) GetAuth() string {
+	if x != nil {
+		return x.Auth
+	}
+	return ""
+}
+
+func (x *Relay) GetIndex() uint32 {
+	if x != nil {
+		return x.Index
+	}
+	return 0
+}
+
 type ServerConfig struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Users         []*protocol.User       `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
@@ -75,7 +147,7 @@ type ServerConfig struct {
 
 func (x *ServerConfig) Reset() {
 	*x = ServerConfig{}
-	mi := &file_proxy_hysteria_config_proto_msgTypes[1]
+	mi := &file_proxy_hysteria_config_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -87,7 +159,7 @@ func (x *ServerConfig) String() string {
 func (*ServerConfig) ProtoMessage() {}
 
 func (x *ServerConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_proxy_hysteria_config_proto_msgTypes[1]
+	mi := &file_proxy_hysteria_config_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -100,7 +172,7 @@ func (x *ServerConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerConfig.ProtoReflect.Descriptor instead.
 func (*ServerConfig) Descriptor() ([]byte, []int) {
-	return file_proxy_hysteria_config_proto_rawDescGZIP(), []int{1}
+	return file_proxy_hysteria_config_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ServerConfig) GetUsers() []*protocol.User {
@@ -114,9 +186,14 @@ var File_proxy_hysteria_config_proto protoreflect.FileDescriptor
 
 const file_proxy_hysteria_config_proto_rawDesc = "" +
 	"\n" +
-	"\x1bproxy/hysteria/config.proto\x12\x13xray.proxy.hysteria\x1a!common/protocol/server_spec.proto\x1a\x1acommon/protocol/user.proto\"L\n" +
+	"\x1bproxy/hysteria/config.proto\x12\x13xray.proxy.hysteria\x1a!common/protocol/server_spec.proto\x1a\x1acommon/protocol/user.proto\"~\n" +
 	"\fClientConfig\x12<\n" +
-	"\x06server\x18\x01 \x01(\v2$.xray.common.protocol.ServerEndpointR\x06server\"@\n" +
+	"\x06server\x18\x01 \x01(\v2$.xray.common.protocol.ServerEndpointR\x06server\x120\n" +
+	"\x05relay\x18\x02 \x01(\v2\x1a.xray.proxy.hysteria.RelayR\x05relay\"K\n" +
+	"\x05Relay\x12\x18\n" +
+	"\asession\x18\x01 \x01(\tR\asession\x12\x12\n" +
+	"\x04auth\x18\x02 \x01(\tR\x04auth\x12\x14\n" +
+	"\x05index\x18\x03 \x01(\rR\x05index\"@\n" +
 	"\fServerConfig\x120\n" +
 	"\x05users\x18\x01 \x03(\v2\x1a.xray.common.protocol.UserR\x05usersB[\n" +
 	"\x17com.xray.proxy.hysteriaP\x01Z(github.com/xtls/xray-core/proxy/hysteria\xaa\x02\x13Xray.Proxy.Hysteriab\x06proto3"
@@ -133,21 +210,23 @@ func file_proxy_hysteria_config_proto_rawDescGZIP() []byte {
 	return file_proxy_hysteria_config_proto_rawDescData
 }
 
-var file_proxy_hysteria_config_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_proxy_hysteria_config_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_proxy_hysteria_config_proto_goTypes = []any{
 	(*ClientConfig)(nil),            // 0: xray.proxy.hysteria.ClientConfig
-	(*ServerConfig)(nil),            // 1: xray.proxy.hysteria.ServerConfig
-	(*protocol.ServerEndpoint)(nil), // 2: xray.common.protocol.ServerEndpoint
-	(*protocol.User)(nil),           // 3: xray.common.protocol.User
+	(*Relay)(nil),                   // 1: xray.proxy.hysteria.Relay
+	(*ServerConfig)(nil),            // 2: xray.proxy.hysteria.ServerConfig
+	(*protocol.ServerEndpoint)(nil), // 3: xray.common.protocol.ServerEndpoint
+	(*protocol.User)(nil),           // 4: xray.common.protocol.User
 }
 var file_proxy_hysteria_config_proto_depIdxs = []int32{
-	2, // 0: xray.proxy.hysteria.ClientConfig.server:type_name -> xray.common.protocol.ServerEndpoint
-	3, // 1: xray.proxy.hysteria.ServerConfig.users:type_name -> xray.common.protocol.User
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	3, // 0: xray.proxy.hysteria.ClientConfig.server:type_name -> xray.common.protocol.ServerEndpoint
+	1, // 1: xray.proxy.hysteria.ClientConfig.relay:type_name -> xray.proxy.hysteria.Relay
+	4, // 2: xray.proxy.hysteria.ServerConfig.users:type_name -> xray.common.protocol.User
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_proxy_hysteria_config_proto_init() }
@@ -161,7 +240,7 @@ func file_proxy_hysteria_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proxy_hysteria_config_proto_rawDesc), len(file_proxy_hysteria_config_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

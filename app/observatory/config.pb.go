@@ -296,10 +296,13 @@ func (x *OutboundStatus) GetForceDownSince() int64 {
 // A burst observatory track group as loaded, with its probe's current status
 // (absent before the probe's first result). Spec014.
 type TrackStatus struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Probe         string                 `protobuf:"bytes,1,opt,name=probe,proto3" json:"probe,omitempty"`
-	Outbounds     []string               `protobuf:"bytes,2,rep,name=outbounds,proto3" json:"outbounds,omitempty"`
-	ProbeStatus   *OutboundStatus        `protobuf:"bytes,3,opt,name=probe_status,json=probeStatus,proto3" json:"probe_status,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Probe       string                 `protobuf:"bytes,1,opt,name=probe,proto3" json:"probe,omitempty"`
+	Outbounds   []string               `protobuf:"bytes,2,rep,name=outbounds,proto3" json:"outbounds,omitempty"`
+	ProbeStatus *OutboundStatus        `protobuf:"bytes,3,opt,name=probe_status,json=probeStatus,proto3" json:"probe_status,omitempty"`
+	// Tracked outbounds that are dead on their own whatever the probe, with the reason: a Hy2 relay outbound
+	// the server refused or cannot relay for (Core spec024 R6).
+	Refused       map[string]string `protobuf:"bytes,4,rep,name=refused,proto3" json:"refused,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -351,6 +354,13 @@ func (x *TrackStatus) GetOutbounds() []string {
 func (x *TrackStatus) GetProbeStatus() *OutboundStatus {
 	if x != nil {
 		return x.ProbeStatus
+	}
+	return nil
+}
+
+func (x *TrackStatus) GetRefused() map[string]string {
+	if x != nil {
+		return x.Refused
 	}
 	return nil
 }
@@ -565,11 +575,15 @@ const file_app_observatory_config_proto_rawDesc = "" +
 	"force_down\x18\t \x01(\bR\tforceDown\x12*\n" +
 	"\x11force_down_reason\x18\n" +
 	" \x01(\tR\x0fforceDownReason\x12(\n" +
-	"\x10force_down_since\x18\v \x01(\x03R\x0eforceDownSince\"\x8f\x01\n" +
+	"\x10force_down_since\x18\v \x01(\x03R\x0eforceDownSince\"\x9a\x02\n" +
 	"\vTrackStatus\x12\x14\n" +
 	"\x05probe\x18\x01 \x01(\tR\x05probe\x12\x1c\n" +
 	"\toutbounds\x18\x02 \x03(\tR\toutbounds\x12L\n" +
-	"\fprobe_status\x18\x03 \x01(\v2).xray.core.app.observatory.OutboundStatusR\vprobeStatus\"e\n" +
+	"\fprobe_status\x18\x03 \x01(\v2).xray.core.app.observatory.OutboundStatusR\vprobeStatus\x12M\n" +
+	"\arefused\x18\x04 \x03(\v23.xray.core.app.observatory.TrackStatus.RefusedEntryR\arefused\x1a:\n" +
+	"\fRefusedEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"e\n" +
 	"\vProbeResult\x12\x14\n" +
 	"\x05alive\x18\x01 \x01(\bR\x05alive\x12\x14\n" +
 	"\x05delay\x18\x02 \x01(\x03R\x05delay\x12*\n" +
@@ -595,7 +609,7 @@ func file_app_observatory_config_proto_rawDescGZIP() []byte {
 	return file_app_observatory_config_proto_rawDescData
 }
 
-var file_app_observatory_config_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_app_observatory_config_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_app_observatory_config_proto_goTypes = []any{
 	(*ObservationResult)(nil),           // 0: xray.core.app.observatory.ObservationResult
 	(*HealthPingMeasurementResult)(nil), // 1: xray.core.app.observatory.HealthPingMeasurementResult
@@ -604,16 +618,18 @@ var file_app_observatory_config_proto_goTypes = []any{
 	(*ProbeResult)(nil),                 // 4: xray.core.app.observatory.ProbeResult
 	(*Intensity)(nil),                   // 5: xray.core.app.observatory.Intensity
 	(*Config)(nil),                      // 6: xray.core.app.observatory.Config
+	nil,                                 // 7: xray.core.app.observatory.TrackStatus.RefusedEntry
 }
 var file_app_observatory_config_proto_depIdxs = []int32{
 	2, // 0: xray.core.app.observatory.ObservationResult.status:type_name -> xray.core.app.observatory.OutboundStatus
 	1, // 1: xray.core.app.observatory.OutboundStatus.health_ping:type_name -> xray.core.app.observatory.HealthPingMeasurementResult
 	2, // 2: xray.core.app.observatory.TrackStatus.probe_status:type_name -> xray.core.app.observatory.OutboundStatus
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	7, // 3: xray.core.app.observatory.TrackStatus.refused:type_name -> xray.core.app.observatory.TrackStatus.RefusedEntry
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_app_observatory_config_proto_init() }
@@ -627,7 +643,7 @@ func file_app_observatory_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_app_observatory_config_proto_rawDesc), len(file_app_observatory_config_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

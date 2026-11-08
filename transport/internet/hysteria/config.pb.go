@@ -34,8 +34,10 @@ type Config struct {
 	MasqString           string                 `protobuf:"bytes,10,opt,name=masq_string,json=masqString,proto3" json:"masq_string,omitempty"`
 	MasqStringHeaders    map[string]string      `protobuf:"bytes,11,rep,name=masq_string_headers,json=masqStringHeaders,proto3" json:"masq_string_headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	MasqStringStatusCode int32                  `protobuf:"varint,12,opt,name=masq_string_status_code,json=masqStringStatusCode,proto3" json:"masq_string_status_code,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// A session owner's connection pool (spec024 R1, R4); unset keeps one connection per outbound.
+	Session       *Session `protobuf:"bytes,13,opt,name=session,proto3" json:"session,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Config) Reset() {
@@ -145,11 +147,96 @@ func (x *Config) GetMasqStringStatusCode() int32 {
 	return 0
 }
 
+func (x *Config) GetSession() *Session {
+	if x != nil {
+		return x.Session
+	}
+	return nil
+}
+
+type Session struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	MinConnections       uint32                 `protobuf:"varint,1,opt,name=min_connections,json=minConnections,proto3" json:"min_connections,omitempty"`
+	MaxConnections       uint32                 `protobuf:"varint,2,opt,name=max_connections,json=maxConnections,proto3" json:"max_connections,omitempty"`
+	StreamsPerConnection uint32                 `protobuf:"varint,3,opt,name=streams_per_connection,json=streamsPerConnection,proto3" json:"streams_per_connection,omitempty"`
+	ScaleUpStreams       uint32                 `protobuf:"varint,4,opt,name=scale_up_streams,json=scaleUpStreams,proto3" json:"scale_up_streams,omitempty"`
+	// The relay outbounds' credentials, index = position + 1; filled when the configuration is built
+	// (spec024 R2). ListOutbounds already returns each of them in its relay outbound's settings.
+	RelayAuth     []string `protobuf:"bytes,5,rep,name=relay_auth,json=relayAuth,proto3" json:"relay_auth,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Session) Reset() {
+	*x = Session{}
+	mi := &file_transport_internet_hysteria_config_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Session) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Session) ProtoMessage() {}
+
+func (x *Session) ProtoReflect() protoreflect.Message {
+	mi := &file_transport_internet_hysteria_config_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Session.ProtoReflect.Descriptor instead.
+func (*Session) Descriptor() ([]byte, []int) {
+	return file_transport_internet_hysteria_config_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Session) GetMinConnections() uint32 {
+	if x != nil {
+		return x.MinConnections
+	}
+	return 0
+}
+
+func (x *Session) GetMaxConnections() uint32 {
+	if x != nil {
+		return x.MaxConnections
+	}
+	return 0
+}
+
+func (x *Session) GetStreamsPerConnection() uint32 {
+	if x != nil {
+		return x.StreamsPerConnection
+	}
+	return 0
+}
+
+func (x *Session) GetScaleUpStreams() uint32 {
+	if x != nil {
+		return x.ScaleUpStreams
+	}
+	return 0
+}
+
+func (x *Session) GetRelayAuth() []string {
+	if x != nil {
+		return x.RelayAuth
+	}
+	return nil
+}
+
 var File_transport_internet_hysteria_config_proto protoreflect.FileDescriptor
 
 const file_transport_internet_hysteria_config_proto_rawDesc = "" +
 	"\n" +
-	"(transport/internet/hysteria/config.proto\x12 xray.transport.internet.hysteria\"\xc0\x04\n" +
+	"(transport/internet/hysteria/config.proto\x12 xray.transport.internet.hysteria\"\x85\x05\n" +
 	"\x06Config\x12\x12\n" +
 	"\x04auth\x18\x02 \x01(\tR\x04auth\x12(\n" +
 	"\x10udp_idle_timeout\x18\x03 \x01(\x03R\x0eudpIdleTimeout\x12\x1b\n" +
@@ -163,10 +250,18 @@ const file_transport_internet_hysteria_config_proto_rawDesc = "" +
 	" \x01(\tR\n" +
 	"masqString\x12o\n" +
 	"\x13masq_string_headers\x18\v \x03(\v2?.xray.transport.internet.hysteria.Config.MasqStringHeadersEntryR\x11masqStringHeaders\x125\n" +
-	"\x17masq_string_status_code\x18\f \x01(\x05R\x14masqStringStatusCode\x1aD\n" +
+	"\x17masq_string_status_code\x18\f \x01(\x05R\x14masqStringStatusCode\x12C\n" +
+	"\asession\x18\r \x01(\v2).xray.transport.internet.hysteria.SessionR\asession\x1aD\n" +
 	"\x16MasqStringHeadersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01J\x04\b\x01\x10\x02B\x82\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01J\x04\b\x01\x10\x02\"\xda\x01\n" +
+	"\aSession\x12'\n" +
+	"\x0fmin_connections\x18\x01 \x01(\rR\x0eminConnections\x12'\n" +
+	"\x0fmax_connections\x18\x02 \x01(\rR\x0emaxConnections\x124\n" +
+	"\x16streams_per_connection\x18\x03 \x01(\rR\x14streamsPerConnection\x12(\n" +
+	"\x10scale_up_streams\x18\x04 \x01(\rR\x0escaleUpStreams\x12\x1d\n" +
+	"\n" +
+	"relay_auth\x18\x05 \x03(\tR\trelayAuthB\x82\x01\n" +
 	"$com.xray.transport.internet.hysteriaP\x01Z5github.com/xtls/xray-core/transport/internet/hysteria\xaa\x02 Xray.Transport.Internet.Hysteriab\x06proto3"
 
 var (
@@ -181,18 +276,20 @@ func file_transport_internet_hysteria_config_proto_rawDescGZIP() []byte {
 	return file_transport_internet_hysteria_config_proto_rawDescData
 }
 
-var file_transport_internet_hysteria_config_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_transport_internet_hysteria_config_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_transport_internet_hysteria_config_proto_goTypes = []any{
-	(*Config)(nil), // 0: xray.transport.internet.hysteria.Config
-	nil,            // 1: xray.transport.internet.hysteria.Config.MasqStringHeadersEntry
+	(*Config)(nil),  // 0: xray.transport.internet.hysteria.Config
+	(*Session)(nil), // 1: xray.transport.internet.hysteria.Session
+	nil,             // 2: xray.transport.internet.hysteria.Config.MasqStringHeadersEntry
 }
 var file_transport_internet_hysteria_config_proto_depIdxs = []int32{
-	1, // 0: xray.transport.internet.hysteria.Config.masq_string_headers:type_name -> xray.transport.internet.hysteria.Config.MasqStringHeadersEntry
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	2, // 0: xray.transport.internet.hysteria.Config.masq_string_headers:type_name -> xray.transport.internet.hysteria.Config.MasqStringHeadersEntry
+	1, // 1: xray.transport.internet.hysteria.Config.session:type_name -> xray.transport.internet.hysteria.Session
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_transport_internet_hysteria_config_proto_init() }
@@ -206,7 +303,7 @@ func file_transport_internet_hysteria_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_transport_internet_hysteria_config_proto_rawDesc), len(file_transport_internet_hysteria_config_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

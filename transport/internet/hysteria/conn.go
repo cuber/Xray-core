@@ -23,6 +23,11 @@ type interConn struct {
 
 	client bool
 	user   *protocol.MemoryUser
+	// A relayed client stream's index (spec024 R2); 0 for the connection user.
+	relayIndex uint32
+	// A pool stream's release, run once on Close (spec024 R4).
+	release     func()
+	releaseOnce sync.Once
 }
 
 func (c *interConn) User() *protocol.MemoryUser {
@@ -36,7 +41,11 @@ func (c *interConn) Read(b []byte) (int, error) {
 func (c *interConn) Write(b []byte) (int, error) {
 	if c.client {
 		c.client = false
-		if _, err := c.stream.Write(append(quicvarint.Append(nil, FrameTypeTCPRequest), b...)); err != nil {
+		head := quicvarint.Append(nil, FrameTypeTCPRequest)
+		if c.relayIndex > 0 {
+			head = quicvarint.Append(quicvarint.Append(nil, FrameTypeTCPRelayRequest), uint64(c.relayIndex))
+		}
+		if _, err := c.stream.Write(append(head, b...)); err != nil {
 			return 0, err
 		}
 		return len(b), nil
@@ -46,6 +55,9 @@ func (c *interConn) Write(b []byte) (int, error) {
 }
 
 func (c *interConn) Close() error {
+	if c.release != nil {
+		c.releaseOnce.Do(c.release)
+	}
 	c.stream.CancelRead(0)
 	return c.stream.Close()
 }
@@ -159,6 +171,12 @@ type udpSessionManager struct {
 	addConn        internet.ConnHandler
 	udpIdleTimeout time.Duration
 	user           *protocol.MemoryUser
+
+	// Relay sessions (spec024 R2): a client's connection that negotiated relaying numbers its sessions per
+	// index (relayNext); a server's connection takes a relayed session's user from relayedUser.
+	relayed     bool
+	relayNext   map[uint32]uint32
+	relayedUser func(index uint32) *protocol.MemoryUser
 }
 
 func (m *udpSessionManager) close(udpConn *InterConn) {
@@ -229,7 +247,7 @@ func (m *udpSessionManager) run() {
 	}
 }
 
-func (m *udpSessionManager) udp() (*InterConn, error) {
+func (m *udpSessionManager) udp(index uint32) (*InterConn, error) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -237,11 +255,20 @@ func (m *udpSessionManager) udp() (*InterConn, error) {
 		return nil, errors.New("closed")
 	}
 
+	id := m.next
+	if m.relayed {
+		var err error
+		if id, err = m.relaySessionID(index); err != nil {
+			return nil, err
+		}
+	} else {
+		m.next++
+	}
 	udpConn := &InterConn{
 		local:  m.conn.LocalAddr(),
 		remote: m.conn.RemoteAddr(),
 
-		id: m.next,
+		id: id,
 		ch: make(chan []byte, udpMessageChanSize),
 	}
 	udpConn.write = m.conn.SendDatagram
@@ -250,10 +277,28 @@ func (m *udpSessionManager) udp() (*InterConn, error) {
 		m.close(udpConn)
 		m.Unlock()
 	}
-	m.m[m.next] = udpConn
-	m.next++
+	m.m[id] = udpConn
 
 	return udpConn, nil
+}
+
+// relaySessionID takes the index's next free ID; sequence numbers wrap in 24 bits and skip IDs in use.
+// Called under m's lock.
+func (m *udpSessionManager) relaySessionID(index uint32) (uint32, error) {
+	if m.relayNext == nil {
+		m.relayNext = make(map[uint32]uint32)
+	}
+	for tries := 0; tries <= relaySeqMask; tries++ {
+		seq := m.relayNext[index]
+		m.relayNext[index] = (seq + 1) & relaySeqMask
+		if index == 0 && seq == 0 {
+			continue // the connection user's IDs start at 1, as without relaying
+		}
+		if id := relaySessionID(index, seq); m.m[id] == nil {
+			return id, nil
+		}
+	}
+	return 0, errors.New("hysteria relay: no free UDP session ID for index ", index)
 }
 
 func (m *udpSessionManager) feed(id uint32, d []byte) {
@@ -301,6 +346,12 @@ func (m *udpSessionManager) feed(id uint32, d []byte) {
 			m.Unlock()
 		}
 		udpConn.user = m.user
+		if index := relayIndexOf(id); m.relayedUser != nil && index > 0 {
+			if udpConn.user = m.relayedUser(index); udpConn.user == nil {
+				m.Unlock()
+				return // refused relay index (spec024 R3)
+			}
+		}
 		m.m[id] = udpConn
 	}
 

@@ -268,6 +268,9 @@ func (c *InboundDetourConfig) Build() (*core.InboundHandlerConfig, error) {
 			return nil, err
 		}
 		receiverSettings.StreamSettings = ss
+		if hysteriaTransport(ss).GetSession() != nil {
+			return nil, errors.New("hysteriaSettings.session belongs to an outbound (a session owner), not to an inbound")
+		}
 		if strings.Contains(ss.SecurityType, "reality") && (receiverSettings.PortList == nil ||
 			len(receiverSettings.PortList.Ports()) != 1 || receiverSettings.PortList.Ports()[0] != 443) {
 			errors.LogWarning(context.Background(), `REALITY: Listening on non-443 ports will increase the likelihood of your server's IP being blocked by the GFW`)
@@ -798,6 +801,9 @@ func (c *Config) Build() (*core.Config, error) {
 			return nil, errors.New("failed to build outbound config with tag ", rawOutboundConfig.Tag).Base(err)
 		}
 		config.Outbound = append(config.Outbound, oc)
+	}
+	if err := linkHysteriaRelays(config.Outbound); err != nil {
+		return nil, err
 	}
 
 	return config, nil

@@ -46,6 +46,9 @@ func (c conn) QuicStats() internet.QuicConnStats {
 		MinRTT:      s.MinRTT,
 		LatestRTT:   s.LatestRTT,
 		RTTVariance: s.MeanDeviation,
+
+		PacketsAcked:  s.PacketsAcked,
+		BytesInFlight: s.BytesInFlight,
 		Counters: internet.QuicCounters{
 			PacketsSent:        s.PacketsSent,
 			BytesSent:          s.BytesSent,

@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/apernet/quic-go"
@@ -46,6 +47,32 @@ type client struct {
 	tr      *quic.Transport
 	pktConn net.PacketConn
 	udpSM   *udpSessionManager
+
+	// The relay negotiation of the current connection (spec024 R2) and its UDP sessions, guarded by
+	// relayMu so that status reports never wait for a dial.
+	relayMu       sync.Mutex
+	relayAnswered bool
+	relayBindings map[uint32]RelayBinding
+	liveUDP       *udpSessionManager
+
+	// live is the current connection for readers outside the lock (a pool's placement and reports).
+	live atomic.Pointer[quic.Conn]
+	// onConnect runs after each successful dial (a pool member registers its row detail).
+	onConnect func(internet.QuicConn)
+}
+
+// liveStatus is status without the lock.
+func (c *client) liveStatus() status {
+	conn := c.live.Load()
+	if conn == nil {
+		return StatusNull
+	}
+	select {
+	case <-conn.Context().Done():
+		return StatusInactive
+	default:
+		return StatusActive
+	}
 }
 
 func (c *client) status() status {
@@ -61,6 +88,7 @@ func (c *client) status() status {
 }
 
 func (c *client) close() {
+	c.live.Store(nil)
 	c.conn.CloseWithError(closeErrCodeOK, "")
 	c.quicStats.Remove(quicrecovery.Conn(c.conn))
 	// Dispatch-backed PacketConn deadlines are no-ops. Unblock its reader
@@ -71,6 +99,9 @@ func (c *client) close() {
 	c.tr = nil
 	c.pktConn = nil
 	c.udpSM = nil
+	c.relayMu.Lock()
+	c.relayAnswered, c.relayBindings, c.liveUDP = false, nil, nil
+	c.relayMu.Unlock()
 }
 
 func (c *client) dial(ctx context.Context) error {
@@ -186,6 +217,10 @@ func (c *client) dial(ctx context.Context) error {
 			CommonHeaderPadding: []string{AuthRequestPadding.String()},
 		},
 	}
+	relays := c.config.GetSession().GetRelayAuth()
+	if len(relays) > 0 {
+		req.Header.Set(HeaderRelay, encodeRelayRequest(relays))
+	}
 	resp, err := rt.RoundTrip(req.WithContext(ctx))
 	if err != nil {
 		if conn != nil {
@@ -226,16 +261,39 @@ func (c *client) dial(ctx context.Context) error {
 		panic(quicParams.Congestion)
 	}
 
+	answered, bindings := false, map[uint32]RelayBinding(nil)
+	if len(relays) > 0 {
+		if v := resp.Header.Get(HeaderRelay); v != "" {
+			if answers, err := decodeRelayResponse(v); err != nil {
+				errors.LogWarning(ctx, "hysteria relay answer unreadable; no relaying on this connection: ", err)
+			} else {
+				answered, bindings = true, answers
+			}
+		}
+	}
+
 	c.pktConn = pktConn
 	c.tr = tr
 	c.conn = conn
+	c.relayMu.Lock()
+	c.relayAnswered, c.relayBindings = answered, bindings
+	c.relayMu.Unlock()
 	c.quicStats.Add(quicrecovery.Conn(conn))
 	c.udpSM = &udpSessionManager{
 		conn: conn,
 		m:    make(map[uint32]*InterConn),
 		next: 1,
+
+		relayed: answered,
 	}
 	go c.udpSM.run()
+	c.relayMu.Lock()
+	c.liveUDP = c.udpSM
+	c.relayMu.Unlock()
+	c.live.Store(conn)
+	if c.onConnect != nil {
+		c.onConnect(quicrecovery.Conn(conn))
+	}
 
 	return nil
 }
@@ -274,32 +332,162 @@ func (c *client) unlock() {
 }
 
 func (c *client) tcp(ctx context.Context) (stat.Connection, error) {
+	return c.tcpOpen(ctx, false)
+}
+
+// tcpOpen opens a stream, dialing first when needed; with wait, it waits for stream credit (a pool whose
+// connections all reached the peer's stream limit, spec024 R4).
+func (c *client) tcpOpen(ctx context.Context, wait bool) (*interConn, error) {
 	ctx, cancel := c.dialContext(ctx)
 	defer cancel()
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	case c.lock <- struct{}{}:
-		defer c.unlock()
 	}
+	unlocked := false
+	unlock := func() {
+		if !unlocked {
+			unlocked = true
+			c.unlock()
+		}
+	}
+	defer unlock()
 
 	err := c.dial(ctx)
 	if err != nil {
 		return nil, err
 	}
+	index := RelayIndexFromContext(ctx)
+	if err := c.relayReady(index); err != nil {
+		return nil, err
+	}
 
-	stream, err := c.conn.OpenStream()
+	conn := c.conn
+	var stream *quic.Stream
+	if wait {
+		unlock() // the wait must not hold the dial lock
+		stream, err = conn.OpenStreamSync(ctx)
+	} else {
+		stream, err = conn.OpenStream()
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	return &interConn{
 		stream: stream,
-		local:  c.conn.LocalAddr(),
-		remote: c.conn.RemoteAddr(),
+		local:  conn.LocalAddr(),
+		remote: conn.RemoteAddr(),
 
-		client: true,
+		client:     true,
+		relayIndex: index,
 	}, nil
+}
+
+// connect dials the connection in the background (a pool member), under the client's owner context.
+func (c *client) connect() error {
+	ctx, cancel := c.dialContext(context.Background())
+	defer cancel()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case c.lock <- struct{}{}:
+		defer c.unlock()
+	}
+	return c.dial(ctx)
+}
+
+// udpSessions is the number of live UDP sessions on the current connection.
+func (c *client) udpSessions() int {
+	c.relayMu.Lock()
+	m := c.liveUDP
+	c.relayMu.Unlock()
+	if m == nil {
+		return 0
+	}
+	m.RLock()
+	defer m.RUnlock()
+	return len(m.m)
+}
+
+// relayReport is the current connection's bindings for its report row (spec024 R7).
+func (c *client) relayReport() []internet.QuicRelayBinding {
+	c.relayMu.Lock()
+	defer c.relayMu.Unlock()
+	if len(c.relayBindings) == 0 {
+		return nil
+	}
+	out := make([]internet.QuicRelayBinding, 0, len(c.relayBindings))
+	for index := uint32(1); index <= MaxRelayIndex && len(out) < len(c.relayBindings); index++ {
+		if b, ok := c.relayBindings[index]; ok {
+			out = append(out, internet.QuicRelayBinding{Index: index, User: b.User, Status: b.Status})
+		}
+	}
+	return out
+}
+
+// relayReady refuses a relayed stream the current connection cannot carry (spec024 R2).
+func (c *client) relayReady(index uint32) error {
+	if index == 0 {
+		return nil
+	}
+	c.relayMu.Lock()
+	defer c.relayMu.Unlock()
+	if !c.relayAnswered {
+		return errors.New("hysteria relay: the server does not relay (no ", HeaderRelay, " answer)")
+	}
+	if binding := c.relayBindings[index]; binding.Status != RelayStatusOK {
+		return errors.New("hysteria relay: the server refused relay index ", index, ": ", binding.Status)
+	}
+	return nil
+}
+
+// Relay outbound states as reported (spec024 R6, R7).
+const (
+	RelayBound        = "bound"
+	RelayUnsupported  = "unsupported"
+	RelayNoConnection = "no_connection"
+)
+
+func (c *client) relayStatus(index uint32) (status, user string) {
+	if c.liveStatus() != StatusActive {
+		return RelayNoConnection, ""
+	}
+	c.relayMu.Lock()
+	defer c.relayMu.Unlock()
+	if !c.relayAnswered {
+		return RelayUnsupported, ""
+	}
+	binding, ok := c.relayBindings[index]
+	switch {
+	case !ok:
+		return RelayUnsupported, ""
+	case binding.Status == RelayStatusOK:
+		return RelayBound, binding.User
+	default:
+		return binding.Status, ""
+	}
+}
+
+// RelayStatus reports a relay outbound's binding on its owner's connection, without dialing (spec024 R6,
+// R7): the owner is found by the key Dial uses.
+func RelayStatus(instance *core.Instance, dest net.Destination, streamSettings *internet.MemoryStreamConfig, index uint32) (status, user string) {
+	if manager == nil {
+		return RelayNoConnection, ""
+	}
+	dest.Network = net.Network_UDP
+	key := dialerConf{Destination: dest, MemoryStreamConfig: streamSettings, owner: instance}
+	manager.RLock()
+	c, p := manager.m[key], manager.pools[key]
+	manager.RUnlock()
+	switch {
+	case p != nil:
+		return p.relayStatus(index)
+	case c != nil:
+		return c.relayStatus(index)
+	}
+	return RelayNoConnection, ""
 }
 
 func (c *client) udp(ctx context.Context) (stat.Connection, error) {
@@ -316,8 +504,12 @@ func (c *client) udp(ctx context.Context) (stat.Connection, error) {
 	if err != nil {
 		return nil, err
 	}
+	index := RelayIndexFromContext(ctx)
+	if err := c.relayReady(index); err != nil {
+		return nil, err
+	}
 
-	return c.udpSM.udp()
+	return c.udpSM.udp(index)
 }
 
 func (c *client) clean(force bool) {
@@ -351,7 +543,8 @@ type dialerConf struct {
 
 type clientManager struct {
 	sync.RWMutex
-	m map[dialerConf]*client
+	m     map[dialerConf]*client
+	pools map[dialerConf]*pool // session owners (spec024 R4)
 }
 
 func (m *clientManager) clean() {
@@ -367,6 +560,10 @@ func (m *clientManager) cleanOnce() {
 	for k, c := range m.m {
 		entries[k] = c
 	}
+	pools := make(map[dialerConf]*pool, len(m.pools))
+	for k, p := range m.pools {
+		pools[k] = p
+	}
 	m.RUnlock()
 	for k, c := range entries {
 		force := c.instance != nil && !c.instance.IsRunning()
@@ -375,6 +572,17 @@ func (m *clientManager) cleanOnce() {
 			m.Lock()
 			if m.m[k] == c {
 				delete(m.m, k)
+			}
+			m.Unlock()
+		}
+	}
+	for k, p := range pools {
+		force := k.owner != nil && !k.owner.IsRunning()
+		p.clean(force)
+		if force {
+			m.Lock()
+			if m.pools[k] == p {
+				delete(m.pools, k)
 			}
 			m.Unlock()
 		}
@@ -397,12 +605,20 @@ func Dial(ctx context.Context, dest net.Destination, streamSettings *internet.Me
 
 	initmanager.Do(func() {
 		manager = &clientManager{
-			m: make(map[dialerConf]*client),
+			m:     make(map[dialerConf]*client),
+			pools: make(map[dialerConf]*pool),
 		}
 		go manager.clean()
 	})
 
 	dialerConfKey := dialerConf{Destination: dest, MemoryStreamConfig: streamSettings, owner: core.FromContext(ctx)}
+	if session := streamSettings.ProtocolSettings.(*Config).GetSession(); session != nil {
+		p, err := sessionPool(ctx, dialerConfKey, session, tlsConfig)
+		if err != nil {
+			return nil, err
+		}
+		return p.open(ctx, datagram)
+	}
 
 	manager.RLock()
 	c := manager.m[dialerConfKey]
@@ -446,6 +662,54 @@ func Dial(ctx context.Context, dest net.Destination, streamSettings *internet.Me
 		return c.udp(ctx)
 	}
 	return c.tcp(ctx)
+}
+
+// sessionPool returns the owner's pool, creating it on the first dial (spec024 R4). Its members are
+// clients like Dial's, sharing one owner context that the instance's close cancels.
+func sessionPool(ctx context.Context, key dialerConf, session *Session, tlsConfig *tls.Config) (*pool, error) {
+	manager.RLock()
+	p := manager.pools[key]
+	manager.RUnlock()
+	if p != nil {
+		return p, nil
+	}
+	manager.Lock()
+	defer manager.Unlock()
+	if p = manager.pools[key]; p != nil {
+		return p, nil
+	}
+	instance := core.FromContext(ctx)
+	ownerContext, ownerCancel := context.WithCancel(context.Background())
+	streamSettings := key.MemoryStreamConfig
+	p = newPool(session, streamSettings.QuicStats, func() *client {
+		return &client{
+			lock:         make(chan struct{}, 1),
+			instance:     instance,
+			ownerContext: ownerContext,
+			dest:         key.Destination,
+			config:       streamSettings.ProtocolSettings.(*Config),
+			tlsConfig:    tlsConfig.GetTLSConfig(tls.WithDestination(key.Destination)),
+			socketConfig: streamSettings.SocketSettings,
+			finalMask:    streamSettings.FinalMask,
+			quicParams:   streamSettings.QuicParams,
+			quicStats:    streamSettings.QuicStats,
+		}
+	})
+	owned := p
+	if instance != nil && !instance.OnClose(func() {
+		ownerCancel()
+		manager.Lock()
+		if manager.pools[key] == owned {
+			delete(manager.pools, key)
+		}
+		manager.Unlock()
+		owned.clean(true)
+	}) {
+		ownerCancel()
+		return nil, errors.New("instance is closing")
+	}
+	manager.pools[key] = p
+	return p, nil
 }
 
 func init() {

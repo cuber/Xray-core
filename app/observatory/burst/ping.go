@@ -10,6 +10,7 @@ import (
 	"github.com/xtls/xray-core/common/errors"
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/retry"
+	"github.com/xtls/xray-core/common/session"
 	"github.com/xtls/xray-core/common/utils"
 	"github.com/xtls/xray-core/features/routing"
 	"github.com/xtls/xray-core/transport/internet/tagged"
@@ -58,7 +59,7 @@ func newHTTPClient(ctxv context.Context, dispatcher routing.Dispatcher, handler 
 			}
 			// Dispatch returns a pipe before protocol dialing/handshaking finishes.
 			// Closing only that pipe cannot cancel an admission still in progress.
-			dialCtx, cancel := context.WithCancel(ctx)
+			dialCtx, cancel := context.WithCancel(session.ContextWithProbe(ctx))
 			stop := context.AfterFunc(ctxv, cancel)
 			cleanup := func() { stop(); cancel() }
 			conn, err := tagged.Dialer(dialCtx, dispatcher, dest, handler)

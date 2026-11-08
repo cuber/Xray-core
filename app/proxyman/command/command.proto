@@ -171,6 +171,40 @@ message QuicConnection {
   int64 latest_rtt_us = 6;
   int64 rtt_variance_us = 7;
   QuicCounters counters = 8;
+  // spec024 R7, a session owner's connection: active, draining, spare or suspect.
+  string state = 9;
+  uint64 streams_open = 10;
+  // The relay bindings negotiated on the connection: on an owner's row every index, on a server's row the
+  // relayed users it accepted.
+  repeated QuicRelayBinding relay = 11;
+}
+
+message QuicRelayBinding {
+  uint32 index = 1;
+  // By email; empty when the server refused the credential.
+  string user = 2;
+  // ok, unknown or denied.
+  string status = 3;
+}
+
+// spec024 R7, a session owner's pool.
+message QuicSession {
+  uint32 min = 1;
+  uint32 max = 2;
+  uint32 active = 3;
+  uint32 draining = 4;
+  uint32 spare = 5;
+  uint32 suspect = 6;
+  uint64 streams_open = 7;
+}
+
+// spec024 R7, a relay outbound.
+message QuicRelay {
+  string session = 1;
+  // By email, once a connection has bound it.
+  string user = 2;
+  // bound, unknown, denied, unsupported or no_connection.
+  string status = 3;
 }
 
 message QuicHandlerStats {
@@ -186,6 +220,8 @@ message QuicHandlerStats {
   uint64 connections_total = 7;
   repeated QuicConnection connections = 8;
   bool truncated = 9;
+  QuicSession session = 10;
+  QuicRelay relay = 11;
 }
 
 message GetQuicStatsResponse {

@@ -16,14 +16,27 @@ func (a *Account) AsAccount() (protocol.Account, error) {
 		VR = net.PortFromBytes(id[6:8])
 	}
 	return &MemoryAccount{
-		Auth: a.Auth,
-		VR:   VR,
+		Auth:  a.Auth,
+		VR:    VR,
+		Relay: a.Relay,
 	}, nil
 }
 
 type MemoryAccount struct {
 	Auth string
 	VR   net.Port
+	// The emails of the users this one may relay for (spec024 R3).
+	Relay []string
+}
+
+// MayRelay reports whether this user's connections may carry the user with this email (spec024 R3).
+func (a *MemoryAccount) MayRelay(email string) bool {
+	for _, e := range a.Relay {
+		if e == email {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *MemoryAccount) Equals(other protocol.Account) bool {
@@ -35,7 +48,8 @@ func (a *MemoryAccount) Equals(other protocol.Account) bool {
 
 func (a *MemoryAccount) ToProto() proto.Message {
 	return &Account{
-		Auth: a.Auth,
+		Auth:  a.Auth,
+		Relay: a.Relay,
 	}
 }
 
@@ -85,8 +99,9 @@ func (v *Validator) Get(auth string) (user *protocol.MemoryUser) {
 					Email: user.Email,
 					Level: user.Level,
 					Account: &MemoryAccount{
-						Auth: auth,
-						VR:   VR,
+						Auth:  auth,
+						VR:    VR,
+						Relay: user.Account.(*MemoryAccount).Relay,
 					},
 				}
 			}

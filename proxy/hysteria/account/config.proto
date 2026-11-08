@@ -8,4 +8,6 @@ option java_multiple_files = true;
 
 message Account {
   string auth = 1;
+  // The emails of the inbound's other clients this client may relay for (spec024 R1, R3).
+  repeated string relay = 2;
 }

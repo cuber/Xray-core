@@ -16,7 +16,9 @@ import (
 	"github.com/xtls/xray-core/common/signal"
 	"github.com/xtls/xray-core/common/task"
 	"github.com/xtls/xray-core/core"
+	"github.com/xtls/xray-core/features/outbound"
 	"github.com/xtls/xray-core/features/policy"
+	"github.com/xtls/xray-core/proxy"
 	"github.com/xtls/xray-core/transport"
 	"github.com/xtls/xray-core/transport/internet"
 	"github.com/xtls/xray-core/transport/internet/hysteria"
@@ -26,11 +28,19 @@ import (
 type Client struct {
 	server        *protocol.ServerSpec
 	policyManager policy.Manager
+
+	// A relay outbound (spec024 R1) has no server of its own: it dials its session owner's connections.
+	relay    *Relay
+	instance *core.Instance
 }
 
 func NewClient(ctx context.Context, config *ClientConfig) (*Client, error) {
 	v := core.MustFromContext(ctx)
 	p := v.GetFeature(policy.ManagerType()).(policy.Manager)
+
+	if config.Relay != nil {
+		return &Client{policyManager: p, relay: config.Relay, instance: v}, nil
+	}
 
 	streamSettings := session.StreamSettingsFromContext(ctx).(*internet.MemoryStreamConfig)
 	if _, ok := streamSettings.ProtocolSettings.(*hysteria.Config); !ok {
@@ -60,12 +70,19 @@ func (c *Client) Process(ctx context.Context, link *transport.Link, dialer inter
 	ob.CanSpliceCopy = 3
 	target := ob.Target
 
-	conn, err := dialer.Dial(hysteria.ContextWithDatagram(ctx, target.Network == net.Network_UDP), c.server.Destination)
+	dial := func(ctx context.Context) (stat.Connection, net.Destination, error) {
+		conn, err := dialer.Dial(ctx, c.server.Destination)
+		return conn, c.server.Destination, err
+	}
+	if c.relay != nil {
+		dial = c.dialRelay
+	}
+	conn, server, err := dial(hysteria.ContextWithDatagram(ctx, target.Network == net.Network_UDP))
 	if err != nil {
 		return errors.New("failed to find an available destination").Base(err)
 	}
 	defer conn.Close()
-	errors.LogInfo(ctx, "tunneling request to ", target, " via ", target.Network, ":", c.server.Destination.NetAddr())
+	errors.LogInfo(ctx, "tunneling request to ", target, " via ", target.Network, ":", server.NetAddr())
 
 	var newCtx context.Context
 	var newCancel context.CancelFunc
@@ -166,6 +183,55 @@ func (c *Client) Process(ctx context.Context, link *transport.Link, dialer inter
 	}
 
 	return nil
+}
+
+// sessionOwner resolves a relay outbound's owner: its server and stream settings (spec024 R1).
+func (c *Client) sessionOwner() (*Client, *internet.MemoryStreamConfig, error) {
+	ohm, _ := c.instance.GetFeature(outbound.ManagerType()).(outbound.Manager)
+	if ohm == nil {
+		return nil, nil, errors.New("hysteria relay: no outbound manager")
+	}
+	handler, ok := ohm.GetHandler(c.relay.Session).(interface {
+		GetOutbound() proxy.Outbound
+		StreamSettings() *internet.MemoryStreamConfig
+	})
+	if !ok {
+		return nil, nil, errors.New("hysteria relay: no session owner ", c.relay.Session)
+	}
+	owner, ok := handler.GetOutbound().(*Client)
+	if !ok || owner.server == nil {
+		return nil, nil, errors.New("hysteria relay: ", c.relay.Session, " is not a Hy2 session owner")
+	}
+	return owner, handler.StreamSettings(), nil
+}
+
+// dialRelay opens the stream or UDP session on the owner's connections as the relayed user (spec024 R2).
+func (c *Client) dialRelay(ctx context.Context) (stat.Connection, net.Destination, error) {
+	owner, streamSettings, err := c.sessionOwner()
+	if err != nil {
+		return nil, net.Destination{}, err
+	}
+	conn, err := hysteria.Dial(hysteria.ContextWithRelayIndex(ctx, c.relay.Index), owner.server.Destination, streamSettings)
+	return conn, owner.server.Destination, err
+}
+
+// RelayStatus reports a relay outbound's binding without dialing (spec024 R6, R7): the status and, once
+// bound, the user's email. ok is false for an outbound that is not a relay.
+func (c *Client) RelayStatus() (status, user string, ok bool) {
+	if c.relay == nil {
+		return "", "", false
+	}
+	owner, streamSettings, err := c.sessionOwner()
+	if err != nil {
+		return hysteria.RelayNoConnection, "", true
+	}
+	status, user = hysteria.RelayStatus(c.instance, owner.server.Destination, streamSettings, c.relay.Index)
+	return status, user, true
+}
+
+// RelaySession is the relay outbound's owner tag, empty for other outbounds.
+func (c *Client) RelaySession() string {
+	return c.relay.GetSession()
 }
 
 func init() {

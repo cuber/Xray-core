@@ -22,8 +22,10 @@ const (
 )
 
 type Account struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Auth          string                 `protobuf:"bytes,1,opt,name=auth,proto3" json:"auth,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Auth  string                 `protobuf:"bytes,1,opt,name=auth,proto3" json:"auth,omitempty"`
+	// The emails of the inbound's other clients this client may relay for (spec024 R1, R3).
+	Relay         []string `protobuf:"bytes,2,rep,name=relay,proto3" json:"relay,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -65,13 +67,21 @@ func (x *Account) GetAuth() string {
 	return ""
 }
 
+func (x *Account) GetRelay() []string {
+	if x != nil {
+		return x.Relay
+	}
+	return nil
+}
+
 var File_proxy_hysteria_account_config_proto protoreflect.FileDescriptor
 
 const file_proxy_hysteria_account_config_proto_rawDesc = "" +
 	"\n" +
-	"#proxy/hysteria/account/config.proto\x12\x1bxray.proxy.hysteria.account\"\x1d\n" +
+	"#proxy/hysteria/account/config.proto\x12\x1bxray.proxy.hysteria.account\"3\n" +
 	"\aAccount\x12\x12\n" +
-	"\x04auth\x18\x01 \x01(\tR\x04authBs\n" +
+	"\x04auth\x18\x01 \x01(\tR\x04auth\x12\x14\n" +
+	"\x05relay\x18\x02 \x03(\tR\x05relayBs\n" +
 	"\x1fcom.xray.proxy.hysteria.accountP\x01Z0github.com/xtls/xray-core/proxy/hysteria/account\xaa\x02\x1bXray.Proxy.Hysteria.Accountb\x06proto3"
 
 var (

@@ -142,6 +142,39 @@ func TestQuicStatsText(t *testing.T) {
 	}
 }
 
+// Core spec024 FR-009: a session owner, its connection's pool state and bindings, and a relay outbound.
+func TestQuicStatsRelaySessionText(t *testing.T) {
+	var out bytes.Buffer
+	writeQuicHandlerStats(&out, &handlerService.QuicHandlerStats{
+		Tag: "owner", Direction: "outbound", Transport: "hysteria", ConnectionsActive: 2, ConnectionsTotal: 3,
+		Session: &handlerService.QuicSession{Min: 1, Max: 4, Active: 1, Draining: 1, StreamsOpen: 130},
+		Connections: []*handlerService.QuicConnection{{
+			Remote: "192.0.2.1:443", State: "active", StreamsOpen: 128,
+			Relay: []*handlerService.QuicRelayBinding{{Index: 1, User: "a@example", Status: "ok"}, {Index: 2, Status: "denied"}},
+		}},
+	})
+	writeQuicHandlerStats(&out, &handlerService.QuicHandlerStats{
+		Tag: "relay-a", Direction: "outbound", Transport: "hysteria",
+		Relay: &handlerService.QuicRelay{Session: "owner", User: "a@example", Status: "bound"},
+	})
+	writeQuicHandlerStats(&out, &handlerService.QuicHandlerStats{
+		Tag: "relay-x", Direction: "outbound", Transport: "hysteria", Relay: &handlerService.QuicRelay{Session: "owner", Status: "unsupported"},
+	})
+	text := out.String()
+	for _, want := range []string{
+		"owner  outbound  hysteria  connections 2 active, 3 total\n",
+		"    session  1–4 connections: 1 active, 1 draining, 0 spare, 0 suspect; 130 streams open\n",
+		"  active, 128 streams\n",
+		"        relay 1=ok a@example, 2=denied\n",
+		"relay-a  outbound  hysteria  relay through owner as a@example: bound\n",
+		"relay-x  outbound  hysteria  relay through owner as -: unsupported\n",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("missing %q in:\n%s", want, text)
+		}
+	}
+}
+
 func TestQuicStatsJSON(t *testing.T) {
 	client := quicStatsClient(t, quicStatsFixture())
 	read, write, err := os.Pipe()

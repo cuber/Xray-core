@@ -8,6 +8,7 @@ import (
 	"github.com/apernet/quic-go"
 	"github.com/xtls/xray-core/features/inbound"
 	"github.com/xtls/xray-core/features/outbound"
+	"github.com/xtls/xray-core/proxy"
 	"github.com/xtls/xray-core/transport/internet"
 	"github.com/xtls/xray-core/transport/internet/quicrecovery"
 	"google.golang.org/grpc/codes"
@@ -45,7 +46,11 @@ func (s *handlerServer) GetQuicStats(ctx context.Context, request *GetQuicStatsR
 		}
 	}
 	for _, h := range outbounds {
-		if stats := quicHandlerStats(h, h.Tag(), "outbound", request.Connections); stats != nil {
+		stats := quicHandlerStats(h, h.Tag(), "outbound", request.Connections)
+		if stats == nil {
+			stats = quicRelayStats(h)
+		}
+		if stats != nil {
 			response.Handlers = append(response.Handlers, stats)
 		}
 	}
@@ -82,8 +87,14 @@ func quicHandlerStats(handler any, tag, direction string, rows bool) *QuicHandle
 		ConnectionsTotal:  report.ConnectionsTotal,
 		Truncated:         report.Truncated,
 	}
+	if s := report.Session; s != nil {
+		stats.Session = &QuicSession{
+			Min: s.Min, Max: s.Max, Active: s.Active, Draining: s.Draining, Spare: s.Spare, Suspect: s.Suspect,
+			StreamsOpen: s.StreamsOpen,
+		}
+	}
 	for _, c := range report.Connections {
-		stats.Connections = append(stats.Connections, &QuicConnection{
+		row := &QuicConnection{
 			Remote:        c.Remote,
 			User:          c.User,
 			AgeMs:         c.Age.Milliseconds(),
@@ -92,9 +103,43 @@ func quicHandlerStats(handler any, tag, direction string, rows bool) *QuicHandle
 			LatestRttUs:   c.LatestRTT.Microseconds(),
 			RttVarianceUs: c.RTTVariance.Microseconds(),
 			Counters:      quicCounters(c.Counters),
-		})
+			State:         c.State,
+			StreamsOpen:   c.StreamsOpen,
+		}
+		for _, b := range c.Relay {
+			row.Relay = append(row.Relay, &QuicRelayBinding{Index: b.Index, User: b.User, Status: b.Status})
+		}
+		stats.Connections = append(stats.Connections, row)
 	}
 	return stats
+}
+
+// relayOutbound is a Hy2 relay outbound's proxy (spec024 R7): it has no connections of its own.
+type relayOutbound interface {
+	RelayStatus() (status, user string, ok bool)
+	RelaySession() string
+}
+
+// quicRelayStats reports a relay outbound: its session owner, its user once bound, and its status.
+func quicRelayStats(handler outbound.Handler) *QuicHandlerStats {
+	h, ok := handler.(interface{ GetOutbound() proxy.Outbound })
+	if !ok {
+		return nil
+	}
+	relay, ok := h.GetOutbound().(relayOutbound)
+	if !ok {
+		return nil
+	}
+	status, user, isRelay := relay.RelayStatus()
+	if !isRelay {
+		return nil
+	}
+	return &QuicHandlerStats{
+		Tag:       handler.Tag(),
+		Direction: "outbound",
+		Transport: "hysteria",
+		Relay:     &QuicRelay{Session: relay.RelaySession(), User: user, Status: status},
+	}
 }
 
 func quicEffective(r quic.LossRecovery) *QuicEffective {

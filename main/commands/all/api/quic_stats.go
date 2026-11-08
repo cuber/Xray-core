@@ -88,7 +88,20 @@ func runQuicStats(ctx context.Context, w io.Writer, client handlerService.Handle
 }
 
 func writeQuicHandlerStats(w io.Writer, h *handlerService.QuicHandlerStats) {
+	if r := h.Relay; r != nil {
+		// A relay outbound (spec024 R7) has no connections of its own.
+		user := r.User
+		if user == "" {
+			user = "-"
+		}
+		fmt.Fprintf(w, "%s  %s  %s  relay through %s as %s: %s\n", h.Tag, h.Direction, h.Transport, r.Session, user, r.Status)
+		return
+	}
 	fmt.Fprintf(w, "%s  %s  %s  connections %d active, %d total\n", h.Tag, h.Direction, h.Transport, h.ConnectionsActive, h.ConnectionsTotal)
+	if s := h.Session; s != nil {
+		fmt.Fprintf(w, "    session  %d–%d connections: %d active, %d draining, %d spare, %d suspect; %d streams open\n",
+			s.Min, s.Max, s.Active, s.Draining, s.Spare, s.Suspect, s.StreamsOpen)
+	}
 	if e := h.Effective; e != nil {
 		fmt.Fprintf(w, "    effective  %s\n", formatQuicEffective(e))
 	}
@@ -100,10 +113,25 @@ func writeQuicHandlerStats(w io.Writer, h *handlerService.QuicHandlerStats) {
 		if user == "" {
 			user = "-"
 		}
-		fmt.Fprintf(w, "    %s  %s  age %s  srtt %s  min %s  latest %s  var %s\n", c.Remote, user,
-			(time.Duration(c.AgeMs) * time.Millisecond).String(), us(c.SmoothedRttUs), us(c.MinRttUs), us(c.LatestRttUs), us(c.RttVarianceUs))
+		pool := ""
+		if c.State != "" {
+			pool = fmt.Sprintf("  %s, %d streams", c.State, c.StreamsOpen)
+		}
+		fmt.Fprintf(w, "    %s  %s  age %s  srtt %s  min %s  latest %s  var %s%s\n", c.Remote, user,
+			(time.Duration(c.AgeMs) * time.Millisecond).String(), us(c.SmoothedRttUs), us(c.MinRttUs), us(c.LatestRttUs), us(c.RttVarianceUs), pool)
 		if c.Counters != nil {
 			writeQuicCounters(w, "        ", c.Counters)
+		}
+		if len(c.Relay) > 0 {
+			bindings := make([]string, 0, len(c.Relay))
+			for _, b := range c.Relay {
+				binding := fmt.Sprintf("%d=%s", b.Index, b.Status)
+				if b.User != "" {
+					binding += " " + b.User
+				}
+				bindings = append(bindings, binding)
+			}
+			fmt.Fprintf(w, "        relay %s\n", strings.Join(bindings, ", "))
 		}
 	}
 	if h.Truncated {

@@ -41,6 +41,10 @@ type httpHandler struct {
 
 	auth bool
 	user *protocol.MemoryUser
+
+	// The relayed users this connection negotiated (spec024 R2, R3), by index, and the answer to repeat.
+	relays      map[uint32]string
+	relayAnswer string
 }
 
 func (h *httpHandler) AuthHTTP(w http.ResponseWriter, r *http.Request) bool {
@@ -49,6 +53,9 @@ func (h *httpHandler) AuthHTTP(w http.ResponseWriter, r *http.Request) bool {
 		defer h.Unlock()
 
 		if h.auth {
+			if h.relayAnswer != "" {
+				w.Header().Set(HeaderRelay, h.relayAnswer)
+			}
 			w.Header().Set(ResponseHeaderUDPEnabled, strconv.FormatBool(h.validator != nil))
 			w.Header().Set(CommonHeaderCCRX, strconv.FormatUint(h.quicParams.BrutalDown, 10))
 			w.Header().Set(CommonHeaderPadding, AuthResponsePadding.String())
@@ -72,6 +79,7 @@ func (h *httpHandler) AuthHTTP(w http.ResponseWriter, r *http.Request) bool {
 			h.user = user
 			if user != nil {
 				h.quicStats.SetUser(quicrecovery.Conn(h.conn), user.Email)
+				h.negotiateRelays(user, r.Header.Get(HeaderRelay))
 			}
 
 			conn := h.conn
@@ -101,10 +109,16 @@ func (h *httpHandler) AuthHTTP(w http.ResponseWriter, r *http.Request) bool {
 					udpIdleTimeout: time.Duration(h.config.UdpIdleTimeout) * time.Second,
 					user:           h.user,
 				}
+				if len(h.relays) > 0 {
+					udpSM.relayedUser = h.relayedUser
+				}
 				go udpSM.clean()
 				go udpSM.run()
 			}
 
+			if h.relayAnswer != "" {
+				w.Header().Set(HeaderRelay, h.relayAnswer)
+			}
 			w.Header().Set(ResponseHeaderUDPEnabled, strconv.FormatBool(h.validator != nil))
 			w.Header().Set(CommonHeaderCCRX, strconv.FormatUint(h.quicParams.BrutalDown, 10))
 			w.Header().Set(CommonHeaderPadding, AuthResponsePadding.String())
@@ -113,6 +127,56 @@ func (h *httpHandler) AuthHTTP(w http.ResponseWriter, r *http.Request) bool {
 		}
 	}
 	return false
+}
+
+// negotiateRelays answers a relay list (spec024 R2): each credential must be a client of the inbound
+// (authentication) on the connection user's relay list (authorization). Called under h's lock.
+func (h *httpHandler) negotiateRelays(user *protocol.MemoryUser, request string) {
+	if request == "" || h.validator == nil {
+		return
+	}
+	auths, err := decodeRelayRequest(request)
+	if err != nil {
+		errors.LogWarning(context.Background(), "hysteria relay request from ", h.conn.RemoteAddr(), " unreadable; not relaying: ", err)
+		return
+	}
+	acc, _ := user.Account.(*account.MemoryAccount)
+	answers := make(map[uint32]RelayBinding, len(auths))
+	h.relays = make(map[uint32]string, len(auths))
+	for index, auth := range auths {
+		relayed := h.validator.Get(auth)
+		switch {
+		case relayed == nil:
+			answers[index] = RelayBinding{Status: RelayStatusUnknown}
+		case acc == nil || !acc.MayRelay(relayed.Email):
+			answers[index] = RelayBinding{Status: RelayStatusDenied}
+		default:
+			answers[index] = RelayBinding{Status: RelayStatusOK, User: relayed.Email}
+			h.relays[index] = auth
+		}
+	}
+	h.relayAnswer = encodeRelayResponse(answers)
+	var accepted []internet.QuicRelayBinding
+	for index := uint32(1); index <= MaxRelayIndex && len(accepted) < len(h.relays); index++ {
+		if answer, ok := answers[index]; ok && answer.Status == RelayStatusOK {
+			accepted = append(accepted, internet.QuicRelayBinding{Index: index, User: answer.User, Status: answer.Status})
+		}
+	}
+	h.quicStats.SetDetail(quicrecovery.Conn(h.conn), func() internet.QuicConnDetail {
+		return internet.QuicConnDetail{Relay: accepted}
+	})
+}
+
+// relayedUser is the user a relayed stream or UDP session of this index carries, checked again against
+// the inbound so that a user removed at runtime is refused at once (spec024 R3); nil when refused.
+func (h *httpHandler) relayedUser(index uint32) *protocol.MemoryUser {
+	h.Lock()
+	auth, ok := h.relays[index]
+	h.Unlock()
+	if !ok {
+		return nil
+	}
+	return h.validator.Get(auth)
 }
 
 func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -139,6 +203,30 @@ func (h *httpHandler) StreamDispatcher(ft http3.FrameType, stream *quic.Stream, 
 			remote: h.conn.RemoteAddr(),
 
 			user: h.user,
+		})
+		return true, nil
+	case FrameTypeTCPRelayRequest:
+		r := quicvarint.NewReader(stream)
+		if _, err := quicvarint.Read(r); err != nil {
+			return false, err
+		}
+		index, err := quicvarint.Read(r)
+		if err != nil {
+			return false, err
+		}
+		user := h.relayedUser(uint32(index))
+		if user == nil {
+			errors.LogInfo(context.Background(), "hysteria relay: refused index ", index, " from ", h.conn.RemoteAddr())
+			stream.CancelRead(0)
+			stream.CancelWrite(0)
+			return true, nil
+		}
+		h.addConn(&interConn{
+			stream: stream,
+			local:  h.conn.LocalAddr(),
+			remote: h.conn.RemoteAddr(),
+
+			user: user,
 		})
 		return true, nil
 	default:

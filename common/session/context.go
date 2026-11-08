@@ -29,6 +29,7 @@ const (
 
 	streamSettingsKey ctx.SessionKey = 13
 	loopbacksKey      ctx.SessionKey = 14 // loopback outbounds the connection has passed (Core spec017 L7)
+	probeKey          ctx.SessionKey = 15 // a burst observatory probe dial (Core spec024 R6)
 )
 
 func ContextWithInbound(ctx context.Context, inbound *Inbound) context.Context {
@@ -215,4 +216,16 @@ func LoopbacksFromContext(ctx context.Context) []string {
 		return val
 	}
 	return nil
+}
+
+// ContextWithProbe marks a burst observatory probe's dial, so that a Hy2 session pool places it in turn
+// on every connection (Core spec024 R6).
+func ContextWithProbe(ctx context.Context) context.Context {
+	return context.WithValue(ctx, probeKey, true)
+}
+
+// ProbeFromContext reports whether the dial is a burst observatory probe's.
+func ProbeFromContext(ctx context.Context) bool {
+	probe, _ := ctx.Value(probeKey).(bool)
+	return probe
 }

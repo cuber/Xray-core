@@ -50,6 +50,9 @@ type QuicConnStats struct {
 	LatestRTT   time.Duration
 	RTTVariance time.Duration
 	Counters    QuicCounters
+	// Acknowledgment progress (quic-go fork spec002), for a Hy2 session pool's stall check (Core spec024 R5).
+	PacketsAcked  uint64
+	BytesInFlight uint64
 }
 
 // QuicConn is a QUIC connection as a transport registers it. Its value is the set's key.
@@ -65,6 +68,28 @@ type QuicConnection struct {
 	User   string // an inbound connection's authenticated user, by email
 	Age    time.Duration
 	QuicConnStats
+	QuicConnDetail
+}
+
+// QuicConnDetail is what a Hy2 session pool or relay listener adds to a connection's row (Core spec024 R7).
+type QuicConnDetail struct {
+	State       string // a pool connection: active, draining, spare or suspect
+	StreamsOpen uint64
+	Relay       []QuicRelayBinding
+}
+
+// QuicRelayBinding is one negotiated relay index of a connection.
+type QuicRelayBinding struct {
+	Index  uint32
+	User   string // by email
+	Status string
+}
+
+// QuicSessionReport is a Hy2 session owner's pool (Core spec024 R7).
+type QuicSessionReport struct {
+	Min, Max                         uint32
+	Active, Draining, Spare, Suspect uint32
+	StreamsOpen                      uint64
 }
 
 // QuicReport is what a QuicStatsSet reports.
@@ -74,20 +99,46 @@ type QuicReport struct {
 	ConnectionsTotal  uint64
 	Connections       []QuicConnection
 	Truncated         bool
+	Session           *QuicSessionReport
 }
 
 // QuicStatsSet collects the QUIC connections built from one stream settings value: a handler's
 // connections, whichever of its listeners or dialers made them. Its methods accept a nil set.
 type QuicStatsSet struct {
-	mu     sync.Mutex
-	closed QuicCounters // the final counters of removed connections
-	total  uint64
-	conns  map[QuicConn]*quicConnEntry
+	mu      sync.Mutex
+	closed  QuicCounters // the final counters of removed connections
+	total   uint64
+	conns   map[QuicConn]*quicConnEntry
+	session func() QuicSessionReport
 }
 
 type quicConnEntry struct {
-	user  string
-	start time.Time
+	user   string
+	start  time.Time
+	detail func() QuicConnDetail
+}
+
+// SetDetail makes reports ask detail for the connection's row; detail must not take a lock that the
+// data plane holds for long.
+func (s *QuicStatsSet) SetDetail(c QuicConn, detail func() QuicConnDetail) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if e, ok := s.conns[c]; ok {
+		e.detail = detail
+	}
+}
+
+// SetSession makes reports carry a session owner's pool.
+func (s *QuicStatsSet) SetSession(session func() QuicSessionReport) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	s.session = session
+	s.mu.Unlock()
 }
 
 // Add registers a new connection.
@@ -148,6 +199,7 @@ func (s *QuicStatsSet) Report(rows bool) QuicReport {
 	s.mu.Lock()
 	r.Totals = s.closed
 	r.ConnectionsTotal = s.total
+	session := s.session
 	conns := make([]live, 0, len(s.conns))
 	for c, e := range s.conns {
 		conns = append(conns, live{conn: c, quicConnEntry: *e})
@@ -174,7 +226,15 @@ func (s *QuicStatsSet) Report(rows bool) QuicReport {
 		if addr := c.conn.RemoteAddr(); addr != nil {
 			remote = addr.String()
 		}
-		r.Connections = append(r.Connections, QuicConnection{Remote: remote, User: c.user, Age: now.Sub(c.start), QuicConnStats: stats})
+		row := QuicConnection{Remote: remote, User: c.user, Age: now.Sub(c.start), QuicConnStats: stats}
+		if c.detail != nil {
+			row.QuicConnDetail = c.detail()
+		}
+		r.Connections = append(r.Connections, row)
+	}
+	if session != nil {
+		report := session()
+		r.Session = &report
 	}
 	return r
 }

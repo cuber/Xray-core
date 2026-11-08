@@ -41,6 +41,7 @@ reference sibling repositories as integration evidence, not implementation input
 | [021](021-quic-loss-recovery/spec.md) | QUIC loss recovery and redundancy: opt-in `quicParams` for the delayed-ACK timer, ACK threshold, initial RTT, PTO backoff limit and loss thresholds; byte-identical copies of small and tail datagrams; read-only `HandlerService.GetQuicStats` (loss, PTOs, copies, RTT per handler) and `xray api quicstats`; library changes on the spec022 fork under its own spec001 (approved 2026-11-07) |
 | [022](022-quic-go-fork/spec.md) | quic-go fork dependency: `replace github.com/apernet/quic-go => github.com/cuber/quic-go`, first pinned at the upstream base itself (no code change); append-only fork lines (spec023; now `fork/2026-11-07/184d081eef3e`) carry patch series owned by the fork's own specs, carried to a new line with every upstream raise; guard test on the replace (approved 2026-11-07) |
 | [023](023-fork-lines/spec.md) | Fork lines for Core and quic-go: append-only `fork/<YYYY-MM-DD>/<12-hex upstream fork point>`, the date the generation was opened (Beijing time); every rebase opens a new line in both forks on the same date; `origin` upstream, `cuber` ours; pins stay hashes, `xray-config/xray-core/line` selects the Core line and `build.sh` checks the quic-go pin's generation; [SOP](023-fork-lines/sop.md), [register](023-fork-lines/lines.md); `develop` became `fork/2026-11-07/0888beb38a9b` (approved 2026-11-07) |
+| [024](024-hy2-relay-session/spec.md) | Hy2 relay sessions: a session owner (`hysteriaSettings.session`) keeps a pool of 1–16 connections that scales by open streams and drains without moving flows; relay outbounds (`settings.relay`) send as other users of the same server inbound, negotiated once per connection in `Hysteria-Relay` with each user's own credential and the server client's `relay` list, `0x402` streams and indexed UDP sessions; probes rotate over the pool; refused relays are dead in `track`; `GetQuicStats` session, connection and relay fields (approved 2026-11-08) |
 
 The 2026-10-17 mainline review keeps feature boundaries stable rather than
 splitting AnyTLS inbound/outbound or merging traffic listeners003 with direct
@@ -75,7 +76,7 @@ last in the original 001-008 reconstruction. Later features allocate new IDs.
 On 2026-09-27 the user authorized repository-local renumbering: old global
 005/006/007/008/009/010/011/012 map to local 001/002/003/004/005/006/007/008.
 Historical hashes, requirement IDs, test names and evidence filenames remain
-provenance, not allocations in the new sequence. Next spec: 024; next draft: 005.
+provenance, not allocations in the new sequence. Next spec: 025; next draft: 005.
 Core draft002 was promoted to [spec010](010-upstream-main-upgrade/spec.md)
 on 2026-10-14 following explicit implementation authorization.
 
