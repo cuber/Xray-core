@@ -36,10 +36,12 @@ func (d *fakeDispatcher) Dispatch(context.Context, net.Destination) (*transport.
 	d.dispatched.Add(1)
 	return nil, nil
 }
+
 func (d *fakeDispatcher) DispatchLink(context.Context, net.Destination, *transport.Link) error {
 	d.dispatched.Add(1)
 	return nil
 }
+
 func (*fakeDispatcher) Carrier(dest net.Destination) mux.Carrier {
 	if dest == carrierDest {
 		return mux.SingMuxCarrier
