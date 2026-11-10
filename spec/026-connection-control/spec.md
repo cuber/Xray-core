@@ -94,10 +94,14 @@ per user, so that an operator sees what a closure removes and what reconnects.
 |---|---|
 | A `tcp` entry bound to U (SS-2022, VLESS, Trojan, AnyTLS, Mux.Cool or sing-mux carriers included) | its context is canceled, then the connection is closed: the path that removing an inbound takes. A carrier's streams end with it. |
 | A Hy2 QUIC connection whose user is U | `CloseWithError(0x100, "closed by control plane")`: every stream on it ends, relayed users' included |
-| A Hy2 stream or UDP session bound to U on a connection that is not U's (a relayed user) | that stream or session closes; the owner's connection and its other streams stay |
+| A Hy2 stream or UDP session bound to U on a connection that is not U's (a relayed user) | that stream is reset both ways (`CancelRead` and `CancelWrite`), the session closes; the owner's connection and its other streams stay |
 | An SS-2022 UDP session of U | closes; the client's next packet starts a new session |
 
 - `all_users` selects every bound user not in `exclude_users`. Unbound objects are never selected.
+- A Hy2 stream is aborted rather than closed: its `Close` only queues a FIN behind data already written, so a `Write`
+  waiting for the flow control of a peer that stopped reading would stay blocked, and with it the stream's goroutine
+  and its entry (found by the Akile gate on 2026-11-10). Closing a socket releases its blocked calls, and closing a QUIC
+  connection releases its streams'.
 - Entries are picked under the worker's lock and marked closing, so a closure counts each object once even when calls
   overlap; closing happens outside the lock, concurrently, with a two-second bound. A close still running at the
   bound is counted as `pending` and finishes on its own (a TLS close can wait for its close-notify write). The call

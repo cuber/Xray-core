@@ -76,6 +76,18 @@ func (c *interConn) Close() error {
 	return c.stream.Close()
 }
 
+// Abort ends both directions of the stream at once (Core spec026 R3). Close only queues a FIN after the data already
+// written, so it leaves a Write that waits for the peer's flow control blocked, and with it the stream's goroutine;
+// a control-plane close must release it. CancelWrite is a no-op on a closed or canceled stream.
+func (c *interConn) Abort() error {
+	if c.release != nil {
+		c.releaseOnce.Do(c.release)
+	}
+	c.stream.CancelRead(0)
+	c.stream.CancelWrite(0)
+	return nil
+}
+
 func (c *interConn) LocalAddr() net.Addr {
 	return c.local
 }

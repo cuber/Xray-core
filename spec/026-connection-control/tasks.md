@@ -18,3 +18,9 @@
   xray-config draft 008, promoted into this spec and xray-config spec034). Binding sites: `worker.go` (`callback`,
   `accept`), `hysteria/hub.go` (`AuthHTTP` sets the QUIC connection's user; `StreamDispatcher` hands streams with
   their user to the worker), `shadowsocks_2022/replay.go` (sessions bound at authentication).
+- 2026-11-10 T006, the gate's first finding: with la.akile.lite as the server, one Hy2 stream closed by
+  `CloseConnections` stayed `closing` to the end and its goroutine waited minutes in `BufferedWriter.Flush` behind a
+  `Write` on the stream that waited for the client's flow control; `interConn.Close` (CancelRead and a FIN) does not
+  release it. Fixed by `interConn.Abort` (CancelRead and CancelWrite), which `CloseConnections` uses for any connection
+  that has it; `TestAbortReleasesAWriteBlockedOnFlowControl` reproduces the blocked Write with a client that never reads
+  (Close leaves it blocked, Abort releases it within microseconds), `TestCloseAbortsWhatCanBeAborted`.

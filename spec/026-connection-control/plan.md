@@ -36,7 +36,7 @@ No library change; the quic-go pin stays. No configuration field: `HandlerServic
   `MultiUserInbound.UserSessions()` and `CloseUserSessions(match)` walk the session map.
 - **Handler** (`app/proxyman/inbound/connections.go`): `AlwaysOnInboundHandler.Connections()` and
   `CloseConnections(match, bound)`. The close cancels each claimed entry's context, then runs every connection close
-  and QUIC close in its own goroutine; `closeBounded` waits for them up to `bound` and counts the rest as pending.
+  (`Abort` for a Hy2 stream, `hysteria.interConn.Abort`: CancelRead and CancelWrite) and QUIC close in its own goroutine; `closeBounded` waits for them up to `bound` and counts the rest as pending.
   UDP sessions close synchronously (`Close` takes only the session's own lock and interrupts pipes).
 - **RPCs** (`app/proxyman/command/connections.go`, `command.proto`): `GetConnections`, `CloseConnections`; messages
   `ConnectionCounts`, `GetConnectionsRequest`, `ConnectionUser`, `InboundConnections`, `GetConnectionsResponse`,

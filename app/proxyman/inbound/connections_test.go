@@ -351,3 +351,26 @@ func TestCloseRaces(t *testing.T) {
 	}
 	t.Logf("accepted %d, claimed %d", accepted.Load(), claimed.Load())
 }
+
+type abortCounter struct {
+	stdnet.Conn
+	aborted, closed atomic.Int32
+}
+
+func (a *abortCounter) Abort() error { a.aborted.Add(1); return nil }
+func (a *abortCounter) Close() error { a.closed.Add(1); return nil }
+
+// A Hy2 stream is aborted, not closed: its Close leaves a Write blocked on flow control (2026-11-10 Akile gate).
+func TestCloseAbortsWhatCanBeAborted(t *testing.T) {
+	a := &abortCounter{}
+	abortOrClose(a)()
+	if a.aborted.Load() != 1 || a.closed.Load() != 0 {
+		t.Fatalf("aborted %d, closed %d", a.aborted.Load(), a.closed.Load())
+	}
+	server, client := stdnet.Pipe()
+	defer client.Close()
+	abortOrClose(server)()
+	if _, err := server.Write([]byte("x")); err == nil {
+		t.Fatal("a plain connection is closed")
+	}
+}

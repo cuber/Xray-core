@@ -7,6 +7,7 @@ import (
 
 	"github.com/xtls/xray-core/common/mux"
 	"github.com/xtls/xray-core/transport/internet"
+	"github.com/xtls/xray-core/transport/internet/stat"
 )
 
 // ConnectionCounts are an inbound's live objects, or one user's (Core spec026 R2).
@@ -125,8 +126,7 @@ func (h *AlwaysOnInboundHandler) CloseConnections(match func(email string) bool,
 		for _, e := range w.ownership.claim(match) {
 			closed.addEntry(e)
 			e.cancel()
-			conn := e.conn
-			closers = append(closers, func() { conn.Close() })
+			closers = append(closers, abortOrClose(e.conn))
 		}
 	}
 	if h.stream != nil {
@@ -140,6 +140,20 @@ func (h *AlwaysOnInboundHandler) CloseConnections(match func(email string) bool,
 		closed.UDPSessions = p.CloseUserSessions(match)
 	}
 	return closed, closeBounded(closers, bound)
+}
+
+// aborter is a connection whose Close may leave a blocked Write waiting: a Hy2 stream, which Abort resets both ways.
+type aborter interface {
+	Abort() error
+}
+
+// abortOrClose ends a connection so that no Read or Write on it stays blocked. Closing a socket does that; a Hy2
+// stream needs Abort, since its Close only queues a FIN behind data the peer may never take.
+func abortOrClose(conn stat.Connection) func() {
+	if a, ok := conn.(aborter); ok {
+		return func() { a.Abort() }
+	}
+	return func() { conn.Close() }
 }
 
 // closeBounded runs every close at once and returns how many were still running after bound.
