@@ -10,7 +10,9 @@ import (
 	"github.com/xtls/xray-core/common/buf"
 	c "github.com/xtls/xray-core/common/ctx"
 	"github.com/xtls/xray-core/common/errors"
+	"github.com/xtls/xray-core/common/mux"
 	"github.com/xtls/xray-core/common/net"
+	"github.com/xtls/xray-core/common/protocol"
 	"github.com/xtls/xray-core/common/serial"
 	"github.com/xtls/xray-core/common/session"
 	"github.com/xtls/xray-core/common/signal/done"
@@ -19,6 +21,7 @@ import (
 	"github.com/xtls/xray-core/features/stats"
 	"github.com/xtls/xray-core/proxy"
 	hysteria_proxy "github.com/xtls/xray-core/proxy/hysteria"
+	"github.com/xtls/xray-core/transport"
 	"github.com/xtls/xray-core/transport/internet"
 	"github.com/xtls/xray-core/transport/internet/hysteria"
 	"github.com/xtls/xray-core/transport/internet/stat"
@@ -37,6 +40,83 @@ type worker interface {
 type acceptedConnection struct {
 	conn   stat.Connection
 	cancel context.CancelFunc
+
+	// Core spec026 R1: what the connection carries, its user's email once bound, and whether a
+	// CloseConnections call has claimed it.
+	kind    connKind
+	email   atomic.Pointer[string]
+	carrier atomic.Uint32 // a mux.Carrier
+	closing atomic.Bool
+}
+
+type connKind uint8
+
+const (
+	connTCP connKind = iota
+	connHy2Stream
+	connHy2UDP
+)
+
+func kindOf(conn stat.Connection) connKind {
+	if _, ok := conn.(*hysteria.InterConn); ok {
+		return connHy2UDP
+	}
+	if hysteria.IsStream(conn) {
+		return connHy2Stream
+	}
+	return connTCP
+}
+
+// bind records the entry's user once; later emails are ignored.
+func (e *acceptedConnection) bind(email string) {
+	if email != "" {
+		e.email.CompareAndSwap(nil, &email)
+	}
+}
+
+func (e *acceptedConnection) user() string {
+	if p := e.email.Load(); p != nil {
+		return *p
+	}
+	return ""
+}
+
+// boundDispatcher is a connection's dispatcher: it binds the entry's user, read from the dispatching
+// context on the goroutine that wrote it, and marks a carrier before it forwards (Core spec026 R1).
+type boundDispatcher struct {
+	routing.Dispatcher
+	entry *acceptedConnection
+}
+
+// carrierDispatcher is an inbound's mux.Server.
+type carrierDispatcher interface {
+	Carrier(net.Destination) mux.Carrier
+}
+
+func (d *boundDispatcher) observe(ctx context.Context, dest net.Destination) {
+	if d.entry.email.Load() != nil {
+		return
+	}
+	inbound := session.InboundFromContext(ctx)
+	if inbound == nil || inbound.User == nil || inbound.User.Email == "" {
+		return
+	}
+	if c, ok := d.Dispatcher.(carrierDispatcher); ok {
+		if carrier := c.Carrier(dest); carrier != mux.NoCarrier {
+			d.entry.carrier.CompareAndSwap(uint32(mux.NoCarrier), uint32(carrier))
+		}
+	}
+	d.entry.bind(inbound.User.Email)
+}
+
+func (d *boundDispatcher) Dispatch(ctx context.Context, dest net.Destination) (*transport.Link, error) {
+	d.observe(ctx, dest)
+	return d.Dispatcher.Dispatch(ctx, dest)
+}
+
+func (d *boundDispatcher) DispatchLink(ctx context.Context, dest net.Destination, link *transport.Link) error {
+	d.observe(ctx, dest)
+	return d.Dispatcher.DispatchLink(ctx, dest, link)
 }
 
 // streamOwnership serializes publication, not socket I/O or callback execution.
@@ -102,7 +182,13 @@ func (s *streamOwnership) publish(hub internet.Listener) bool {
 
 func (s *streamOwnership) accept(parent context.Context, conn stat.Connection) (context.Context, *acceptedConnection) {
 	ctx, cancel := context.WithCancel(parent)
-	entry := &acceptedConnection{conn: conn, cancel: cancel}
+	entry := &acceptedConnection{conn: conn, cancel: cancel, kind: kindOf(conn)}
+	// A Hy2 stream or UDP session carries its user from the connection's authentication.
+	if u, ok := conn.(interface{ User() *protocol.MemoryUser }); ok {
+		if user := u.User(); user != nil {
+			entry.bind(user.Email)
+		}
+	}
 	s.mu.Lock()
 	if s.closed {
 		s.mu.Unlock()
@@ -126,6 +212,35 @@ func (s *streamOwnership) retire(entry *acceptedConnection) {
 	delete(s.active, entry)
 	s.mu.Unlock()
 	s.running.Done()
+}
+
+// entries copies the live entries; their fields are read after the lock.
+func (s *streamOwnership) entries() []*acceptedConnection {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	entries := make([]*acceptedConnection, 0, len(s.active))
+	for entry := range s.active {
+		entries = append(entries, entry)
+	}
+	return entries
+}
+
+// claim marks the bound entries whose user matches as closing and returns them; an entry already
+// claimed by another call is left to it.
+func (s *streamOwnership) claim(match func(email string) bool) []*acceptedConnection {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var claimed []*acceptedConnection
+	for entry := range s.active {
+		email := entry.user()
+		if email == "" || !match(email) {
+			continue
+		}
+		if entry.closing.CompareAndSwap(false, true) {
+			claimed = append(claimed, entry)
+		}
+	}
+	return claimed
 }
 
 func (s *streamOwnership) stop() error {
@@ -211,11 +326,11 @@ func (w *tcpWorker) callback(conn stat.Connection) {
 	}
 	go func() {
 		defer w.ownership.retire(entry)
-		w.process(ctx, conn)
+		w.process(ctx, conn, &boundDispatcher{Dispatcher: w.dispatcher, entry: entry})
 	}()
 }
 
-func (w *tcpWorker) process(ctx context.Context, conn stat.Connection) {
+func (w *tcpWorker) process(ctx context.Context, conn stat.Connection, dispatcher routing.Dispatcher) {
 	sid := session.NewID()
 	ctx = c.ContextWithID(ctx, sid)
 
@@ -264,7 +379,7 @@ func (w *tcpWorker) process(ctx context.Context, conn stat.Connection) {
 	content.SniffingRequest = w.sniffingRequest
 	ctx = session.ContextWithContent(ctx, content)
 
-	if err := w.proxy.Process(ctx, net.Network_TCP, conn, w.dispatcher); err != nil {
+	if err := w.proxy.Process(ctx, net.Network_TCP, conn, dispatcher); err != nil {
 		errors.LogInfoInner(ctx, err, "connection ends")
 	}
 }

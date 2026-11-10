@@ -113,9 +113,15 @@ type QuicStatsSet struct {
 }
 
 type quicConnEntry struct {
-	user   string
-	start  time.Time
-	detail func() QuicConnDetail
+	user    string
+	start   time.Time
+	detail  func() QuicConnDetail
+	closing bool // claimed by a CloseConnections call (Core spec026 R3)
+}
+
+// QuicCloser is a QuicConn that the control plane can close (Core spec026 R3).
+type QuicCloser interface {
+	CloseByControl(reason string) error
 }
 
 // SetDetail makes reports ask detail for the connection's row; detail must not take a lock that the
@@ -183,6 +189,56 @@ func (s *QuicStatsSet) Remove(c QuicConn) {
 	}
 	delete(s.conns, c)
 	s.closed.add(stats.Counters)
+}
+
+// Census counts the live connections by user, "" for those without one, and those being closed
+// apart (Core spec026 R2).
+func (s *QuicStatsSet) Census() (users map[string]uint64, closing uint64) {
+	users = make(map[string]uint64)
+	if s == nil {
+		return users, 0
+	}
+	type live struct {
+		conn    QuicConn
+		user    string
+		closing bool
+	}
+	s.mu.Lock()
+	conns := make([]live, 0, len(s.conns))
+	for c, e := range s.conns {
+		conns = append(conns, live{conn: c, user: e.user, closing: e.closing})
+	}
+	s.mu.Unlock()
+	for _, c := range conns {
+		if c.conn.Done() {
+			continue
+		}
+		if c.closing {
+			closing++
+			continue
+		}
+		users[c.user]++
+	}
+	return users, closing
+}
+
+// Claim marks the live connections whose user matches as closing and returns them, each a QuicCloser;
+// a connection without a user, or claimed by another call, is left.
+func (s *QuicStatsSet) Claim(match func(user string) bool) []QuicConn {
+	if s == nil {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var claimed []QuicConn
+	for c, e := range s.conns {
+		if _, ok := c.(QuicCloser); !ok || e.closing || e.user == "" || !match(e.user) || c.Done() {
+			continue
+		}
+		e.closing = true
+		claimed = append(claimed, c)
+	}
+	return claimed
 }
 
 // Report returns the totals since the set was created and, with rows, the live connections, oldest first.

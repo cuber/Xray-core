@@ -36,6 +36,12 @@ func (c *interConn) User() *protocol.MemoryUser {
 	return c.user
 }
 
+// IsStream says whether a listener handed c over as a Hy2 TCP stream (Core spec026 R1); its UDP sessions are *InterConn.
+func IsStream(c net.Conn) bool {
+	_, ok := c.(*interConn)
+	return ok
+}
+
 // HysteriaPadding says whether the proxy pads the TCP request or response header it writes on this stream:
 // the setting of the end whose connection carries it, never of the outbound that opened it (spec025 R3).
 func (c *interConn) HysteriaPadding() bool {

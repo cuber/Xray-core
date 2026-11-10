@@ -37,11 +37,14 @@ func (s *ServerUDPSession) WriteToClient(b []byte) error {
 	return err
 }
 
-func (s *ServerUDPSession) Close() {
+func (s *ServerUDPSession) Close() { s.shut() }
+
+// shut closes the session and says whether this call did.
+func (s *ServerUDPSession) shut() bool {
 	s.Lock()
 	if s.closed {
 		s.Unlock()
-		return
+		return false
 	}
 	s.closed = true
 	timer, cancel := s.timer, s.cancel
@@ -64,6 +67,7 @@ func (s *ServerUDPSession) Close() {
 		common.Interrupt(link.Reader)
 		common.Interrupt(link.Writer)
 	}
+	return true
 }
 
 func (s *ServerUDPSession) EnsureLink(

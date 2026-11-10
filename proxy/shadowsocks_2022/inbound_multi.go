@@ -171,6 +171,36 @@ func (i *MultiUserInbound) RemoveUser(ctx context.Context, email string) error {
 	return nil
 }
 
+// UserSessions counts the live UDP sessions by their user's email (Core spec026 R2).
+func (i *MultiUserInbound) UserSessions() map[string]uint64 {
+	counts := make(map[string]uint64)
+	i.udpSessions.sessions.Range(func(_ uint64, s *ServerUDPSession) bool {
+		s.Lock()
+		if !s.closed && s.User != nil {
+			counts[s.User.Email]++
+		}
+		s.Unlock()
+		return true
+	})
+	return counts
+}
+
+// CloseUserSessions closes the live UDP sessions whose user's email matches and returns how many
+// it closed (Core spec026 R3); the client's next packet starts a new session.
+func (i *MultiUserInbound) CloseUserSessions(match func(email string) bool) uint64 {
+	var closed uint64
+	i.udpSessions.sessions.Range(func(_ uint64, s *ServerUDPSession) bool {
+		s.Lock()
+		selected := !s.closed && s.User != nil && match(s.User.Email)
+		s.Unlock()
+		if selected && s.shut() {
+			closed++
+		}
+		return true
+	})
+	return closed
+}
+
 // GetUser implements proxy.UserManager.GetUser()
 func (i *MultiUserInbound) GetUser(ctx context.Context, email string) *protocol.MemoryUser {
 	if email == "" {

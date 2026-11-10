@@ -43,6 +43,7 @@ reference sibling repositories as integration evidence, not implementation input
 | [023](023-fork-lines/spec.md) | Fork lines for Core and quic-go: append-only `fork/<YYYY-MM-DD>/<12-hex upstream fork point>`, the date the generation was opened (Beijing time); every rebase opens a new line in both forks on the same date; `origin` upstream, `cuber` ours; pins stay hashes, `xray-config/xray-core/line` selects the Core line and `build.sh` checks the quic-go pin's generation; [SOP](023-fork-lines/sop.md), [register](023-fork-lines/lines.md); `develop` became `fork/2026-11-07/0888beb38a9b` (approved 2026-11-07) |
 | [024](024-hy2-relay-session/spec.md) | Hy2 relay sessions: a session owner (`hysteriaSettings.session`) keeps a pool of 1–16 connections that scales by open streams and drains without moving flows; relay outbounds (`settings.relay`) send as other users of the same server inbound, negotiated once per connection in `Hysteria-Relay` with each user's own credential and the server client's `relay` list, `0x402` streams and indexed UDP sessions; probes rotate over the pool; refused relays are dead in `track`; `GetQuicStats` session, connection and relay fields (approved 2026-11-08) |
 | [025](025-hy2-padding/spec.md) | Hy2 padding switch: opt-in `hysteriaSettings.disablePadding`; each end stops padding only what it sends (client: the authentication request and TCP request headers; server: the authentication response and TCP response headers); unnegotiated and wire-compatible, since receivers already accept zero; relay outbounds follow their session owner; `GetQuicStats` `effective.padding`; never a fleet default, and only inside a WireGuard tunnel (xray-config checks) (approved 2026-11-08; Core side implemented 2026-11-09, consumers and gate pending) |
+| [026](026-connection-control/spec.md) | Connection control: the stream worker binds each connection to its user (Hy2 at accept, other protocols at the first dispatch through a per-connection dispatcher) and marks Mux.Cool and sing-mux carriers; `HandlerService.GetConnections` reports live TCP, carriers, Hy2 QUIC connections, streams and UDP sessions and SS-2022 UDP sessions per inbound and per user; `CloseConnections` closes chosen users' objects (a relayed Hy2 user only its streams), bounded and idempotent; `xray api conns` and `connclose` (approved 2026-11-10; Core side implemented 2026-11-10, gate and consumers pending) |
 
 The 2026-10-17 mainline review keeps feature boundaries stable rather than
 splitting AnyTLS inbound/outbound or merging traffic listeners003 with direct
@@ -77,7 +78,7 @@ last in the original 001-008 reconstruction. Later features allocate new IDs.
 On 2026-09-27 the user authorized repository-local renumbering: old global
 005/006/007/008/009/010/011/012 map to local 001/002/003/004/005/006/007/008.
 Historical hashes, requirement IDs, test names and evidence filenames remain
-provenance, not allocations in the new sequence. Next spec: 026; next draft: 005.
+provenance, not allocations in the new sequence. Next spec: 027; next draft: 005.
 Core draft002 was promoted to [spec010](010-upstream-main-upgrade/spec.md)
 on 2026-10-14 following explicit implementation authorization.
 

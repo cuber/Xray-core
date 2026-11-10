@@ -27,6 +27,8 @@ const (
 	HandlerService_GetInboundUsersCount_FullMethodName = "/xray.app.proxyman.command.HandlerService/GetInboundUsersCount"
 	HandlerService_GetInboundMuxStats_FullMethodName   = "/xray.app.proxyman.command.HandlerService/GetInboundMuxStats"
 	HandlerService_GetQuicStats_FullMethodName         = "/xray.app.proxyman.command.HandlerService/GetQuicStats"
+	HandlerService_GetConnections_FullMethodName       = "/xray.app.proxyman.command.HandlerService/GetConnections"
+	HandlerService_CloseConnections_FullMethodName     = "/xray.app.proxyman.command.HandlerService/CloseConnections"
 	HandlerService_AddOutbound_FullMethodName          = "/xray.app.proxyman.command.HandlerService/AddOutbound"
 	HandlerService_RemoveOutbound_FullMethodName       = "/xray.app.proxyman.command.HandlerService/RemoveOutbound"
 	HandlerService_AlterOutbound_FullMethodName        = "/xray.app.proxyman.command.HandlerService/AlterOutbound"
@@ -45,6 +47,8 @@ type HandlerServiceClient interface {
 	GetInboundUsersCount(ctx context.Context, in *GetInboundUserRequest, opts ...grpc.CallOption) (*GetInboundUsersCountResponse, error)
 	GetInboundMuxStats(ctx context.Context, in *GetInboundMuxStatsRequest, opts ...grpc.CallOption) (*GetInboundMuxStatsResponse, error)
 	GetQuicStats(ctx context.Context, in *GetQuicStatsRequest, opts ...grpc.CallOption) (*GetQuicStatsResponse, error)
+	GetConnections(ctx context.Context, in *GetConnectionsRequest, opts ...grpc.CallOption) (*GetConnectionsResponse, error)
+	CloseConnections(ctx context.Context, in *CloseConnectionsRequest, opts ...grpc.CallOption) (*CloseConnectionsResponse, error)
 	AddOutbound(ctx context.Context, in *AddOutboundRequest, opts ...grpc.CallOption) (*AddOutboundResponse, error)
 	RemoveOutbound(ctx context.Context, in *RemoveOutboundRequest, opts ...grpc.CallOption) (*RemoveOutboundResponse, error)
 	AlterOutbound(ctx context.Context, in *AlterOutboundRequest, opts ...grpc.CallOption) (*AlterOutboundResponse, error)
@@ -139,6 +143,26 @@ func (c *handlerServiceClient) GetQuicStats(ctx context.Context, in *GetQuicStat
 	return out, nil
 }
 
+func (c *handlerServiceClient) GetConnections(ctx context.Context, in *GetConnectionsRequest, opts ...grpc.CallOption) (*GetConnectionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetConnectionsResponse)
+	err := c.cc.Invoke(ctx, HandlerService_GetConnections_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *handlerServiceClient) CloseConnections(ctx context.Context, in *CloseConnectionsRequest, opts ...grpc.CallOption) (*CloseConnectionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CloseConnectionsResponse)
+	err := c.cc.Invoke(ctx, HandlerService_CloseConnections_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *handlerServiceClient) AddOutbound(ctx context.Context, in *AddOutboundRequest, opts ...grpc.CallOption) (*AddOutboundResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AddOutboundResponse)
@@ -191,6 +215,8 @@ type HandlerServiceServer interface {
 	GetInboundUsersCount(context.Context, *GetInboundUserRequest) (*GetInboundUsersCountResponse, error)
 	GetInboundMuxStats(context.Context, *GetInboundMuxStatsRequest) (*GetInboundMuxStatsResponse, error)
 	GetQuicStats(context.Context, *GetQuicStatsRequest) (*GetQuicStatsResponse, error)
+	GetConnections(context.Context, *GetConnectionsRequest) (*GetConnectionsResponse, error)
+	CloseConnections(context.Context, *CloseConnectionsRequest) (*CloseConnectionsResponse, error)
 	AddOutbound(context.Context, *AddOutboundRequest) (*AddOutboundResponse, error)
 	RemoveOutbound(context.Context, *RemoveOutboundRequest) (*RemoveOutboundResponse, error)
 	AlterOutbound(context.Context, *AlterOutboundRequest) (*AlterOutboundResponse, error)
@@ -228,6 +254,12 @@ func (UnimplementedHandlerServiceServer) GetInboundMuxStats(context.Context, *Ge
 }
 func (UnimplementedHandlerServiceServer) GetQuicStats(context.Context, *GetQuicStatsRequest) (*GetQuicStatsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetQuicStats not implemented")
+}
+func (UnimplementedHandlerServiceServer) GetConnections(context.Context, *GetConnectionsRequest) (*GetConnectionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetConnections not implemented")
+}
+func (UnimplementedHandlerServiceServer) CloseConnections(context.Context, *CloseConnectionsRequest) (*CloseConnectionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CloseConnections not implemented")
 }
 func (UnimplementedHandlerServiceServer) AddOutbound(context.Context, *AddOutboundRequest) (*AddOutboundResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddOutbound not implemented")
@@ -406,6 +438,42 @@ func _HandlerService_GetQuicStats_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _HandlerService_GetConnections_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetConnectionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HandlerServiceServer).GetConnections(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HandlerService_GetConnections_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HandlerServiceServer).GetConnections(ctx, req.(*GetConnectionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HandlerService_CloseConnections_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CloseConnectionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HandlerServiceServer).CloseConnections(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HandlerService_CloseConnections_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HandlerServiceServer).CloseConnections(ctx, req.(*CloseConnectionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _HandlerService_AddOutbound_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AddOutboundRequest)
 	if err := dec(in); err != nil {
@@ -516,6 +584,14 @@ var HandlerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetQuicStats",
 			Handler:    _HandlerService_GetQuicStats_Handler,
+		},
+		{
+			MethodName: "GetConnections",
+			Handler:    _HandlerService_GetConnections_Handler,
+		},
+		{
+			MethodName: "CloseConnections",
+			Handler:    _HandlerService_CloseConnections_Handler,
 		},
 		{
 			MethodName: "AddOutbound",

@@ -39,6 +39,9 @@ func Conn(c *quic.Conn) internet.QuicConn { return conn{c: c} }
 
 type conn struct{ c *quic.Conn }
 
+// CloseByControl closes the connection with HTTP/3's no-error code, as a Hy2 listener closes its own (Core spec026 R3).
+func (c conn) CloseByControl(reason string) error { return c.c.CloseWithError(0x100, reason) }
+
 func (c conn) QuicStats() internet.QuicConnStats {
 	s := c.c.ConnectionStats()
 	return internet.QuicConnStats{

@@ -231,6 +231,82 @@ message GetQuicStatsResponse {
   repeated QuicHandlerStats handlers = 1;
 }
 
+// spec026 R2: an inbound's live objects, or one user's.
+message ConnectionCounts {
+  // Accepted stream-transport connections that are not Hy2, bound to a user or not.
+  uint64 tcp = 1;
+  // Those of the tcp connections that are carriers.
+  uint64 mux_cool_carriers = 2;
+  uint64 sing_mux_carriers = 3;
+  // Live Hy2 QUIC connections.
+  uint64 hy2_connections = 4;
+  // Hy2 TCP streams and UDP sessions.
+  uint64 hy2_streams = 5;
+  uint64 hy2_udp_sessions = 6;
+  // SS-2022 multi-user UDP sessions.
+  uint64 udp_sessions = 7;
+}
+
+message GetConnectionsRequest {
+  // Empty selects every inbound.
+  repeated string tags = 1;
+  // Adds one row per user with a live object.
+  bool user_rows = 2;
+  // With user_rows, only these users, by email, case-insensitive.
+  repeated string users = 3;
+}
+
+message ConnectionUser {
+  string user = 1;
+  ConnectionCounts counts = 2;
+}
+
+message InboundConnections {
+  string tag = 1;
+  ConnectionCounts counts = 2;
+  // Connections, streams and QUIC connections not bound to a user: in their handshake, refused, falling back.
+  uint64 unbound = 3;
+  // Objects a CloseConnections call is still closing; not in counts.
+  uint64 closing = 4;
+  // From the inbound's multiplexing servers, as GetInboundMuxStats reports them.
+  uint64 mux_cool_streams = 5;
+  uint64 sing_mux_streams = 6;
+  // Active sing-mux carriers by stream protocol: smux, yamux, h2mux.
+  map<string, uint64> sing_mux_protocols = 7;
+  // By email; at most 4096.
+  repeated ConnectionUser users = 8;
+  bool truncated = 9;
+}
+
+message GetConnectionsResponse {
+  repeated InboundConnections inbounds = 1;
+}
+
+// spec026 R3.
+message CloseConnectionsRequest {
+  // By email, case-insensitive. Exactly one of users and all_users.
+  repeated string users = 1;
+  // Every bound user on the inbounds named in tags, which it requires.
+  bool all_users = 2;
+  // Empty with users: every inbound.
+  repeated string tags = 3;
+  repeated string exclude_users = 4;
+  // Logged with the closure.
+  string reason = 5;
+}
+
+message InboundClosed {
+  string tag = 1;
+  // The objects the call selected and closed.
+  ConnectionCounts closed = 2;
+  // Closes still running when the call returned; they finish on their own.
+  uint64 pending = 3;
+}
+
+message CloseConnectionsResponse {
+  repeated InboundClosed inbounds = 1;
+}
+
 service HandlerService {
   rpc AddInbound(AddInboundRequest) returns (AddInboundResponse) {}
 
@@ -247,6 +323,10 @@ service HandlerService {
   rpc GetInboundMuxStats(GetInboundMuxStatsRequest) returns (GetInboundMuxStatsResponse) {}
 
   rpc GetQuicStats(GetQuicStatsRequest) returns (GetQuicStatsResponse) {}
+
+  rpc GetConnections(GetConnectionsRequest) returns (GetConnectionsResponse) {}
+
+  rpc CloseConnections(CloseConnectionsRequest) returns (CloseConnectionsResponse) {}
 
   rpc AddOutbound(AddOutboundRequest) returns (AddOutboundResponse) {}
 

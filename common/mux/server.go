@@ -93,6 +93,26 @@ func (r *coolRegistry) snapshot() MuxCoolStats {
 	return stats
 }
 
+// Carrier is the multiplexing server that takes a dispatch (Core spec026 R1).
+type Carrier uint32
+
+const (
+	NoCarrier Carrier = iota
+	MuxCoolCarrier
+	SingMuxCarrier
+)
+
+// Carrier says which of s's multiplexing servers a dispatch to dest reaches, as Dispatch decides it.
+func (s *Server) Carrier(dest net.Destination) Carrier {
+	if dest.Network == net.Network_TCP && s.sing.Enabled() && singmux.IsDestination(dest) {
+		return SingMuxCarrier
+	}
+	if dest.Address == muxCoolAddress {
+		return MuxCoolCarrier
+	}
+	return NoCarrier
+}
+
 // Type implements common.HasType.
 func (s *Server) Type() interface{} {
 	return s.dispatcher.Type()
