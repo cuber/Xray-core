@@ -185,6 +185,31 @@ Real started Core, real local gRPC, both `GetBalancerInfo` and `ListBalancers`.
 | R15 | `ListBalancers` while passes are being published | all balancers of one response carry the same generation |
 | R16 | 100 connections dropped by an unavailable balancer | counter 100 and last reason in threshold_decision; dispatcher log lines at info level, none at warning (D14) |
 
+## F. Real Network (A cases; the configuration repository's `threshold-check`)
+
+A decider host runs the candidate with SS-2022 and Hy2 outbounds to an endpoint host in a second region (the
+candidates) and SS-2022 to an endpoint in a third region (the fallback). Each endpoint runs the candidate
+in front of a loopback sink that answers with its region's mark and echoes, and a probe page whose added delay
+or failure the harness sets. The decider's balancers: `t` (candidates, fallback the third region), `u`
+(the same, fallback a blackhole), `n` with a thresholdLeastPing child `lab` as its fallback, `m` with a
+roundRobin child as its fallback, and `h`/`hb` (one candidate, without and with a band) for hysteresis.
+Limits come from the measured baseline: `t`'s maxRTT lies above both regions' round trips; `h`'s lies just
+above the candidate's.
+
+| ID | Action | Required result |
+|---|---|---|
+| A01 | baseline with no added delay | every path's measured RTT recorded; `t` primary on a candidate; fresh TCP and UDP flows carry that region's mark |
+| A02 | the candidate region's probes answer late, over `t`'s limit | `t` falls back to the third region within a bounded time; new flows carry its mark; a TCP flow and a UDP association opened before keep the candidate region's mark on their own connection |
+| A03 | the third region's probes late too | `t` degraded on the faster usable option; flows follow it |
+| A04 | the candidate region's endpoint stopped, then restarted | `t` leaves it within a bounded time and returns after the restart; both times measured |
+| A05 | every probe fails | `t` drops: each attempt fails, the decider's default outbound sees nothing, the drop counter grows by the attempts and the decider logs the drops at info, none as a warning; `u` ends on its blackhole |
+| A06 | the decider restarts | the time from process start to the first carried flow, and the attempts dropped meanwhile, are recorded against the interruption budget |
+| A07 | `n`'s candidate late | `n` chooses its child `lab`; flows reach the third region; `n`'s fallback RTT is `lab`'s reported RTT |
+| A08 | `m` | its roundRobin fallback reports a mean over two measured members |
+| A09 | the candidate's probe delay alternates around `h`'s limit for the hysteresis phase, with connection churn | `hb` changes its choice fewer times than `h`; the decider's goroutines, FDs and RSS return near their start; churned flows never fail while a usable option exists |
+| A10 | every RPC sample of the run | each response is internally consistent (mode, choice, shares, principle target, fallback flag), as R07/R13; the decision is the one TL-3 gives from the options it reports, and every option's latch obeys TL-4 |
+| A11 | a TCP flow and a UDP association opened while `t` uses its fallback, then the candidate region returns: once after its probes were late (A02), once after its endpoint was stopped (A04) | `t` returns for new flows, which carry the candidate region's mark; the flows opened on the fallback keep echoing with the fallback's mark on their own connection, none failing (TL-8, the other direction of A02) |
+
 ## X. Rollout (owned by xray-config; listed for traceability)
 
 | ID | Check | Required result |

@@ -50,6 +50,23 @@ Decisions D1–D16).
   `XRAY_SPEC027_TIMING=1`: p99 504-547us. Earlier runs made while other suites ran beside them are not
   evidence: one failed the E13 wall-clock bound at 1.09ms and one routing command run failed uncaptured,
   which is why the skill requires running suites alone and why E13's bound is now opt-in.
+- [x] T007b Real-network functional check A01–A11 with the configuration repository's `threshold-check`
+  (operator, 2026-11-15: before the stability gate; repeated to check that the results agree). Candidate
+  `db65843` (Linux sha256 `05bab80305c0…`). Five runs on three test hosts in different regions, all PASS; the
+  last four with A01's fastest-candidate check, per-sample TL-3/TL-4 rule checks (11011 responses, no
+  violation) and hb's release asserted. Across those four: probe RTTs stable within 1 ms (SS-2022 about twice
+  Hy2 on the same path, a new TCP connection per probe); restart to first flow 0.33–0.35 s with 2 attempts
+  dropped; fallback 8–13 s after a path's probes turned late (one window of 2 s × 5); endpoint outage left in
+  5–9 s and returned in 2–5 s; drops exact, logged at info only; nested and mean children as specified;
+  without a band the hysteresis balancer changed exit 22–28 times in 300 s, with one 1–2 (latch, release);
+  2720 churned flows, none failed; the decider's goroutines, FDs and RSS flat. The first run's A01 showed the
+  slower SS-2022 candidate chosen: the polls of the later runs show why, Hy2's first sample carries the QUIC
+  handshake (about 150 ms), so for about 2 s after a start its window average is the higher one; the choice
+  then moves to Hy2. A11 (added afterwards) in three more runs, all PASS: a TCP flow and a UDP association
+  opened while `t` used its fallback kept echoing on the fallback after the candidate region returned, once
+  from late probes and once from a stopped endpoint (9–15 TCP echoes, none failed; every UDP reply from the
+  fallback, none lost), while new flows went back to the candidate region. Records stay in xray-config's
+  private `.cache/threshold-check-*`.
 - [ ] T008 Sidecar and Portal consumers (their repositories; separate authorization).
 - [ ] T009 Commit, dual-platform build, stability gate (separate authorization).
 - [ ] T010 Rollout X01–X05, thresholds and paired restore plan (separate authorization; xray-config TODO-053).

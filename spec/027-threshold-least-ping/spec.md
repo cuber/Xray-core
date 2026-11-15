@@ -348,7 +348,19 @@ synthetic identities and local endpoints.
 | TL-8 overrides/flows | H01–H08 | Override precedence with true state; track/force-down provenance; observatory recovery untouched; flows survive a decision change |
 | TL-9 leastPing guard | C11 | Focused error; other leastPing settings unchanged |
 | Control plane | R01–R16 | Real started Core over local gRPC; one pass per response and per listing; old/new decoding; drop counter; `xray api bi` |
+| Real network | A01–A11 | The configuration repository's `threshold-check` on three test hosts (TL-3 to TL-6 and TL-8 over real paths) |
 | Rollout | X01–X05 | xray-config acceptance and switch tooling (owned there) |
+
+### Real-network functional check (2026-11-15, operator)
+
+The local cases inject observations or delays on loopback. Before the stability gate, the candidate is also
+exercised on real wide-area paths: one decider host and two endpoint hosts in different regions, so that the
+two candidate paths and the fallback path have genuinely different round trips, jitter and loss. The
+configuration repository owns the harness (`xrayctl threshold-check`) and the host names; this spec owns the
+cases (tests.md F) and their verdicts. The harness runs only temporary processes in private directories, never
+touches installed services (their PIDs and Core hash are fenced) and changes no qdisc or firewall: a slow
+path is a probe target that answers late, not a slowed network. A Hy2 relay refusal (D12) is not reproduced
+there and stays covered by E19 only.
 
 Required execution, once tests exist (planned, not run):
 
