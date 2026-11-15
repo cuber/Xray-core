@@ -36,6 +36,14 @@ func NewManager(ctx context.Context, dispatcher routing.Dispatcher, groups []*He
 }
 
 // Groups returns the underlying HealthPing instances (read-only view).
+// SetOnChange makes every group run fn after it records or removes a result (Core spec027 TL-5). It
+// is set before the schedulers start.
+func (m *Manager) SetOnChange(fn func()) {
+	for _, hp := range m.groups {
+		hp.onChange = fn
+	}
+}
+
 func (m *Manager) Groups() []*HealthPing {
 	return m.groups
 }

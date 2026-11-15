@@ -20,6 +20,7 @@ import (
 	"github.com/xtls/xray-core/common/net/cnc"
 	"github.com/xtls/xray-core/common/session"
 	"github.com/xtls/xray-core/core"
+	"github.com/xtls/xray-core/features/extension"
 	"github.com/xtls/xray-core/transport/internet"
 	"github.com/xtls/xray-core/transport/internet/finalmask"
 	"github.com/xtls/xray-core/transport/internet/hysteria/congestion"
@@ -278,6 +279,9 @@ func (c *client) dial(ctx context.Context) error {
 	c.relayMu.Lock()
 	c.relayAnswered, c.relayBindings = answered, bindings
 	c.relayMu.Unlock()
+	if len(relays) > 0 {
+		extension.NotifyRelayChange() // Core spec027 D12: relay outbounds' observed status may have changed
+	}
 	c.quicStats.Add(quicrecovery.Conn(conn))
 	c.udpSM = &udpSessionManager{
 		conn: conn,

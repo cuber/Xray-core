@@ -188,6 +188,29 @@ func (br *BalancingRule) build(ohm outbound.Manager, dispatcher routing.Dispatch
 			fallbackTag: br.FallbackTag,
 			strategy:    strategy,
 		}, nil
+	case "thresholdleastping": // Core spec027 TL-1
+		if br.GetStrategySettings() == nil {
+			return nil, errors.New("balancer ", br.Tag, ": thresholdLeastPing needs settings with maxRTT")
+		}
+		i, err := br.StrategySettings.GetInstance()
+		if err != nil {
+			return nil, errors.New("balancer ", br.Tag, ": thresholdLeastPing needs settings with maxRTT").Base(err)
+		}
+		s, ok := i.(*StrategyThresholdLeastPingConfig)
+		if !ok {
+			return nil, errors.New("balancer ", br.Tag, ": not a StrategyThresholdLeastPingConfig")
+		}
+		policy, err := newThresholdPolicy(s)
+		if err != nil {
+			return nil, errors.New("balancer ", br.Tag).Base(err)
+		}
+		return &Balancer{
+			tag:         br.Tag,
+			selectors:   br.OutboundSelector,
+			ohm:         ohm,
+			fallbackTag: br.FallbackTag,
+			strategy:    &ThresholdLeastPingStrategy{policy: policy},
+		}, nil
 	case "random":
 		fallthrough
 	case "":

@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -199,5 +200,56 @@ func TestBalancerInfoShowsWhereStatusesComeFrom(t *testing.T) {
 	}
 	if strings.Contains(printed, "track owner") || strings.Contains(printed, "Candidates") {
 		t.Errorf("-json prints the response only:\n%s", printed)
+	}
+}
+
+// Core spec027 R12: a thresholdLeastPing level shows its limits, its decision with the pass's age and
+// drops, each candidate's RTT and eligibility, and its fallback's; -json passes every field through.
+func TestBalancerInfoShowsThresholdLeastPing(t *testing.T) {
+	status := func(alive bool, delay int64) *routerService.BalancerStatus {
+		return &routerService.BalancerStatus{Known: true, Alive: alive, Delay: delay, Provenance: true}
+	}
+	server := &fakeRouting{tags: []string{"t"}, balancers: map[string]*routerService.BalancerMsg{
+		"t": {
+			Strategy: "thresholdleastping", Status: status(true, 30),
+			ThresholdPolicy: &routerService.ThresholdPolicy{MaxRttNs: int64(50 * time.Millisecond), RecoverRttNs: int64(40 * time.Millisecond)},
+			ThresholdDecision: &routerService.ThresholdDecision{
+				Mode: "primary", ChoiceTag: "a-vless", Generation: 7,
+				ObservedAtMs: time.Now().Add(-3 * time.Second).UnixMilli(), Dropped: 2, LastDropReason: "no usable option",
+				FallbackSelection: &routerService.ThresholdSelection{
+					Usable: true, RttKnown: true, RttNs: int64(100 * time.Millisecond), Reason: "max_rtt_exceeded",
+					Latched: true, Aggregation: "mean", Measured: 2, Dispatchable: 3,
+				},
+			},
+			Members: []*routerService.BalancerMember{
+				{Tag: "a-hy2", Status: status(true, 44), Selection: &routerService.ThresholdSelection{
+					Usable: true, RttKnown: true, RttNs: int64(44 * time.Millisecond), Reason: "recovering", Latched: true,
+				}},
+				{Tag: "a-vless", Status: status(true, 30), Share: 1, Selection: &routerService.ThresholdSelection{
+					Usable: true, WithinLimit: true, RttKnown: true, RttNs: int64(30 * time.Millisecond), Reason: "eligible",
+				}},
+				{Tag: "a-new", Status: &routerService.BalancerStatus{Provenance: true}, Selection: &routerService.ThresholdSelection{Reason: "unobserved"}},
+			},
+			Fallback: &routerService.FallbackInfo{Tag: "rr"},
+		},
+	}}
+	all := runBalancerInfo(t, server)
+	for _, want := range []string{
+		"t  thresholdleastping  30ms  maxRTT 50ms recoverRTT 40ms\n",
+		"  - Decision: primary -> a-vless  pass 7, observed 3s ago, dropped 2 (last: no usable option)\n",
+		"rtt 44ms recovering latched\n",
+		"rtt 30ms eligible\n",
+		"rtt - unobserved\n",
+		"  - Fallback: rr  rtt 100ms (mean of 2/3) max_rtt_exceeded latched\n",
+	} {
+		if !strings.Contains(all, want) {
+			t.Errorf("missing %q in:\n%s", want, all)
+		}
+	}
+	printed := runBalancerInfo(t, server, "-json", "t")
+	for _, want := range []string{`"maxRttNs"`, `"recoverRttNs"`, `"mode": "primary"`, `"withinLimit": true`, `"aggregation": "mean"`, `"dropped"`} {
+		if !strings.Contains(printed, want) {
+			t.Errorf("-json is missing %s:\n%s", want, printed)
+		}
 	}
 }

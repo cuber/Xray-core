@@ -282,27 +282,31 @@ func (r *Router) checkLoopbacks(rules []*Rule, balancers map[string]*Balancer, o
 
 // checkMemberObservation is Core spec019 M6: every balancer with members, and every balancer reached
 // from one through members or fallbacks, has every outbound candidate and outbound fallback observed;
-// a blackhole fallback needs none.
+// a blackhole fallback needs none. Core spec027 TL-7 adds every thresholdLeastPing balancer as a root
+// of the same check, and requires its reached balancers' fallbackTags to name something.
 func (r *Router) checkMemberObservation(m map[string]*Balancer, handlers []outbound.Handler) error {
-	reached := map[string]bool{}
-	var reach func(string)
-	reach = func(tag string) {
+	byMembers, byThreshold := map[string]bool{}, map[string]bool{}
+	var reach func(string, map[string]bool)
+	reach = func(tag string, reached map[string]bool) {
 		b, ok := m[tag]
 		if !ok || reached[tag] {
 			return
 		}
 		reached[tag] = true
 		for _, member := range b.members {
-			reach(member)
+			reach(member, reached)
 		}
-		reach(b.fallbackTag)
+		reach(b.fallbackTag, reached)
 	}
 	for _, tag := range slices.Sorted(maps.Keys(m)) {
 		if len(m[tag].members) > 0 {
-			reach(tag)
+			reach(tag, byMembers)
+		}
+		if _, ok := m[tag].strategy.(*ThresholdLeastPingStrategy); ok {
+			reach(tag, byThreshold)
 		}
 	}
-	if len(reached) == 0 {
+	if len(byMembers) == 0 && len(byThreshold) == 0 {
 		return nil
 	}
 	observes := r.observes()
@@ -310,6 +314,8 @@ func (r *Router) checkMemberObservation(m map[string]*Balancer, handlers []outbo
 	for _, h := range handlers {
 		byTag[h.Tag()] = h
 	}
+	reached := maps.Clone(byMembers)
+	maps.Copy(reached, byThreshold)
 	for _, tag := range slices.Sorted(maps.Keys(reached)) {
 		b := m[tag]
 		var outbounds []string
@@ -322,14 +328,22 @@ func (r *Router) checkMemberObservation(m map[string]*Balancer, handlers []outbo
 			}
 		}
 		if _, isBalancer := m[b.fallbackTag]; !isBalancer && b.fallbackTag != "" {
-			if h := byTag[b.fallbackTag]; h == nil || h.ProxySettings().GetType() != "xray.proxy.blackhole.Config" {
+			h := byTag[b.fallbackTag]
+			if h == nil && byThreshold[tag] {
+				return errors.New("balancer ", tag, ": fallbackTag ", b.fallbackTag,
+					" names no outbound and no balancer (thresholdLeastPing needs every outbound it can choose observed)")
+			}
+			if h == nil || h.ProxySettings().GetType() != "xray.proxy.blackhole.Config" {
 				outbounds = append(outbounds, b.fallbackTag)
 			}
 		}
+		why := "balancer members need every outbound observed"
+		if !byMembers[tag] {
+			why = "thresholdLeastPing needs every outbound it can choose observed"
+		}
 		for _, outboundTag := range outbounds {
 			if !observes(outboundTag) {
-				return errors.New("balancer ", tag, ": outbound ", outboundTag,
-					" is not observed (balancer members need every outbound observed)")
+				return errors.New("balancer ", tag, ": outbound ", outboundTag, " is not observed (", why, ")")
 			}
 		}
 	}

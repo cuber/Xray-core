@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -19,20 +20,82 @@ const (
 	strategyRoundRobin        string = "roundrobin"
 	strategyLeastLoad         string = "leastload"
 	strategyWeightedLeastPing string = "weightedleastping"
+	// Core spec027
+	strategyThresholdLeastPing string = "thresholdleastping"
 )
 
 var strategyConfigLoader = NewJSONConfigLoader(ConfigCreatorCache{
-	strategyRandom:            func() interface{} { return new(strategyEmptyConfig) },
-	strategyLeastPing:         func() interface{} { return new(strategyEmptyConfig) },
-	strategyRoundRobin:        func() interface{} { return new(strategyEmptyConfig) },
-	strategyLeastLoad:         func() interface{} { return new(strategyLeastLoadConfig) },
-	strategyWeightedLeastPing: func() interface{} { return new(strategyWeightedLeastPingConfig) },
+	strategyRandom:             func() interface{} { return new(strategyEmptyConfig) },
+	strategyLeastPing:          func() interface{} { return new(strategyLeastPingConfig) },
+	strategyRoundRobin:         func() interface{} { return new(strategyEmptyConfig) },
+	strategyLeastLoad:          func() interface{} { return new(strategyLeastLoadConfig) },
+	strategyWeightedLeastPing:  func() interface{} { return new(strategyWeightedLeastPingConfig) },
+	strategyThresholdLeastPing: func() interface{} { return new(strategyThresholdLeastPingConfig) },
 }, "type", "settings")
 
 type strategyEmptyConfig struct{}
 
 func (v *strategyEmptyConfig) Build() (proto.Message, error) {
 	return nil, nil
+}
+
+// strategyLeastPingConfig is leastPing's settings: none. Core spec027 TL-9: the settings of
+// thresholdLeastPing, written on leastPing, are refused instead of loading and doing nothing; every
+// other field stays ignored as before. JSON matches the keys case-insensitively, and a null value
+// still reaches a json.RawMessage.
+type strategyLeastPingConfig struct {
+	MaxRTT     json.RawMessage `json:"maxRTT"`
+	RecoverRTT json.RawMessage `json:"recoverRTT"`
+}
+
+func (v *strategyLeastPingConfig) Build() (proto.Message, error) {
+	for _, field := range []struct {
+		name string
+		raw  json.RawMessage
+	}{{"maxRTT", v.MaxRTT}, {"recoverRTT", v.RecoverRTT}} {
+		if len(field.raw) > 0 {
+			return nil, errors.New("leastPing has no ", field.name, "; use the thresholdLeastPing strategy (Core spec027)")
+		}
+	}
+	return nil, nil
+}
+
+// strategyThresholdLeastPingConfig is thresholdLeastPing's settings (Core spec027 TL-1): maxRTT is
+// required; recoverRTT, when given, is within (0, maxRTT]; omitted, it equals maxRTT. Both are
+// duration strings with units; each error names its field.
+type strategyThresholdLeastPingConfig struct {
+	MaxRTT     json.RawMessage `json:"maxRTT"`
+	RecoverRTT json.RawMessage `json:"recoverRTT"`
+}
+
+func (v *strategyThresholdLeastPingConfig) Build() (proto.Message, error) {
+	parse := func(name string, raw json.RawMessage) (time.Duration, error) {
+		var d duration.Duration
+		if err := d.UnmarshalJSON(raw); err != nil {
+			return 0, errors.New("thresholdLeastPing ", name, ": ").Base(err)
+		}
+		if d <= 0 {
+			return 0, errors.New("thresholdLeastPing ", name, " must be positive, got ", time.Duration(d).String())
+		}
+		return time.Duration(d), nil
+	}
+	if len(v.MaxRTT) == 0 {
+		return nil, errors.New("thresholdLeastPing needs maxRTT")
+	}
+	maxRTT, err := parse("maxRTT", v.MaxRTT)
+	if err != nil {
+		return nil, err
+	}
+	recoverRTT := maxRTT
+	if len(v.RecoverRTT) > 0 {
+		if recoverRTT, err = parse("recoverRTT", v.RecoverRTT); err != nil {
+			return nil, err
+		}
+		if recoverRTT > maxRTT {
+			return nil, errors.New("thresholdLeastPing recoverRTT ", recoverRTT.String(), " is above maxRTT ", maxRTT.String())
+		}
+	}
+	return &router.StrategyThresholdLeastPingConfig{MaxRTT: int64(maxRTT), RecoverRTT: int64(recoverRTT)}, nil
 }
 
 type strategyLeastLoadConfig struct {

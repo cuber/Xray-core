@@ -78,6 +78,9 @@ type statusReader struct {
 	ohm      outbound.Manager
 	memo     map[string]*observatory.OutboundStatus
 	done     map[string]bool
+	// threshold, when set, gives a thresholdLeastPing balancer's status from the pass being computed
+	// (Core spec027 TL-5); otherwise it comes from the balancer's published pass.
+	threshold func(tag string) *observatory.OutboundStatus
 }
 
 func newStatusReader(m map[string]*Balancer, statuses []*observatory.OutboundStatus, ohm outbound.Manager) *statusReader {
@@ -103,6 +106,19 @@ func (r *statusReader) balancer(tag string) *observatory.OutboundStatus {
 	b, ok := r.m[tag]
 	if !ok {
 		return nil
+	}
+	if isThreshold(b) { // Core spec027 TL-3: what its decision reports, computed in its pass
+		var status *observatory.OutboundStatus
+		if r.threshold != nil {
+			status = r.threshold(tag)
+		} else if st := b.pass.Load().state(tag); st != nil {
+			status = st.bubbled
+		}
+		if status != nil {
+			status = proto.Clone(status).(*observatory.OutboundStatus)
+		}
+		r.memo[tag] = status
+		return status
 	}
 	var status *observatory.OutboundStatus
 	if target := b.override.Get(); target != "" {
@@ -249,6 +265,8 @@ func (v balancerView) GetStrategy(tag string) (string, error) {
 		return "random", nil
 	case *LeastLoadStrategy:
 		return "leastload", nil
+	case *ThresholdLeastPingStrategy:
+		return "thresholdleastping", nil // Core spec027: the capability signal
 	}
 	return "", nil
 }

@@ -128,3 +128,12 @@ message Config {
   repeated BalancingRule balancing_rule = 3;
   string script = 4;
 }
+
+// Core spec027 TL-1: the thresholdLeastPing strategy. Durations are int64 values of time.Duration.
+message StrategyThresholdLeastPingConfig {
+  // Preferred RTT limit; required and positive.
+  int64 maxRTT = 1;
+  // An option latched over maxRTT is within the limit again below this; 0 < recoverRTT <= maxRTT.
+  // Zero means omitted, which is recoverRTT = maxRTT (no band).
+  int64 recoverRTT = 2;
+}

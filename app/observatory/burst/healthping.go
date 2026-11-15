@@ -42,6 +42,9 @@ type HealthPing struct {
 	cancel      context.CancelFunc
 	workers     sync.WaitGroup
 
+	// onChange runs after a result is recorded or removed, outside access (Core spec027 TL-5).
+	onChange func()
+
 	// Selector is the tag-prefix selector this HealthPing owns. Set by
 	// Manager when building multi-group observatories; unused by legacy
 	// single-group callers (who pass the selector via StartScheduler's
@@ -169,10 +172,14 @@ func (h *HealthPing) StartScheduler(selector func() ([]string, error)) {
 				}
 				h.doCheckContext(roundCtx, tags, interval, h.Settings.SamplingCount)
 				h.access.Lock()
-				if roundCtx.Err() == nil {
+				cleaned := roundCtx.Err() == nil
+				if cleaned {
 					h.cleanupLocked(tags)
 				}
 				h.access.Unlock()
+				if cleaned {
+					h.changed() // Core spec027 TL-5: removed results change the observation
+				}
 			}()
 			select {
 			case <-ticker.C:
@@ -338,10 +345,14 @@ func (h *HealthPing) doCheckContext(ctx context.Context, tags []string, duration
 		if rtt.value > 0 {
 			// should not put results when network is down
 			h.access.Lock()
-			if ctx.Err() == nil {
+			put := ctx.Err() == nil
+			if put {
 				h.putResultLocked(rtt.handler, rtt.value)
 			}
 			h.access.Unlock()
+			if put {
+				h.changed()
+			}
 		}
 	}
 }
@@ -349,8 +360,16 @@ func (h *HealthPing) doCheckContext(ctx context.Context, tags []string, duration
 // PutResult put a ping rtt to results
 func (h *HealthPing) PutResult(tag string, rtt time.Duration) {
 	h.access.Lock()
-	defer h.access.Unlock()
 	h.putResultLocked(tag, rtt)
+	h.access.Unlock()
+	h.changed()
+}
+
+// changed runs onChange, if any (Core spec027 TL-5).
+func (h *HealthPing) changed() {
+	if h.onChange != nil {
+		h.onChange()
+	}
 }
 
 func (h *HealthPing) putResultLocked(tag string, rtt time.Duration) {
@@ -374,8 +393,9 @@ func (h *HealthPing) putResultLocked(tag string, rtt time.Duration) {
 // tags should be all valid tags of the Balancer now
 func (h *HealthPing) Cleanup(tags []string) {
 	h.access.Lock()
-	defer h.access.Unlock()
 	h.cleanupLocked(tags)
+	h.access.Unlock()
+	h.changed()
 }
 
 func (h *HealthPing) cleanupLocked(tags []string) {

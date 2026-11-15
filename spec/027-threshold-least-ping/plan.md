@@ -10,8 +10,9 @@ the protobuf is edited.
   builder with `MaxRTT` and `RecoverRTT` as `*duration.Duration`; enforce required/positive and
   `0 < recoverRTT <= maxRTT`, filling recoverRTT with maxRTT when omitted.
 - `infra/conf/router.go`: accept the new type in the strategy switch.
-- `app/router/config.proto`: `message StrategyThresholdLeastPingConfig { int64 max_rtt = 1; int64 recover_rtt = 2; }`
-  (nanoseconds). `app/router/config.go`: a `case` building `Balancer{strategy: &ThresholdLeastPingStrategy{...}}`,
+- `app/router/config.proto`: `message StrategyThresholdLeastPingConfig { int64 maxRTT = 1; int64 recoverRTT = 2; }`
+  (nanoseconds; field names follow the existing strategy messages), appended after `Config` so no existing
+  descriptor index moves. `app/router/config.go`: a `case` building `Balancer{strategy: &ThresholdLeastPingStrategy{...}}`,
   validating the typed message again for direct protobuf and AddRule input.
 - leastPing guard (TL-9, D11): leastPing keeps `strategyEmptyConfig` for every other field, but its
   loader rejects a settings object containing `maxRTT` or `recoverRTT` with an error naming
@@ -45,14 +46,17 @@ func decideThreshold(policy tlpPolicy, candidates []tlpOption, fallback *tlpOpti
 
 ## 3. Observation Notification (TL-5)
 
-- `features/extension/observatory.go`: an optional interface
-  `ObservationNotifier { OnObservationChange(func()) (cancel func()) }`.
-- Burst (`app/observatory/burst`): fire after `PutResult`/the round loop's `putResultLocked` once the lock
-  is released, after `Cleanup`, and after `SetForceDown` stores a new set. Classic (`app/observatory`):
-  after `updateStatusForResult` releases `statusLock`.
-- Hy2 relay (D12): the relay outbound already reports `RelayStatus()`; fire a notification when that
-  status changes, through the same optional interface implemented on the outbound side, so the router
-  subscribes to relay outbounds a thresholdLeastPing balancer can choose.
+- `common/signal/broadcast.go`: `Broadcast` (Subscribe/Fire; cancel waits for a call in flight; Fire holds
+  no lock while calling). `features/extension/observatory.go`: `ChangeNotifier { OnChange(func()) (cancel
+  func()) }`, and the process-wide `NotifyRelayChange`/`OnRelayChange`.
+- Burst (`app/observatory/burst`): `HealthPing.onChange` (set through `Manager.SetOnChange`) fires after a
+  result is put (round loop and `PutResult`), after `Cleanup` and after a scheduled round's cleanup, each
+  once `access` is released; `SetForceDown` fires after `force.write` is released (split into
+  `setForceDown`). Classic (`app/observatory`): after `updateStatusForResult` releases `statusLock`.
+- Hy2 relay (D12): `transport/internet/hysteria` calls `extension.NotifyRelayChange()` after a dial that
+  asked for relays stores its bindings; the burst observer, which reads relay status in `createResult`,
+  forwards it (`subscribeRelays` at Start, cancelled at Close). The router subscribes only to the
+  observatory and the outbound manager.
 - Outbound manager: `AddHandler`/`RemoveHandler` notify after they release `access` (runtime changes of
   selector-matched candidates).
 - Callbacks run synchronously on the caller's goroutine and must return quickly; the router side only
@@ -99,8 +103,11 @@ func decideThreshold(policy tlpPolicy, candidates []tlpOption, fallback *tlpOpti
 
 - `app/router/command/command.proto`: `BalancerMsg.threshold_policy = 11`, `threshold_decision = 12`,
   `BalancerMember.selection = 6` (shapes in the spec).
-- `features/routing/balancer.go`: `BalancerThreshold { GetThreshold(tag) (ThresholdReport, bool, error) }`
-  on `balancerView`, returning everything `balancerMsg` shows for that level from one pass.
+- `features/routing/balancer.go`: `BalancerThreshold { ThresholdReader() ThresholdReader }` on
+  `balancerView` pins the newest pass among the view's thresholdLeastPing balancers;
+  `ThresholdReader.GetThreshold(tag) (ThresholdReport, bool, error)` returns everything `balancerMsg`
+  shows for that level from it (`app/router/threshold_report.go`). `ErrBalancerUnavailable` wraps
+  `ErrRouteDropped`; the dispatcher logs it at info.
 - `balancerMsg`: when the strategy is thresholdLeastPing, fill members, status, shares, principle target,
   fallback active and thresholdLeastPing chain hops from the report; otherwise unchanged.
 - `ListBalancers`: load one pass from the map before the loop and use it for every thresholdLeastPing

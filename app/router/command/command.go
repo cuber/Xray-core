@@ -25,16 +25,25 @@ func (s *routingServer) GetBalancerInfo(ctx context.Context, request *GetBalance
 	if bl, ok := s.router.(routing.BalancerLister); ok {
 		balancers = bl.Balancers()
 	}
-	msg, err := balancerMsg(ctx, balancers, request.GetTag())
+	msg, err := balancerMsg(ctx, balancers, thresholdReaderOf(balancers), request.GetTag())
 	if err != nil {
 		return nil, err
 	}
 	return &GetBalancerInfoResponse{Balancer: msg}, nil
 }
 
+// thresholdReaderOf pins the current thresholdLeastPing pass of a balancer view (Core spec027), nil
+// when the view cannot.
+func thresholdReaderOf(balancers any) routing.ThresholdReader {
+	if bt, ok := balancers.(routing.BalancerThreshold); ok {
+		return bt.ThresholdReader()
+	}
+	return nil
+}
+
 // balancerMsg reads one balancer through whichever balancer interfaces r implements: a router, or
-// one balancer map of it (spec017).
-func balancerMsg(ctx context.Context, r any, tag string) (*BalancerMsg, error) {
+// one balancer map of it (spec017). tr, when set, reports a thresholdLeastPing level from one pass.
+func balancerMsg(ctx context.Context, r any, tr routing.ThresholdReader, tag string) (*BalancerMsg, error) {
 	msg := &BalancerMsg{}
 	if bo, ok := r.(interface {
 		GetOverrideTarget(tag string) (string, error)
@@ -97,7 +106,64 @@ func balancerMsg(ctx context.Context, r any, tag string) (*BalancerMsg, error) {
 			msg.Fallback.Balancer = len(chain) > 0 && chain[0].Balancer
 		}
 	}
+	if tr != nil {
+		thresholdMsg(ctx, msg, tr, tag)
+	}
 	return msg, nil
+}
+
+// thresholdMsg replaces a thresholdLeastPing level's members, status, principle target and fallback
+// state with its pass and adds its policy and decision (Core spec027); thresholdLeastPing hops of its
+// fallback chain take their state from the same pass.
+func thresholdMsg(ctx context.Context, msg *BalancerMsg, tr routing.ThresholdReader, tag string) {
+	report, ok, err := tr.GetThreshold(tag)
+	if err != nil || !ok {
+		if err != nil {
+			errors.LogInfoInner(ctx, err, "unable to obtain the thresholdLeastPing report")
+		}
+		return
+	}
+	msg.Members = nil
+	for _, m := range report.Members {
+		msg.Members = append(msg.Members, &BalancerMember{
+			Tag: m.Tag, Balancer: m.Balancer, Weight: m.Weight, Share: m.Share,
+			Status: balancerStatusMsg(m.Status), Selection: thresholdSelectionMsg(m.Selection),
+		})
+	}
+	msg.Status = balancerStatusMsg(report.Status)
+	msg.PrincipleTarget = &PrincipleTargetInfo{Tag: report.PrincipleTarget}
+	if msg.Fallback != nil {
+		msg.Fallback.Active, msg.Fallback.Reported = report.FallbackActive, true
+		for _, hop := range msg.Fallback.Chain {
+			if hopReport, ok, err := tr.GetThreshold(hop.Tag); err == nil && ok {
+				hop.Active, hop.Reported = hopReport.FallbackActive, true
+			}
+		}
+	}
+	msg.ThresholdPolicy = &ThresholdPolicy{MaxRttNs: int64(report.MaxRTT), RecoverRttNs: int64(report.RecoverRTT)}
+	decision := &ThresholdDecision{
+		Mode: report.Mode, ChoiceTag: report.Choice, Terminal: report.Terminal, Reason: report.Reason,
+		FallbackSelection: thresholdSelectionMsg(report.FallbackSelection),
+		Generation:        report.Generation, Dropped: report.Dropped, LastDropReason: report.LastDropReason,
+	}
+	if report.FallbackStatus != nil {
+		decision.FallbackStatus = balancerStatusMsg(*report.FallbackStatus)
+	}
+	if !report.ObservedAt.IsZero() {
+		decision.ObservedAtMs = report.ObservedAt.UnixMilli()
+	}
+	msg.ThresholdDecision = decision
+}
+
+func thresholdSelectionMsg(s *routing.ThresholdSelection) *ThresholdSelection {
+	if s == nil {
+		return nil
+	}
+	return &ThresholdSelection{
+		Usable: s.Usable, WithinLimit: s.WithinLimit, Latched: s.Latched, RttKnown: s.RTTKnown,
+		RttNs: int64(s.RTT), Reason: s.Reason, Aggregation: s.Aggregation,
+		Measured: uint32(s.Measured), Dispatchable: uint32(s.Dispatchable),
+	}
 }
 
 // balancerStatusMsg is a status as reported: spec019 M4, spec020 P1 and its provenance (P6).
@@ -115,9 +181,10 @@ func (s *routingServer) ListBalancers(ctx context.Context, request *ListBalancer
 		return nil, errors.New("unsupported router implementation")
 	}
 	balancers := bl.Balancers()
+	tr := thresholdReaderOf(balancers) // Core spec027: one pass for the whole listing
 	response := &ListBalancersResponse{}
 	for _, tag := range balancers.Tags() {
-		msg, err := balancerMsg(ctx, balancers, tag)
+		msg, err := balancerMsg(ctx, balancers, tr, tag)
 		if err != nil {
 			return nil, err
 		}

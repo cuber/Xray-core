@@ -9,6 +9,7 @@ import (
 	"github.com/xtls/xray-core/app/observatory"
 	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/errors"
+	"github.com/xtls/xray-core/common/signal"
 	"github.com/xtls/xray-core/common/signal/done"
 	"github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/features/extension"
@@ -31,6 +32,22 @@ type Observer struct {
 
 	track trackIndex
 	force forceDownState
+
+	// changes notifies a change of GetObservation (Core spec027 TL-5); relayCancel ends the relay
+	// subscription that feeds it.
+	changes     signal.Broadcast
+	relayCancel func()
+}
+
+// OnChange implements extension.ChangeNotifier (Core spec027 TL-5).
+func (o *Observer) OnChange(fn func()) (cancel func()) {
+	return o.changes.Subscribe(fn)
+}
+
+// subscribeRelays forwards relay changes: a relay refusal changes the observation without a probe
+// result (Core spec027 D12).
+func (o *Observer) subscribeRelays() {
+	o.relayCancel = extension.OnRelayChange(o.changes.Fire)
 }
 
 // GetObservation is the selection view that balancers read: a forced probe
@@ -161,6 +178,7 @@ func (o *Observer) Start() error {
 	if len(o.hpm.Groups()) == 0 {
 		return nil
 	}
+	o.subscribeRelays()
 	o.finished = done.New()
 	o.hpm.StartAll(func(selector []string) ([]string, error) {
 		hs, ok := o.ohm.(outbound.HandlerSelector)
@@ -173,6 +191,9 @@ func (o *Observer) Start() error {
 }
 
 func (o *Observer) Close() error {
+	if o.relayCancel != nil {
+		o.relayCancel()
+	}
 	if o.finished != nil {
 		o.hpm.StopAll()
 		return o.finished.Close()
@@ -219,13 +240,15 @@ func New(ctx context.Context, config *Config) (*Observer, error) {
 	if err := ValidateTrackShape(config.GetTrack()); err != nil {
 		return nil, err
 	}
-	return &Observer{
+	o := &Observer{
 		config: config,
 		ctx:    ctx,
 		ohm:    outboundManager,
 		hpm:    NewManager(ctx, dispatcher, groups),
 		track:  newTrackIndex(config.GetTrack()),
-	}, nil
+	}
+	o.hpm.SetOnChange(o.changes.Fire)
+	return o, nil
 }
 
 func init() {

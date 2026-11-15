@@ -183,8 +183,19 @@ func (r *Router) pickTag(rule *Rule) (string, error) {
 // pick is counted, logged and dropped, never sent to the default outbound (L6, spec019 M8).
 func (r *Router) resolveChain(first *Balancer, m map[string]*Balancer) (string, error) {
 	b := first
+	var pass *tlpPass // Core spec027 TL-5: one pass for every thresholdLeastPing level of the chain
 	for range len(m) + 1 {
-		tag, fallback, err := b.pick()
+		var tag string
+		var fallback bool
+		var err error
+		if isThreshold(b) {
+			if pass == nil {
+				pass = b.pass.Load()
+			}
+			tag, fallback, err = b.pickThreshold(pass)
+		} else {
+			tag, fallback, err = b.pick()
+		}
 		if err != nil || !fallback && !slices.Contains(b.members, tag) {
 			return tag, err
 		}

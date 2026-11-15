@@ -3,8 +3,8 @@
 - Spec ID: 027-threshold-least-ping (formerly `027-least-ping-max-rtt`; renamed 2026-11-15)
 - Promoted from Core draft005 on 2026-11-14; draft005 remains reserved in the draft index.
 - Created: 2026-11-14. Rewritten 2026-11-15.
-- Status: Approved specification. Implementation has not started. Approval alone does not authorize a build,
-  release, push or deployment.
+- Status: Approved specification; Core side implemented 2026-11-15 (T002–T007), not yet built, gated,
+  pushed or deployed. Consumers and rollout need separate authorization.
 - Inspected baseline: `291fde47` on the active append-only fork line (`10da0092` plus the spec027 commit).
 - Origin: the operator wants a reachable but slow primary path to yield to a backup, while still preferring
   the fastest path. The first consumer is xray-config TODO-053 (RTT-limited tiered backup on HK relays).
@@ -97,8 +97,9 @@ Illustrative native JSON (the values are examples, not defaults):
   field, before any listener starts. The same rules apply to a direct protobuf `BalancingRule` and to
   balancers published through AddRule.
 - Typed settings: a new `StrategyThresholdLeastPingConfig` message; no other strategy's message is reused.
-- `fallbackTag` is optional. Member balancers (`balancers`, spec019) are allowed, with spec019's own
-  requirement that a balancer with members has a fallback. All graph and loop checks (spec017–019) apply.
+- `fallbackTag` is optional. Member balancers (`balancers`, spec019) are allowed, and a
+  thresholdLeastPing balancer can be a member of another, with spec019's own requirement that a balancer
+  which is a member has a fallbackTag. All graph and loop checks (spec017–019) apply.
 - TL-7's observed-outbound check applies to every thresholdLeastPing balancer.
 
 ### TL-2 Measurement And Eligibility
@@ -182,7 +183,8 @@ unusable fallback never receives a connection. A pick never waits or queues whil
 ### TL-5 Observation-driven Computation
 
 - **Triggers.** A computation runs after each change that can affect a decision: a burst probe result
-  recorded or removed, a classic result recorded, a force-down set change, a Hy2 relay outbound's relay
+  recorded or removed (including a scheduled round's cleanup), a classic result recorded, a force-down set
+  change, a Hy2 relay outbound's relay
   status change (spec024; it turns a tracked relay dead in `GetObservation` without any probe result,
   D12), a runtime `AddOutbound`/`RemoveOutbound` (it changes selector-matched candidates), and router
   changes (start, rule publication through ReloadRules/AddRule/RemoveRule, override set or clear). The
@@ -279,8 +281,11 @@ Owner: the existing `RoutingService` (`GetBalancerInfo`, `ListBalancers`). No ne
   status and selection, the pass generation and the observation time (unix milliseconds).
 - `BalancerMember.selection` (free field 6): `usable`, `within_limit`, `latched`, `rtt_known`, `rtt_ns`,
   reason, and for a roundRobin/random member its aggregation kind with measured/dispatchable counts.
-  Reasons: `eligible`, `unobserved` (an observed tag without a result yet), `probe_down`, `rtt_unavailable`,
-  `invalid_measurement`, `max_rtt_exceeded`, `recovering` (latched, below maxRTT, not yet below recoverRTT).
+  Reasons: `eligible`, `unobserved` (an observed tag without a result yet), `absent` (the outbound was removed
+  at run time; a lingering observation does not make it usable), `probe_down`, `rtt_unavailable`,
+  `invalid_measurement`, `max_rtt_exceeded`, `recovering` (latched, below maxRTT, not yet below recoverRTT),
+  `balancer_unavailable` (a child balancer with no usable option) and `observation_unavailable` (the
+  observatory gave no usable observation).
 - Raw `status.alive`, `status.delay`, error and `tracked_from` stay raw facts. An alive option may be
   over-limit; a degraded winner has share 1 with `within_limit = false`; an eligible loser has share 0 and
   is not unhealthy.
@@ -289,8 +294,9 @@ Owner: the existing `RoutingService` (`GetBalancerInfo`, `ListBalancers`). No ne
   the same pass; a `ListBalancers` response uses one pass for all its balancers. Chain hops that are legacy
   balancers keep their legacy reads (they report their own level). Existing `override`, `fallback`, chain,
   share and status fields keep their meaning.
-- **Drops (D14):** `threshold_decision` carries a per-balancer counter of connections this balancer
-  dropped since it was published (a rule publication starts a new count) and the reason of the last drop. A drop is logged at info level, not as a warning,
+- **Drops (D14):** `threshold_decision` carries a per-balancer counter of picks this balancer ended in a
+  drop since it was published (a rule publication starts a new count) and the reason of the last drop. A
+  `RoutingService.TestRoute` that ends in a drop is counted too, since it is a pick. A drop is logged at info level, not as a warning,
   so an outage does not flood journald (which keeps warnings and errors).
 - A read never computes, picks, advances a strategy, sends probes or holds locks across I/O. Response size
   is bounded by the loaded graph. No credentials, URLs or endpoints are returned.
@@ -391,5 +397,6 @@ No question is open.
 
 ## Evidence Status
 
-Source inspection and documentation only. No feature code, protobuf generation, test, build, stress run or
-deployment has been performed for this specification.
+Core side implemented on 2026-11-15 (T002–T007); evidence index in [tasks](tasks.md). Consumers (T008),
+the dual-platform build and stability gate (T009) and any rollout (T010) are not done and need their own
+authorization.

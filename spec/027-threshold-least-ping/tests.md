@@ -20,7 +20,7 @@ the test controls, with wide margins around the threshold.
 | C04 | recoverRTT `40ms`, `50ms`, omitted with maxRTT `50ms` | loaded recover_rtt_ns 40ms, 50ms, 50ms |
 | C05 | recoverRTT `60ms` with maxRTT `50ms`; `0s`; negative; bare number; null | error naming recoverRTT |
 | C06 | no fallbackTag; outbound fallback; balancer fallback; blackhole fallback | accepted when TL-7 and the graph checks hold |
-| C07 | member balancers without a fallbackTag | rejected by spec019's existing rule |
+| C07 | a thresholdLeastPing balancer that is a member of another, without a fallbackTag | rejected by spec019's existing rule (`is a member and has no fallbackTag`) |
 | C08 | direct protobuf with a wrong typed message, zero or negative maxRTT, recoverRTT above maxRTT | rejected, not defaulted |
 | C09 | AddRule publishing a valid and an invalid thresholdLeastPing balancer | valid one live; invalid rejected, previous map kept |
 | C10 | the baseline Core loads a C01 fixture as JSON and as direct protobuf | `unknown balancing strategy` / `unrecognized balancer type` |

@@ -15,6 +15,7 @@ import (
 	"github.com/xtls/xray-core/common/errors"
 	v2net "github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/session"
+	"github.com/xtls/xray-core/common/signal"
 	"github.com/xtls/xray-core/common/signal/done"
 	"github.com/xtls/xray-core/common/task"
 	"github.com/xtls/xray-core/common/utils"
@@ -37,6 +38,14 @@ type Observer struct {
 
 	ohm        outbound.Manager
 	dispatcher routing.Dispatcher
+
+	// changes notifies a recorded result (Core spec027 TL-5).
+	changes signal.Broadcast
+}
+
+// OnChange implements extension.ChangeNotifier (Core spec027 TL-5).
+func (o *Observer) OnChange(fn func()) (cancel func()) {
+	return o.changes.Subscribe(fn)
 }
 
 // GetObservation copies the statuses under the lock: the prober updates them in place (Core spec007
@@ -223,6 +232,11 @@ func (o *Observer) probe(outbound string) ProbeResult {
 }
 
 func (o *Observer) updateStatusForResult(outbound string, result *ProbeResult) {
+	o.recordResult(outbound, result)
+	o.changes.Fire() // Core spec027 TL-5, after statusLock is released
+}
+
+func (o *Observer) recordResult(outbound string, result *ProbeResult) {
 	o.statusLock.Lock()
 	defer o.statusLock.Unlock()
 	var status *OutboundStatus

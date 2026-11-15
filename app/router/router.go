@@ -36,6 +36,17 @@ type Router struct {
 	loopbackReentryGuard atomic.Uint64
 	// started is set by the start check (Core spec018 S3.1); routing changes run spec019 M6 after it.
 	started atomic.Bool
+
+	// Core spec027 TL-5: tlpMu serialises thresholdLeastPing computations; a trigger during one sets
+	// tlpDirty. tlpGen numbers the passes. The subscriptions are taken once (tlpSubMu).
+	tlpMu         sync.Mutex
+	tlpDirty      atomic.Bool
+	tlpGen        atomic.Uint64
+	tlpStarted    atomic.Bool
+	tlpSubMu      sync.Mutex
+	tlpSubscribed bool
+	tlpClosed     bool
+	tlpCancels    []func()
 }
 
 // Route is an implementation of routing.Route.
@@ -208,8 +219,11 @@ func (r *Router) reloadRules(config *Config, shouldAppend bool, newWebhook func(
 	for _, balancer := range newBalancers {
 		balancer.peers.Store(&newBalancers)
 	}
-	r.balancers.Store(&newBalancers)
-	r.rules.Store(&newRules)
+	// Core spec027 TL-5: a map with thresholdLeastPing balancers is published with its first pass.
+	r.publishThreshold(newBalancers, func() {
+		r.balancers.Store(&newBalancers)
+		r.rules.Store(&newRules)
+	})
 	published = true
 	if !shouldAppend {
 		closeWebhooks(oldRules)
@@ -301,6 +315,7 @@ func (r *Router) Start() error {
 			return errors.New("failed to initialize routing script").Base(err)
 		}
 	}
+	r.startThreshold() // Core spec027 TL-5
 	return nil
 }
 
@@ -315,6 +330,7 @@ func closeWebhooks(rules []*Rule) {
 
 // Close implements common.Closable.
 func (r *Router) Close() error {
+	r.closeThreshold() // Core spec027 TL-5: no callback after Close
 	if r.script != nil {
 		r.script.close()
 	}

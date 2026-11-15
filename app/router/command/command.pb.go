@@ -566,8 +566,10 @@ type BalancerMember struct {
 	Status *BalancerStatus `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
 	// spec020 P2: its weight in a weighted strategy (0 otherwise), and the share of the level's new picks it takes
 	// now, 0 to 1.
-	Weight        float64 `protobuf:"fixed64,4,opt,name=weight,proto3" json:"weight,omitempty"`
-	Share         float64 `protobuf:"fixed64,5,opt,name=share,proto3" json:"share,omitempty"`
+	Weight float64 `protobuf:"fixed64,4,opt,name=weight,proto3" json:"weight,omitempty"`
+	Share  float64 `protobuf:"fixed64,5,opt,name=share,proto3" json:"share,omitempty"`
+	// Core spec027: the candidate's eligibility at a thresholdLeastPing level; absent at other strategies.
+	Selection     *ThresholdSelection `protobuf:"bytes,6,opt,name=selection,proto3" json:"selection,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -635,6 +637,13 @@ func (x *BalancerMember) GetShare() float64 {
 		return x.Share
 	}
 	return 0
+}
+
+func (x *BalancerMember) GetSelection() *ThresholdSelection {
+	if x != nil {
+		return x.Selection
+	}
+	return nil
 }
 
 // spec019 M4: a balancer's availability and delay as the level above it reads them; spec020 P1: a candidate's
@@ -740,10 +749,14 @@ type BalancerMsg struct {
 	// spec019 M10: the level's candidates, in order (the selector's outbounds, then the members).
 	Members []*BalancerMember `protobuf:"bytes,8,rep,name=members,proto3" json:"members,omitempty"`
 	Status  *BalancerStatus   `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"`
-	// spec020 P3: the level's strategy as loaded (leastping, weightedleastping, roundrobin, random, leastload).
-	Strategy      string `protobuf:"bytes,10,opt,name=strategy,proto3" json:"strategy,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// spec020 P3: the level's strategy as loaded (leastping, weightedleastping, roundrobin, random, leastload,
+	// thresholdleastping).
+	Strategy string `protobuf:"bytes,10,opt,name=strategy,proto3" json:"strategy,omitempty"`
+	// Core spec027: a thresholdLeastPing level's loaded limits and its decision, from one published pass.
+	ThresholdPolicy   *ThresholdPolicy   `protobuf:"bytes,11,opt,name=threshold_policy,json=thresholdPolicy,proto3" json:"threshold_policy,omitempty"`
+	ThresholdDecision *ThresholdDecision `protobuf:"bytes,12,opt,name=threshold_decision,json=thresholdDecision,proto3" json:"threshold_decision,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *BalancerMsg) Reset() {
@@ -816,6 +829,20 @@ func (x *BalancerMsg) GetStrategy() string {
 		return x.Strategy
 	}
 	return ""
+}
+
+func (x *BalancerMsg) GetThresholdPolicy() *ThresholdPolicy {
+	if x != nil {
+		return x.ThresholdPolicy
+	}
+	return nil
+}
+
+func (x *BalancerMsg) GetThresholdDecision() *ThresholdDecision {
+	if x != nil {
+		return x.ThresholdDecision
+	}
+	return nil
 }
 
 type GetBalancerInfoRequest struct {
@@ -1562,6 +1589,300 @@ func (*Config) Descriptor() ([]byte, []int) {
 	return file_app_router_command_command_proto_rawDescGZIP(), []int{26}
 }
 
+// Core spec027: a thresholdLeastPing balancer's limits as loaded.
+type ThresholdPolicy struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	MaxRttNs int64                  `protobuf:"varint,1,opt,name=max_rtt_ns,json=maxRttNs,proto3" json:"max_rtt_ns,omitempty"`
+	// Equal to max_rtt_ns when no band is configured.
+	RecoverRttNs  int64 `protobuf:"varint,2,opt,name=recover_rtt_ns,json=recoverRttNs,proto3" json:"recover_rtt_ns,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ThresholdPolicy) Reset() {
+	*x = ThresholdPolicy{}
+	mi := &file_app_router_command_command_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ThresholdPolicy) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ThresholdPolicy) ProtoMessage() {}
+
+func (x *ThresholdPolicy) ProtoReflect() protoreflect.Message {
+	mi := &file_app_router_command_command_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ThresholdPolicy.ProtoReflect.Descriptor instead.
+func (*ThresholdPolicy) Descriptor() ([]byte, []int) {
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *ThresholdPolicy) GetMaxRttNs() int64 {
+	if x != nil {
+		return x.MaxRttNs
+	}
+	return 0
+}
+
+func (x *ThresholdPolicy) GetRecoverRttNs() int64 {
+	if x != nil {
+		return x.RecoverRttNs
+	}
+	return 0
+}
+
+// Core spec027: one option's eligibility at a thresholdLeastPing level, as the next pick sees it.
+type ThresholdSelection struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Known, alive and validly measured; raw health stays in BalancerStatus.
+	Usable bool `protobuf:"varint,1,opt,name=usable,proto3" json:"usable,omitempty"`
+	// Usable and not latched over the limit.
+	WithinLimit bool `protobuf:"varint,2,opt,name=within_limit,json=withinLimit,proto3" json:"within_limit,omitempty"`
+	// Latched over maxRTT until it is under recoverRTT (TL-4).
+	Latched bool `protobuf:"varint,3,opt,name=latched,proto3" json:"latched,omitempty"`
+	// false: no RTT, as opposed to a measured zero.
+	RttKnown bool  `protobuf:"varint,4,opt,name=rtt_known,json=rttKnown,proto3" json:"rtt_known,omitempty"`
+	RttNs    int64 `protobuf:"varint,5,opt,name=rtt_ns,json=rttNs,proto3" json:"rtt_ns,omitempty"`
+	// eligible, unobserved, absent, probe_down, rtt_unavailable, invalid_measurement, max_rtt_exceeded,
+	// recovering, balancer_unavailable, observation_unavailable.
+	Reason string `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
+	// "mean" for a roundRobin/random child's representative RTT, with its coverage; empty otherwise.
+	Aggregation   string `protobuf:"bytes,7,opt,name=aggregation,proto3" json:"aggregation,omitempty"`
+	Measured      uint32 `protobuf:"varint,8,opt,name=measured,proto3" json:"measured,omitempty"`
+	Dispatchable  uint32 `protobuf:"varint,9,opt,name=dispatchable,proto3" json:"dispatchable,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ThresholdSelection) Reset() {
+	*x = ThresholdSelection{}
+	mi := &file_app_router_command_command_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ThresholdSelection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ThresholdSelection) ProtoMessage() {}
+
+func (x *ThresholdSelection) ProtoReflect() protoreflect.Message {
+	mi := &file_app_router_command_command_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ThresholdSelection.ProtoReflect.Descriptor instead.
+func (*ThresholdSelection) Descriptor() ([]byte, []int) {
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *ThresholdSelection) GetUsable() bool {
+	if x != nil {
+		return x.Usable
+	}
+	return false
+}
+
+func (x *ThresholdSelection) GetWithinLimit() bool {
+	if x != nil {
+		return x.WithinLimit
+	}
+	return false
+}
+
+func (x *ThresholdSelection) GetLatched() bool {
+	if x != nil {
+		return x.Latched
+	}
+	return false
+}
+
+func (x *ThresholdSelection) GetRttKnown() bool {
+	if x != nil {
+		return x.RttKnown
+	}
+	return false
+}
+
+func (x *ThresholdSelection) GetRttNs() int64 {
+	if x != nil {
+		return x.RttNs
+	}
+	return 0
+}
+
+func (x *ThresholdSelection) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *ThresholdSelection) GetAggregation() string {
+	if x != nil {
+		return x.Aggregation
+	}
+	return ""
+}
+
+func (x *ThresholdSelection) GetMeasured() uint32 {
+	if x != nil {
+		return x.Measured
+	}
+	return 0
+}
+
+func (x *ThresholdSelection) GetDispatchable() uint32 {
+	if x != nil {
+		return x.Dispatchable
+	}
+	return 0
+}
+
+// Core spec027: a thresholdLeastPing level's decision.
+type ThresholdDecision struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// primary, fallback, degraded, pending, unavailable or override.
+	Mode string `protobuf:"bytes,1,opt,name=mode,proto3" json:"mode,omitempty"`
+	// The chosen candidate, the fallback, the blackhole or the override target; empty on a drop.
+	ChoiceTag string `protobuf:"bytes,2,opt,name=choice_tag,json=choiceTag,proto3" json:"choice_tag,omitempty"`
+	// "blackhole" or "drop" when nothing is usable; empty otherwise.
+	Terminal string `protobuf:"bytes,3,opt,name=terminal,proto3" json:"terminal,omitempty"`
+	// Why nothing is usable (pending and unavailable).
+	Reason string `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	// The fallback result as this level reads it, and its eligibility; absent without a fallback option.
+	FallbackStatus    *BalancerStatus     `protobuf:"bytes,5,opt,name=fallback_status,json=fallbackStatus,proto3" json:"fallback_status,omitempty"`
+	FallbackSelection *ThresholdSelection `protobuf:"bytes,6,opt,name=fallback_selection,json=fallbackSelection,proto3" json:"fallback_selection,omitempty"`
+	// The pass: its number and when its observation was read (unix milliseconds).
+	Generation   uint64 `protobuf:"varint,7,opt,name=generation,proto3" json:"generation,omitempty"`
+	ObservedAtMs int64  `protobuf:"varint,8,opt,name=observed_at_ms,json=observedAtMs,proto3" json:"observed_at_ms,omitempty"`
+	// Connections this balancer dropped since it was published, and the reason of the last.
+	Dropped        uint64 `protobuf:"varint,9,opt,name=dropped,proto3" json:"dropped,omitempty"`
+	LastDropReason string `protobuf:"bytes,10,opt,name=last_drop_reason,json=lastDropReason,proto3" json:"last_drop_reason,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ThresholdDecision) Reset() {
+	*x = ThresholdDecision{}
+	mi := &file_app_router_command_command_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ThresholdDecision) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ThresholdDecision) ProtoMessage() {}
+
+func (x *ThresholdDecision) ProtoReflect() protoreflect.Message {
+	mi := &file_app_router_command_command_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ThresholdDecision.ProtoReflect.Descriptor instead.
+func (*ThresholdDecision) Descriptor() ([]byte, []int) {
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ThresholdDecision) GetMode() string {
+	if x != nil {
+		return x.Mode
+	}
+	return ""
+}
+
+func (x *ThresholdDecision) GetChoiceTag() string {
+	if x != nil {
+		return x.ChoiceTag
+	}
+	return ""
+}
+
+func (x *ThresholdDecision) GetTerminal() string {
+	if x != nil {
+		return x.Terminal
+	}
+	return ""
+}
+
+func (x *ThresholdDecision) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *ThresholdDecision) GetFallbackStatus() *BalancerStatus {
+	if x != nil {
+		return x.FallbackStatus
+	}
+	return nil
+}
+
+func (x *ThresholdDecision) GetFallbackSelection() *ThresholdSelection {
+	if x != nil {
+		return x.FallbackSelection
+	}
+	return nil
+}
+
+func (x *ThresholdDecision) GetGeneration() uint64 {
+	if x != nil {
+		return x.Generation
+	}
+	return 0
+}
+
+func (x *ThresholdDecision) GetObservedAtMs() int64 {
+	if x != nil {
+		return x.ObservedAtMs
+	}
+	return 0
+}
+
+func (x *ThresholdDecision) GetDropped() uint64 {
+	if x != nil {
+		return x.Dropped
+	}
+	return 0
+}
+
+func (x *ThresholdDecision) GetLastDropReason() string {
+	if x != nil {
+		return x.LastDropReason
+	}
+	return ""
+}
+
 var File_app_router_command_command_proto protoreflect.FileDescriptor
 
 const file_app_router_command_command_proto_rawDesc = "" +
@@ -1617,13 +1938,14 @@ const file_app_router_command_command_proto_rawDesc = "" +
 	"\x06active\x18\x02 \x01(\bR\x06active\x12\x1a\n" +
 	"\breported\x18\x03 \x01(\bR\breported\x12\x1a\n" +
 	"\bbalancer\x18\x04 \x01(\bR\bbalancer\x12:\n" +
-	"\x05chain\x18\x05 \x03(\v2$.xray.app.router.command.FallbackHopR\x05chain\"\xad\x01\n" +
+	"\x05chain\x18\x05 \x03(\v2$.xray.app.router.command.FallbackHopR\x05chain\"\xf8\x01\n" +
 	"\x0eBalancerMember\x12\x10\n" +
 	"\x03tag\x18\x01 \x01(\tR\x03tag\x12\x1a\n" +
 	"\bbalancer\x18\x02 \x01(\bR\bbalancer\x12?\n" +
 	"\x06status\x18\x03 \x01(\v2'.xray.app.router.command.BalancerStatusR\x06status\x12\x16\n" +
 	"\x06weight\x18\x04 \x01(\x01R\x06weight\x12\x14\n" +
-	"\x05share\x18\x05 \x01(\x01R\x05share\"\xad\x01\n" +
+	"\x05share\x18\x05 \x01(\x01R\x05share\x12I\n" +
+	"\tselection\x18\x06 \x01(\v2+.xray.app.router.command.ThresholdSelectionR\tselection\"\xad\x01\n" +
 	"\x0eBalancerStatus\x12\x14\n" +
 	"\x05known\x18\x01 \x01(\bR\x05known\x12\x14\n" +
 	"\x05alive\x18\x02 \x01(\bR\x05alive\x12\x14\n" +
@@ -1632,7 +1954,7 @@ const file_app_router_command_command_proto_rawDesc = "" +
 	"\x06reason\x18\x05 \x01(\tR\x06reason\x12\x1e\n" +
 	"\n" +
 	"provenance\x18\x06 \x01(\bR\n" +
-	"provenance\"\x8c\x03\n" +
+	"provenance\"\xbc\x04\n" +
 	"\vBalancerMsg\x12A\n" +
 	"\boverride\x18\x05 \x01(\v2%.xray.app.router.command.OverrideInfoR\boverride\x12W\n" +
 	"\x10principle_target\x18\x06 \x01(\v2,.xray.app.router.command.PrincipleTargetInfoR\x0fprincipleTarget\x12A\n" +
@@ -1640,7 +1962,9 @@ const file_app_router_command_command_proto_rawDesc = "" +
 	"\amembers\x18\b \x03(\v2'.xray.app.router.command.BalancerMemberR\amembers\x12?\n" +
 	"\x06status\x18\t \x01(\v2'.xray.app.router.command.BalancerStatusR\x06status\x12\x1a\n" +
 	"\bstrategy\x18\n" +
-	" \x01(\tR\bstrategy\"*\n" +
+	" \x01(\tR\bstrategy\x12S\n" +
+	"\x10threshold_policy\x18\v \x01(\v2(.xray.app.router.command.ThresholdPolicyR\x0fthresholdPolicy\x12Y\n" +
+	"\x12threshold_decision\x18\f \x01(\v2*.xray.app.router.command.ThresholdDecisionR\x11thresholdDecision\"*\n" +
 	"\x16GetBalancerInfoRequest\x12\x10\n" +
 	"\x03tag\x18\x01 \x01(\tR\x03tag\"[\n" +
 	"\x17GetBalancerInfoResponse\x12@\n" +
@@ -1673,7 +1997,36 @@ const file_app_router_command_command_proto_rawDesc = "" +
 	"\x04rule\x18\x03 \x01(\v2\x1c.xray.app.router.RoutingRuleR\x04rule\"O\n" +
 	"\x10ListRuleResponse\x12;\n" +
 	"\x05rules\x18\x01 \x03(\v2%.xray.app.router.command.ListRuleItemR\x05rules\"\b\n" +
-	"\x06Config2\x86\b\n" +
+	"\x06Config\"U\n" +
+	"\x0fThresholdPolicy\x12\x1c\n" +
+	"\n" +
+	"max_rtt_ns\x18\x01 \x01(\x03R\bmaxRttNs\x12$\n" +
+	"\x0erecover_rtt_ns\x18\x02 \x01(\x03R\frecoverRttNs\"\x97\x02\n" +
+	"\x12ThresholdSelection\x12\x16\n" +
+	"\x06usable\x18\x01 \x01(\bR\x06usable\x12!\n" +
+	"\fwithin_limit\x18\x02 \x01(\bR\vwithinLimit\x12\x18\n" +
+	"\alatched\x18\x03 \x01(\bR\alatched\x12\x1b\n" +
+	"\trtt_known\x18\x04 \x01(\bR\brttKnown\x12\x15\n" +
+	"\x06rtt_ns\x18\x05 \x01(\x03R\x05rttNs\x12\x16\n" +
+	"\x06reason\x18\x06 \x01(\tR\x06reason\x12 \n" +
+	"\vaggregation\x18\a \x01(\tR\vaggregation\x12\x1a\n" +
+	"\bmeasured\x18\b \x01(\rR\bmeasured\x12\"\n" +
+	"\fdispatchable\x18\t \x01(\rR\fdispatchable\"\xb2\x03\n" +
+	"\x11ThresholdDecision\x12\x12\n" +
+	"\x04mode\x18\x01 \x01(\tR\x04mode\x12\x1d\n" +
+	"\n" +
+	"choice_tag\x18\x02 \x01(\tR\tchoiceTag\x12\x1a\n" +
+	"\bterminal\x18\x03 \x01(\tR\bterminal\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\x12P\n" +
+	"\x0ffallback_status\x18\x05 \x01(\v2'.xray.app.router.command.BalancerStatusR\x0efallbackStatus\x12Z\n" +
+	"\x12fallback_selection\x18\x06 \x01(\v2+.xray.app.router.command.ThresholdSelectionR\x11fallbackSelection\x12\x1e\n" +
+	"\n" +
+	"generation\x18\a \x01(\x04R\n" +
+	"generation\x12$\n" +
+	"\x0eobserved_at_ms\x18\b \x01(\x03R\fobservedAtMs\x12\x18\n" +
+	"\adropped\x18\t \x01(\x04R\adropped\x12(\n" +
+	"\x10last_drop_reason\x18\n" +
+	" \x01(\tR\x0elastDropReason2\x86\b\n" +
 	"\x0eRoutingService\x12{\n" +
 	"\x15SubscribeRoutingStats\x125.xray.app.router.command.SubscribeRoutingStatsRequest\x1a'.xray.app.router.command.RoutingContext\"\x000\x01\x12a\n" +
 	"\tTestRoute\x12).xray.app.router.command.TestRouteRequest\x1a'.xray.app.router.command.RoutingContext\"\x00\x12v\n" +
@@ -1699,7 +2052,7 @@ func file_app_router_command_command_proto_rawDescGZIP() []byte {
 	return file_app_router_command_command_proto_rawDescData
 }
 
-var file_app_router_command_command_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
+var file_app_router_command_command_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_app_router_command_command_proto_goTypes = []any{
 	(*RoutingContext)(nil),                 // 0: xray.app.router.command.RoutingContext
 	(*SubscribeRoutingStatsRequest)(nil),   // 1: xray.app.router.command.SubscribeRoutingStatsRequest
@@ -1728,51 +2081,59 @@ var file_app_router_command_command_proto_goTypes = []any{
 	(*ListRuleItem)(nil),                   // 24: xray.app.router.command.ListRuleItem
 	(*ListRuleResponse)(nil),               // 25: xray.app.router.command.ListRuleResponse
 	(*Config)(nil),                         // 26: xray.app.router.command.Config
-	nil,                                    // 27: xray.app.router.command.RoutingContext.AttributesEntry
-	(net.Network)(0),                       // 28: xray.common.net.Network
-	(*serial.TypedMessage)(nil),            // 29: xray.common.serial.TypedMessage
-	(*router.RoutingRule)(nil),             // 30: xray.app.router.RoutingRule
+	(*ThresholdPolicy)(nil),                // 27: xray.app.router.command.ThresholdPolicy
+	(*ThresholdSelection)(nil),             // 28: xray.app.router.command.ThresholdSelection
+	(*ThresholdDecision)(nil),              // 29: xray.app.router.command.ThresholdDecision
+	nil,                                    // 30: xray.app.router.command.RoutingContext.AttributesEntry
+	(net.Network)(0),                       // 31: xray.common.net.Network
+	(*serial.TypedMessage)(nil),            // 32: xray.common.serial.TypedMessage
+	(*router.RoutingRule)(nil),             // 33: xray.app.router.RoutingRule
 }
 var file_app_router_command_command_proto_depIdxs = []int32{
-	28, // 0: xray.app.router.command.RoutingContext.Network:type_name -> xray.common.net.Network
-	27, // 1: xray.app.router.command.RoutingContext.Attributes:type_name -> xray.app.router.command.RoutingContext.AttributesEntry
+	31, // 0: xray.app.router.command.RoutingContext.Network:type_name -> xray.common.net.Network
+	30, // 1: xray.app.router.command.RoutingContext.Attributes:type_name -> xray.app.router.command.RoutingContext.AttributesEntry
 	0,  // 2: xray.app.router.command.TestRouteRequest.RoutingContext:type_name -> xray.app.router.command.RoutingContext
 	5,  // 3: xray.app.router.command.FallbackInfo.chain:type_name -> xray.app.router.command.FallbackHop
 	8,  // 4: xray.app.router.command.BalancerMember.status:type_name -> xray.app.router.command.BalancerStatus
-	4,  // 5: xray.app.router.command.BalancerMsg.override:type_name -> xray.app.router.command.OverrideInfo
-	3,  // 6: xray.app.router.command.BalancerMsg.principle_target:type_name -> xray.app.router.command.PrincipleTargetInfo
-	6,  // 7: xray.app.router.command.BalancerMsg.fallback:type_name -> xray.app.router.command.FallbackInfo
-	7,  // 8: xray.app.router.command.BalancerMsg.members:type_name -> xray.app.router.command.BalancerMember
-	8,  // 9: xray.app.router.command.BalancerMsg.status:type_name -> xray.app.router.command.BalancerStatus
-	9,  // 10: xray.app.router.command.GetBalancerInfoResponse.balancer:type_name -> xray.app.router.command.BalancerMsg
-	9,  // 11: xray.app.router.command.BalancerItem.balancer:type_name -> xray.app.router.command.BalancerMsg
-	13, // 12: xray.app.router.command.ListBalancersResponse.balancers:type_name -> xray.app.router.command.BalancerItem
-	29, // 13: xray.app.router.command.AddRuleRequest.config:type_name -> xray.common.serial.TypedMessage
-	30, // 14: xray.app.router.command.ListRuleItem.rule:type_name -> xray.app.router.RoutingRule
-	24, // 15: xray.app.router.command.ListRuleResponse.rules:type_name -> xray.app.router.command.ListRuleItem
-	1,  // 16: xray.app.router.command.RoutingService.SubscribeRoutingStats:input_type -> xray.app.router.command.SubscribeRoutingStatsRequest
-	2,  // 17: xray.app.router.command.RoutingService.TestRoute:input_type -> xray.app.router.command.TestRouteRequest
-	10, // 18: xray.app.router.command.RoutingService.GetBalancerInfo:input_type -> xray.app.router.command.GetBalancerInfoRequest
-	17, // 19: xray.app.router.command.RoutingService.OverrideBalancerTarget:input_type -> xray.app.router.command.OverrideBalancerTargetRequest
-	12, // 20: xray.app.router.command.RoutingService.ListBalancers:input_type -> xray.app.router.command.ListBalancersRequest
-	15, // 21: xray.app.router.command.RoutingService.GetLoopGuards:input_type -> xray.app.router.command.GetLoopGuardsRequest
-	19, // 22: xray.app.router.command.RoutingService.AddRule:input_type -> xray.app.router.command.AddRuleRequest
-	21, // 23: xray.app.router.command.RoutingService.RemoveRule:input_type -> xray.app.router.command.RemoveRuleRequest
-	23, // 24: xray.app.router.command.RoutingService.ListRule:input_type -> xray.app.router.command.ListRuleRequest
-	0,  // 25: xray.app.router.command.RoutingService.SubscribeRoutingStats:output_type -> xray.app.router.command.RoutingContext
-	0,  // 26: xray.app.router.command.RoutingService.TestRoute:output_type -> xray.app.router.command.RoutingContext
-	11, // 27: xray.app.router.command.RoutingService.GetBalancerInfo:output_type -> xray.app.router.command.GetBalancerInfoResponse
-	18, // 28: xray.app.router.command.RoutingService.OverrideBalancerTarget:output_type -> xray.app.router.command.OverrideBalancerTargetResponse
-	14, // 29: xray.app.router.command.RoutingService.ListBalancers:output_type -> xray.app.router.command.ListBalancersResponse
-	16, // 30: xray.app.router.command.RoutingService.GetLoopGuards:output_type -> xray.app.router.command.GetLoopGuardsResponse
-	20, // 31: xray.app.router.command.RoutingService.AddRule:output_type -> xray.app.router.command.AddRuleResponse
-	22, // 32: xray.app.router.command.RoutingService.RemoveRule:output_type -> xray.app.router.command.RemoveRuleResponse
-	25, // 33: xray.app.router.command.RoutingService.ListRule:output_type -> xray.app.router.command.ListRuleResponse
-	25, // [25:34] is the sub-list for method output_type
-	16, // [16:25] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	28, // 5: xray.app.router.command.BalancerMember.selection:type_name -> xray.app.router.command.ThresholdSelection
+	4,  // 6: xray.app.router.command.BalancerMsg.override:type_name -> xray.app.router.command.OverrideInfo
+	3,  // 7: xray.app.router.command.BalancerMsg.principle_target:type_name -> xray.app.router.command.PrincipleTargetInfo
+	6,  // 8: xray.app.router.command.BalancerMsg.fallback:type_name -> xray.app.router.command.FallbackInfo
+	7,  // 9: xray.app.router.command.BalancerMsg.members:type_name -> xray.app.router.command.BalancerMember
+	8,  // 10: xray.app.router.command.BalancerMsg.status:type_name -> xray.app.router.command.BalancerStatus
+	27, // 11: xray.app.router.command.BalancerMsg.threshold_policy:type_name -> xray.app.router.command.ThresholdPolicy
+	29, // 12: xray.app.router.command.BalancerMsg.threshold_decision:type_name -> xray.app.router.command.ThresholdDecision
+	9,  // 13: xray.app.router.command.GetBalancerInfoResponse.balancer:type_name -> xray.app.router.command.BalancerMsg
+	9,  // 14: xray.app.router.command.BalancerItem.balancer:type_name -> xray.app.router.command.BalancerMsg
+	13, // 15: xray.app.router.command.ListBalancersResponse.balancers:type_name -> xray.app.router.command.BalancerItem
+	32, // 16: xray.app.router.command.AddRuleRequest.config:type_name -> xray.common.serial.TypedMessage
+	33, // 17: xray.app.router.command.ListRuleItem.rule:type_name -> xray.app.router.RoutingRule
+	24, // 18: xray.app.router.command.ListRuleResponse.rules:type_name -> xray.app.router.command.ListRuleItem
+	8,  // 19: xray.app.router.command.ThresholdDecision.fallback_status:type_name -> xray.app.router.command.BalancerStatus
+	28, // 20: xray.app.router.command.ThresholdDecision.fallback_selection:type_name -> xray.app.router.command.ThresholdSelection
+	1,  // 21: xray.app.router.command.RoutingService.SubscribeRoutingStats:input_type -> xray.app.router.command.SubscribeRoutingStatsRequest
+	2,  // 22: xray.app.router.command.RoutingService.TestRoute:input_type -> xray.app.router.command.TestRouteRequest
+	10, // 23: xray.app.router.command.RoutingService.GetBalancerInfo:input_type -> xray.app.router.command.GetBalancerInfoRequest
+	17, // 24: xray.app.router.command.RoutingService.OverrideBalancerTarget:input_type -> xray.app.router.command.OverrideBalancerTargetRequest
+	12, // 25: xray.app.router.command.RoutingService.ListBalancers:input_type -> xray.app.router.command.ListBalancersRequest
+	15, // 26: xray.app.router.command.RoutingService.GetLoopGuards:input_type -> xray.app.router.command.GetLoopGuardsRequest
+	19, // 27: xray.app.router.command.RoutingService.AddRule:input_type -> xray.app.router.command.AddRuleRequest
+	21, // 28: xray.app.router.command.RoutingService.RemoveRule:input_type -> xray.app.router.command.RemoveRuleRequest
+	23, // 29: xray.app.router.command.RoutingService.ListRule:input_type -> xray.app.router.command.ListRuleRequest
+	0,  // 30: xray.app.router.command.RoutingService.SubscribeRoutingStats:output_type -> xray.app.router.command.RoutingContext
+	0,  // 31: xray.app.router.command.RoutingService.TestRoute:output_type -> xray.app.router.command.RoutingContext
+	11, // 32: xray.app.router.command.RoutingService.GetBalancerInfo:output_type -> xray.app.router.command.GetBalancerInfoResponse
+	18, // 33: xray.app.router.command.RoutingService.OverrideBalancerTarget:output_type -> xray.app.router.command.OverrideBalancerTargetResponse
+	14, // 34: xray.app.router.command.RoutingService.ListBalancers:output_type -> xray.app.router.command.ListBalancersResponse
+	16, // 35: xray.app.router.command.RoutingService.GetLoopGuards:output_type -> xray.app.router.command.GetLoopGuardsResponse
+	20, // 36: xray.app.router.command.RoutingService.AddRule:output_type -> xray.app.router.command.AddRuleResponse
+	22, // 37: xray.app.router.command.RoutingService.RemoveRule:output_type -> xray.app.router.command.RemoveRuleResponse
+	25, // 38: xray.app.router.command.RoutingService.ListRule:output_type -> xray.app.router.command.ListRuleResponse
+	30, // [30:39] is the sub-list for method output_type
+	21, // [21:30] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_app_router_command_command_proto_init() }
@@ -1786,7 +2147,7 @@ func file_app_router_command_command_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_app_router_command_command_proto_rawDesc), len(file_app_router_command_command_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   28,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

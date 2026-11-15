@@ -1,6 +1,10 @@
 package routing
 
-import "github.com/xtls/xray-core/common/errors"
+import (
+	"time"
+
+	"github.com/xtls/xray-core/common/errors"
+)
 
 type BalancerOverrider interface {
 	SetOverrideTarget(tag, target string) error
@@ -46,6 +50,51 @@ type BalancerMember struct {
 	// Weight in a weighted strategy, 0 otherwise; Share of the level's new picks now, 0 to 1.
 	Weight float64
 	Share  float64
+	// Selection is the candidate's eligibility at a thresholdLeastPing level (Core spec027); nil elsewhere.
+	Selection *ThresholdSelection
+}
+
+// ThresholdSelection is one option's eligibility at a thresholdLeastPing level (Core spec027).
+type ThresholdSelection struct {
+	Usable, WithinLimit, Latched, RTTKnown bool
+	RTT                                    time.Duration
+	Reason                                 string
+	// Aggregation is "mean" for a roundRobin/random child's representative RTT, with its coverage.
+	Aggregation            string
+	Measured, Dispatchable int
+}
+
+// ThresholdReport is a thresholdLeastPing level from one published pass (Core spec027): every field
+// agrees with every other and with the picks made from that pass.
+type ThresholdReport struct {
+	MaxRTT, RecoverRTT time.Duration
+	// Mode is primary, fallback, degraded, pending, unavailable or override.
+	Mode     string
+	Choice   string
+	Terminal string // "blackhole", "drop" or empty
+	Reason   string
+	// Members, Status, PrincipleTarget and FallbackActive replace the level's legacy reads.
+	Members           []BalancerMember
+	Status            BalancerStatus
+	PrincipleTarget   []string
+	FallbackActive    bool
+	FallbackStatus    *BalancerStatus
+	FallbackSelection *ThresholdSelection
+	Generation        uint64
+	ObservedAt        time.Time
+	Dropped           uint64
+	LastDropReason    string
+}
+
+// ThresholdReader reads thresholdLeastPing levels from one pinned pass (Core spec027).
+type ThresholdReader interface {
+	// GetThreshold reports tag; false when it is not a thresholdLeastPing balancer.
+	GetThreshold(tag string) (ThresholdReport, bool, error)
+}
+
+// BalancerThreshold is a balancer view that can pin the current thresholdLeastPing pass.
+type BalancerThreshold interface {
+	ThresholdReader() ThresholdReader
 }
 
 // BalancerStatus is a balancer's availability and delay as the level above reads them (Core spec019
@@ -100,3 +149,8 @@ type LoopGuard interface {
 // ErrRouteDropped is returned when a loop guard stops a connection: the dispatcher closes it
 // instead of taking the default outbound (spec017 L6, L7).
 var ErrRouteDropped = errors.New("route dropped by a loop guard")
+
+// ErrBalancerUnavailable is returned when a thresholdLeastPing balancer has no usable option and no
+// explicit blackhole fallback, or no decision yet (Core spec027 TL-3). It is an ErrRouteDropped: the
+// dispatcher closes the connection, never the default outbound, and logs it at info level (D14).
+var ErrBalancerUnavailable = errors.New("balancer has no usable option").Base(ErrRouteDropped)

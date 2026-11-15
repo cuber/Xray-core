@@ -9,6 +9,7 @@ import (
 	"github.com/xtls/xray-core/app/proxyman"
 	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/errors"
+	"github.com/xtls/xray-core/common/signal"
 	"github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/features/outbound"
 )
@@ -28,6 +29,15 @@ type Manager struct {
 	// the router's S2 check, nil without a routing section.
 	graph       sync.Mutex
 	loopChecker outbound.LoopChecker
+
+	// changes notifies an added or removed handler (Core spec027 TL-5).
+	changes signal.Broadcast
+}
+
+// OnChange implements extension.ChangeNotifier (Core spec027 TL-5): a runtime handler change alters
+// the candidates a selector matches.
+func (m *Manager) OnChange(fn func()) (cancel func()) {
+	return m.changes.Subscribe(fn)
 }
 
 // New creates a new Manager.
@@ -115,6 +125,14 @@ func (m *Manager) GetHandler(tag string) outbound.Handler {
 
 // AddHandler implements outbound.Manager.
 func (m *Manager) AddHandler(ctx context.Context, handler outbound.Handler) error {
+	if err := m.addHandler(ctx, handler); err != nil {
+		return err
+	}
+	m.changes.Fire() // Core spec027 TL-5, after the graph and access locks are released
+	return nil
+}
+
+func (m *Manager) addHandler(ctx context.Context, handler outbound.Handler) error {
 	m.access.RLock()
 	running := m.running
 	m.access.RUnlock()
@@ -167,6 +185,14 @@ func (m *Manager) AddHandler(ctx context.Context, handler outbound.Handler) erro
 
 // RemoveHandler implements outbound.Manager.
 func (m *Manager) RemoveHandler(ctx context.Context, tag string) error {
+	if err := m.removeHandler(tag); err != nil {
+		return err
+	}
+	m.changes.Fire() // Core spec027 TL-5, after access is released
+	return nil
+}
+
+func (m *Manager) removeHandler(tag string) error {
 	if tag == "" {
 		return common.ErrNoClue
 	}

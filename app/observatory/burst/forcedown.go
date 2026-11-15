@@ -96,6 +96,14 @@ func (o *Observer) ForceDown() []ForceDown {
 // refuses the whole request and leaves the set unchanged. A tag already in the set
 // keeps its Since. It returns the set as applied.
 func (o *Observer) SetForceDown(entries []ForceDown) ([]ForceDown, error) {
+	set, err := o.setForceDown(entries)
+	if err == nil {
+		o.changes.Fire() // Core spec027 TL-5, after force.write is released
+	}
+	return set, err
+}
+
+func (o *Observer) setForceDown(entries []ForceDown) ([]ForceDown, error) {
 	o.force.write.Lock()
 	defer o.force.write.Unlock()
 	probes, err := o.probeTags()

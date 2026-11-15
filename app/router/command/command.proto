@@ -111,6 +111,8 @@ message BalancerMember {
   // now, 0 to 1.
   double weight = 4;
   double share = 5;
+  // Core spec027: the candidate's eligibility at a thresholdLeastPing level; absent at other strategies.
+  ThresholdSelection selection = 6;
 }
 
 // spec019 M4: a balancer's availability and delay as the level above it reads them; spec020 P1: a candidate's
@@ -140,8 +142,12 @@ message BalancerMsg {
   // spec019 M10: the level's candidates, in order (the selector's outbounds, then the members).
   repeated BalancerMember members = 8;
   BalancerStatus status = 9;
-  // spec020 P3: the level's strategy as loaded (leastping, weightedleastping, roundrobin, random, leastload).
+  // spec020 P3: the level's strategy as loaded (leastping, weightedleastping, roundrobin, random, leastload,
+  // thresholdleastping).
   string strategy = 10;
+  // Core spec027: a thresholdLeastPing level's loaded limits and its decision, from one published pass.
+  ThresholdPolicy threshold_policy = 11;
+  ThresholdDecision threshold_decision = 12;
 }
 
 message GetBalancerInfoRequest {
@@ -223,3 +229,51 @@ service RoutingService {
 }
 
 message Config {}
+
+// Core spec027: a thresholdLeastPing balancer's limits as loaded.
+message ThresholdPolicy {
+  int64 max_rtt_ns = 1;
+  // Equal to max_rtt_ns when no band is configured.
+  int64 recover_rtt_ns = 2;
+}
+
+// Core spec027: one option's eligibility at a thresholdLeastPing level, as the next pick sees it.
+message ThresholdSelection {
+  // Known, alive and validly measured; raw health stays in BalancerStatus.
+  bool usable = 1;
+  // Usable and not latched over the limit.
+  bool within_limit = 2;
+  // Latched over maxRTT until it is under recoverRTT (TL-4).
+  bool latched = 3;
+  // false: no RTT, as opposed to a measured zero.
+  bool rtt_known = 4;
+  int64 rtt_ns = 5;
+  // eligible, unobserved, absent, probe_down, rtt_unavailable, invalid_measurement, max_rtt_exceeded,
+  // recovering, balancer_unavailable, observation_unavailable.
+  string reason = 6;
+  // "mean" for a roundRobin/random child's representative RTT, with its coverage; empty otherwise.
+  string aggregation = 7;
+  uint32 measured = 8;
+  uint32 dispatchable = 9;
+}
+
+// Core spec027: a thresholdLeastPing level's decision.
+message ThresholdDecision {
+  // primary, fallback, degraded, pending, unavailable or override.
+  string mode = 1;
+  // The chosen candidate, the fallback, the blackhole or the override target; empty on a drop.
+  string choice_tag = 2;
+  // "blackhole" or "drop" when nothing is usable; empty otherwise.
+  string terminal = 3;
+  // Why nothing is usable (pending and unavailable).
+  string reason = 4;
+  // The fallback result as this level reads it, and its eligibility; absent without a fallback option.
+  BalancerStatus fallback_status = 5;
+  ThresholdSelection fallback_selection = 6;
+  // The pass: its number and when its observation was read (unix milliseconds).
+  uint64 generation = 7;
+  int64 observed_at_ms = 8;
+  // Connections this balancer dropped since it was published, and the reason of the last.
+  uint64 dropped = 9;
+  string last_drop_reason = 10;
+}

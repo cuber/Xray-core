@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	routerService "github.com/xtls/xray-core/app/router/command"
 	"github.com/xtls/xray-core/main/commands/base"
@@ -21,8 +22,11 @@ each candidate with its status as the balancer reads it, where that status comes
 weight and its share of new picks (Core spec020). The source is "probe" for a measured
 outbound, "track <probe>" for one that carries a probe's result, "balancer" for a member
 balancer, and "-" when unobserved or from a Core that does not report it. A dead candidate
-ends its row with its reason, and a level that is down adds its own. If no balancer tag
-specified, information for all balancers is returned.
+ends its row with its reason, and a level that is down adds its own. A thresholdLeastPing level
+(Core spec027) adds its limits, its decision with the pass's age and its drops, and each
+candidate's RTT and eligibility (eligible, recovering, max_rtt_exceeded, or why it is not
+usable); a latched candidate is marked so. If no balancer tag specified, information for all
+balancers is returned.
 
 > Ensure that "RoutingService" is enabled under "config.api.services" in the server configuration.
 
@@ -93,7 +97,16 @@ func writeBalancerInfo(w io.Writer, tag string, b *routerService.BalancerMsg) {
 			sb.WriteString("  " + reason) // spec020 P9
 		}
 	}
+	if p := b.ThresholdPolicy; p != nil {
+		sb.WriteString("  maxRTT " + time.Duration(p.MaxRttNs).String())
+		if p.RecoverRttNs != p.MaxRttNs {
+			sb.WriteString(" recoverRTT " + time.Duration(p.RecoverRttNs).String())
+		}
+	}
 	sb.WriteByte('\n')
+	if d := b.ThresholdDecision; d != nil {
+		sb.WriteString("  - Decision: " + thresholdDecisionText(d, time.Now()) + "\n")
+	}
 	// Override
 	if b.Override != nil && b.Override.Target != "" {
 		sb.WriteString("  - Selecting Override:\n")
@@ -134,6 +147,9 @@ func writeBalancerInfo(w io.Writer, tag string, b *routerService.BalancerMsg) {
 			if reason := deadReason(m.Status); reason != "" {
 				share = fmt.Sprintf("%-10s  %s", share, reason) // spec020 P9: a dead candidate ends with its reason
 			}
+			if s := m.Selection; s != nil {
+				share = fmt.Sprintf("%-10s  %s", share, selectionText(s)) // Core spec027
+			}
 			writeRow(sb, tableIndent, i+1, []string{m.Tag, kind, status, candidateSource(m), weight, share}, formats)
 		}
 	}
@@ -142,6 +158,9 @@ func writeBalancerInfo(w io.Writer, tag string, b *routerService.BalancerMsg) {
 		state := ""
 		if f.Active {
 			state = " (active: new picks use it)"
+		}
+		if d := b.ThresholdDecision; d != nil && d.FallbackSelection != nil {
+			state += "  " + selectionText(d.FallbackSelection) // Core spec027
 		}
 		sb.WriteString("  - Fallback: " + f.Tag + state + "\n")
 	}
@@ -199,6 +218,47 @@ func getColumnFormats(titles []string) []string {
 		w[i] = fmt.Sprintf("%%-%ds ", len(t))
 	}
 	return w
+}
+
+// thresholdDecisionText is a thresholdLeastPing decision on one line (Core spec027).
+func thresholdDecisionText(d *routerService.ThresholdDecision, now time.Time) string {
+	out := d.Mode
+	if d.ChoiceTag != "" {
+		out += " -> " + d.ChoiceTag
+	}
+	if d.Terminal != "" {
+		out += " (" + d.Terminal + ")"
+	}
+	if d.Reason != "" {
+		out += ": " + d.Reason
+	}
+	out += fmt.Sprintf("  pass %d", d.Generation)
+	if d.ObservedAtMs > 0 {
+		out += ", observed " + now.Sub(time.UnixMilli(d.ObservedAtMs)).Round(time.Second).String() + " ago"
+	}
+	if d.Dropped > 0 {
+		out += fmt.Sprintf(", dropped %d", d.Dropped)
+		if d.LastDropReason != "" {
+			out += " (last: " + d.LastDropReason + ")"
+		}
+	}
+	return out
+}
+
+// selectionText is one option's RTT and eligibility (Core spec027).
+func selectionText(s *routerService.ThresholdSelection) string {
+	out := "rtt -"
+	if s.RttKnown {
+		out = "rtt " + time.Duration(s.RttNs).Round(10*time.Microsecond).String()
+	}
+	if s.Aggregation != "" {
+		out += fmt.Sprintf(" (%s of %d/%d)", s.Aggregation, s.Measured, s.Dispatchable)
+	}
+	out += " " + s.Reason
+	if s.Latched {
+		out += " latched"
+	}
+	return out
 }
 
 func writeRow(sb *strings.Builder, indent, index int, values, formats []string) {

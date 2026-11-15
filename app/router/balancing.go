@@ -145,6 +145,12 @@ type Balancer struct {
 	override override
 	// peers is the newest published balancer map that contains this balancer (spec017 L6).
 	peers atomic.Pointer[map[string]*Balancer]
+
+	// Core spec027: pass is the newest thresholdLeastPing pass of the map this balancer is in; drops and
+	// lastDrop count the connections a thresholdLeastPing balancer dropped since it was built (D14).
+	pass     atomic.Pointer[tlpPass]
+	drops    atomic.Uint64
+	lastDrop atomic.Pointer[string]
 }
 
 // PickOutbound picks the tag of a outbound at this level only; a fallback that names a balancer is
@@ -157,6 +163,9 @@ func (b *Balancer) PickOutbound() (string, error) {
 // pick is one level of a pick: the tag, and whether it is the fallbackTag (spec017 B3: only a
 // fallback result goes on to another balancer).
 func (b *Balancer) pick() (string, bool, error) {
+	if isThreshold(b) {
+		return b.pickThreshold(nil) // Core spec027: never the generic empty-tag fallback
+	}
 	candidates, err := b.SelectOutbounds()
 	if err != nil {
 		if b.fallbackTag != "" {
@@ -186,6 +195,10 @@ func (b *Balancer) pick() (string, bool, error) {
 // its fallback, and whether the strategy can tell (spec016, spec017). It ignores an override, which
 // still wins in pick and is reported on its own.
 func (b *Balancer) fallbackState() (active bool, reported bool) {
+	if isThreshold(b) { // Core spec027: the published decision chose this level's fallback
+		st := b.pass.Load().state(b.tag)
+		return st != nil && st.decision.fallback, true
+	}
 	s, ok := b.strategy.(BalancingFallbackState)
 	if !ok {
 		return false, false
@@ -255,6 +268,9 @@ func (r *Router) SetOverrideTarget(tag, target string) error {
 			}
 		}
 		b.override.Put(target)
+		if hasThreshold(*r.balancers.Load()) {
+			r.thresholdChanged() // Core spec027 TL-5: the override is reported in the pass
+		}
 		return nil
 	}
 	return errors.New("cannot find tag")
