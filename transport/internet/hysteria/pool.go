@@ -61,10 +61,11 @@ type member struct {
 	spareAt time.Time
 
 	// Stall detection at each maintenance tick, under the pool's lock: the acknowledged packets at the last
-	// tick, and when they last grew or nothing was in flight.
-	lastAcked  uint64
-	progressAt time.Time
-	suspect    atomic.Bool
+	// tick, and the tick since which bytes have been in flight with none acknowledged (zero while nothing is
+	// in flight).
+	lastAcked uint64
+	stallFrom time.Time
+	suspect   atomic.Bool
 }
 
 func (m *member) live() bool {
@@ -353,20 +354,25 @@ func (p *pool) maintain() {
 }
 
 // checkProgress marks a connection suspect when it had bytes in flight and no packet acknowledged for
-// poolStallAfter (R5), from the library's own counters (quic-go fork spec002).
+// poolStallAfter (R5), from the library's own counters (quic-go fork spec002). The counters are read once a
+// tick, so the time runs from the first tick that sees the bytes outstanding: bytes sent just before a tick
+// that follows an idle one have not been unacknowledged since the idle tick.
 func (p *pool) checkProgress(m *member, now time.Time) {
 	conn := m.c.live.Load()
 	if conn == nil || !m.live() {
 		m.suspect.Store(false)
-		m.progressAt = time.Time{}
+		m.stallFrom = time.Time{}
 		return
 	}
 	stats := quicrecovery.Conn(conn).QuicStats()
 	switch {
-	case m.progressAt.IsZero() || stats.PacketsAcked != m.lastAcked || stats.BytesInFlight == 0:
-		m.progressAt = now
+	case stats.BytesInFlight == 0:
+		m.stallFrom = time.Time{}
 		m.suspect.Store(false)
-	case now.Sub(m.progressAt) >= poolStallAfter:
+	case m.stallFrom.IsZero() || stats.PacketsAcked != m.lastAcked:
+		m.stallFrom = now
+		m.suspect.Store(false)
+	case now.Sub(m.stallFrom) >= poolStallAfter:
 		m.suspect.Store(true)
 	}
 	m.lastAcked = stats.PacketsAcked

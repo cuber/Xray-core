@@ -16,6 +16,10 @@
 - [x] T013 Relay outbounds count their traffic under their own tag (R4 amendment, FR-011): `Handler.CountConnection`
   and the relay dial.
 - [x] T014 The gate for the T013 candidate, then the rollout on the nodes that run relays (xray-config spec026).
+- [x] T015 R5 stall timing (2026-11-16 amendment): a stall is timed from the first tick that sees the bytes
+  outstanding, not from the last idle tick.
+- [ ] T016 The Hy2 suites of the gate for the T015 candidate (results in xray-config TODO-054 until the next Core
+  code change); rollout separately authorized.
 
 ## Evidence
 
@@ -102,3 +106,22 @@
     probe); `version` CURRENT `312ee32`. Within a minute or two the relay outbounds of hk.pccw.hkt, la.usvps24.att.1st
     and la.usvps24.att.2nd counted traffic. isz5 and vgz.ecs run no relays and stay on `76e28afd` until their next Core
     upgrade.
+- 2026-11-16 T015: xray-config's `relay-check` for the spec027 candidate `6a7a8c4e` found this. At its scaling peak,
+  la→hk showed one of four healthy connections as suspect. Earlier runs show suspect in 6 of 127 samples on la→hk,
+  3 of 127 on hk→tk and 2 of 130 on tk→la; the code had not changed since T006.
+  - Cause: `checkProgress` timed a stall from the last tick that saw progress or nothing in flight. Bytes sent just
+    before the tick that followed an idle one therefore counted as a second without an acknowledgment.
+  - Fix: a stall is timed from the first tick that sees the bytes outstanding. A tick with nothing in flight clears
+    it, and an acknowledgment restarts it. On an idle connection a real stall is now found 1–2 s after its packet,
+    not 0–1 s; while acknowledgments flow nothing changes.
+  - Tests: `TestPoolDoesNotSuspectAFreshPacketOnAnIdleConnection` puts a byte on a 200 ms path 20 ms before the
+    tick that follows an idle one. It fails on the old code (3 of 3) and passes with the fix. In its second half
+    the same connection is cut off, and it is suspect one tick after the tick that first sees its packet.
+    `TestPoolAvoidsAStalledConnection` is unchanged, and the pool tests pass `-race -count=10`.
+  - Local suites, run alone:
+    - `-race -count=3` on `transport/internet/hysteria/...`, `proxy/hysteria/...`,
+      `transport/internet/quicrecovery/...` and `app/observatory/burst/...`: all ok.
+    - `testing/netem/run.sh -test.count=3`: 18 PASS on the second run. The first run failed
+      `TestNetemBlackoutRecovery` once (113 ms against its 100 ms bound); that test's client has no pool.
+    - Full suite: 109 of 111 packages ok. `proxy/anytls` and `testing/scenarios` failed with
+      `can't assign requested address` and connection resets, and both passed when run alone.

@@ -68,5 +68,21 @@ Decisions D1–D16).
   fallback, none lost), while new flows went back to the candidate region. Records stay in xray-config's
   private `.cache/threshold-check-*`.
 - [ ] T008 Sidecar and Portal consumers (their repositories; separate authorization).
-- [ ] T009 Commit, dual-platform build, stability gate (separate authorization).
+- [x] T009 Commit, dual-platform build, stability gate. Candidate `6a7a8c4e` (Linux sha256 `a0b3d849910c…`);
+  `xrayctl gate plan --base 10da0092` chose L2 with the Hy2 and relay suites. Passed 2026-11-16 on the user's
+  decision. A first run on 2026-11-15 was void, because another session switched the test hosts during it.
+  - `singmux-check` A/B, 600 s chaos and 120 s quiet, against `10da009` (its cases measured within 7 days):
+    PASS with each of hk.akile.lite and la.akile.lite as server, no panic, everything drained.
+    Candidate peaks: 1240 / 1155 goroutines, 243 / 230 FDs, 72.9 / 80.0 MiB.
+    Baseline peaks: 1208 / 1174, 237 / 233, 72.4 / 77.5 MiB.
+  - `quic-check` PASS (2026-11-15). Added latency per request at 15% injected loss
+    (baseline / default / tuned / copies): hk→tk 38 / 39 / 32 / 12 ms, tk→la 109 / 97 / 76 / 38 ms,
+    la→hk 163 / 115 / 136 / 48 ms.
+  - `migration hy2-check --duration 600` on hk.akile.lite after `switch upgrade`:
+    mihomo / sing-box TCP 11641 / 11640, churn 2361 / 2361 and UDP 5912 / 5913, none failed;
+    idle recovery, client restart and the negative control passed; Core peak 53 MiB, no restart.
+    `switch revert` afterwards.
+  - `relay-check`: one failure. la→hk scaling sampled one of its 4 connections as suspect. This is a false
+    suspect of spec024 R5, present since spec024 and the same in `10da009`; fixed as spec024 T015, whose
+    candidate takes the Hy2 suites again (spec024 T016).
 - [ ] T010 Rollout X01–X05, thresholds and paired restore plan (separate authorization; xray-config TODO-053).

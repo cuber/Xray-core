@@ -16,6 +16,7 @@ import (
 	"github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/session"
 	"github.com/xtls/xray-core/transport/internet"
+	"github.com/xtls/xray-core/transport/internet/quicrecovery"
 	"github.com/xtls/xray-core/transport/internet/stat"
 )
 
@@ -367,6 +368,63 @@ func TestPoolAvoidsAStalledConnection(t *testing.T) {
 	}
 	if report := f.stats.Report(false).Session; report.Suspect != 1 {
 		t.Errorf("session report %+v", report)
+	}
+}
+
+// R5 times a stall from the first tick that sees the bytes outstanding: a packet sent just before a tick that
+// follows an idle one has not been unacknowledged since that idle tick (TODO-054 of xray-config, 2026-11-16).
+func TestPoolDoesNotSuspectAFreshPacketOnAnIdleConnection(t *testing.T) {
+	f := newPoolFixture(t, &Session{MinConnections: 1, MaxConnections: 1, StreamsPerConnection: 16, ScaleUpStreams: 16}, 100)
+	conn := f.hold(t, context.Background())
+	m := f.pool.snapshot()[0]
+	f.mu.Lock()
+	sock := f.socks[0]
+	f.mu.Unlock()
+	// A healthy path with 200 ms one way from the owner: every datagram arrives, late.
+	sock.setDrop(func(b []byte) bool {
+		late := append([]byte(nil), b...)
+		time.AfterFunc(200*time.Millisecond, func() { sock.PacketConn.WriteTo(late, f.server) })
+		return true
+	})
+	inFlight := func() uint64 { return quicrecovery.Conn(m.c.live.Load()).QuicStats().BytesInFlight }
+	eventually(t, "nothing in flight", func() bool { return inFlight() == 0 })
+	f.pool.maintain() // idle
+
+	f.advance(time.Second)
+	conn.Write([]byte{2}) // just before the next tick
+	time.Sleep(20 * time.Millisecond)
+	if inFlight() == 0 {
+		t.Fatal("the byte is not in flight at the tick")
+	}
+	f.pool.maintain()
+	if m.suspect.Load() {
+		t.Fatal("a connection is suspect after its packet was in flight for 20 ms")
+	}
+	if report := f.stats.Report(false).Session; report.Active != 1 || report.Suspect != 0 {
+		t.Errorf("session report %+v", report)
+	}
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+	b := make([]byte, 1)
+	if _, err := io.ReadFull(conn, b); err != nil || b[0] != 2 {
+		t.Fatalf("echo %v %v", b, err)
+	}
+
+	// The same connection cut off after an idle tick: a packet never acknowledged is suspect one tick after
+	// the tick that first sees it.
+	eventually(t, "nothing in flight", func() bool { return inFlight() == 0 })
+	f.advance(time.Second)
+	f.pool.maintain() // idle
+	sock.setDrop(func([]byte) bool { return true })
+	conn.Write([]byte{3})
+	time.Sleep(20 * time.Millisecond)
+	f.pool.maintain()
+	if m.suspect.Load() {
+		t.Fatal("suspect at the tick that first sees the packet")
+	}
+	f.advance(time.Second)
+	f.pool.maintain()
+	if !m.suspect.Load() {
+		t.Fatal("not suspect after its packet went unacknowledged for 1 s")
 	}
 }
 

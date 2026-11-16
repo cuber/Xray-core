@@ -128,6 +128,10 @@ Without `session`, `relay` and the client `relay` list, configuration and behavi
   `PacketsAcked`) is suspect: it takes no new streams while another healthy connection exists. Received packets are no
   sign of health: when only the owner's direction is lost, the server keeps retransmitting. When every connection is suspect, placement ignores the mark; the path-level
   observatory decides.
+- The pool reads the counters once a second. The second therefore runs from the first reading that shows the bytes
+  outstanding, and a reading with nothing in flight starts no time. Amendment of 2026-11-16 (xray-config TODO-054): the
+  time was counted from the last idle reading, so a packet sent just before a reading made a healthy connection suspect
+  until the next one (6 of 127 relay-check samples on a 174 ms path).
 - With no live connection, opening a stream dials synchronously, as today.
 - Streams on a connection that closes fail; nothing retries them.
 
