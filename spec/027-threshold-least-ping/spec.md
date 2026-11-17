@@ -3,8 +3,9 @@
 - Spec ID: 027-threshold-least-ping (formerly `027-least-ping-max-rtt`; renamed 2026-11-15)
 - Promoted from Core draft005 on 2026-11-14; draft005 remains reserved in the draft index.
 - Created: 2026-11-14. Rewritten 2026-11-15.
-- Status: Approved specification; Core side implemented 2026-11-15 (T002–T007), not yet built, gated,
-  pushed or deployed. Consumers and rollout need separate authorization.
+- Status: Approved specification; Core side implemented 2026-11-15 (T002–T007) and gated as `6a7a8c4e`
+  (T009), which runs on the LA Verizon aggregate since 2026-11-16 (xray-config TODO-053). TL-10's cold start
+  added 2026-11-17 (T011). Not pushed. Consumers and further rollout need separate authorization.
 - Inspected baseline: `291fde47` on the active append-only fork line (`10da0092` plus the spec027 commit).
 - Origin: the operator wants a reachable but slow primary path to yield to a backup, while still preferring
   the fastest path. The first consumer is xray-config TODO-053 (RTT-limited tiered backup on HK relays).
@@ -23,6 +24,9 @@
 - 2026-11-15 completion: requirements and cases lost in the rewrite restored against `291fde47`; new
   triggers (Hy2 relay status, runtime outbound changes), the leastPing guard, drop accounting and the
   precision rule added; every decision consolidated as D1–D16, none open.
+- 2026-11-17 amendment (operator): TL-10 cold start (D17). An outbound's first probe may set up its
+  connection, and at start it was the window's only sample, so it alone decided the first choices and could
+  latch an option; the observatory now leaves it unrecorded and takes four samples a second apart.
 
 ## Current Evidence
 
@@ -213,7 +217,7 @@ unusable fallback never receives a connection. A pick never waits or queues whil
   outbound, so sample expiry is reflected at the next result. If an observatory stops producing results
   entirely, the last pass stays published; its observation time is reported so consumers can see it.
 - **Lifecycle.** Router start computes the first pass before the first connection is routed (usually
-  pending until the observatory's immediate first checks return). Close cancels every subscription; no
+  pending until the cold start records each option's first sample, TL-10). Close cancels every subscription; no
   callback runs after Close returns.
 - **Order.** The children-first order uses only the existing member and fallback edges; comparing a
   parent's options with a child's result adds no edge to the graph.
@@ -269,6 +273,30 @@ unusable fallback never receives a connection. A pick never waits or queues whil
   message names `thresholdLeastPing`. This catches the earlier draft's syntax, which would otherwise load
   and silently do nothing. No other leastPing setting, ignored or not, changes behaviour.
 
+### TL-10 Cold Start (D17)
+
+The burst observatory's scheduler starts with a cold start in place of its single immediate check:
+
+- **Why.** An outbound's first probe may set up the connection later probes reuse (a Hy2 QUIC handshake and
+  authentication, a VLESS Mux connection), and at start it is the window's only sample. In the 2026-11-15
+  real-network runs (A06 restart, 2 s × 5 window) the first Hy2 reading was 149–156 ms against 47–73 ms a few
+  seconds later, and the slower SS-2022 candidate was chosen first in 6 of 7 runs, for 2–5 s. With a 10 s ×
+  25 window the same sample weighs for minutes, and an option it latches is released only below
+  `recoverRTT`.
+- **The first probe.** Each observed outbound is probed once at start. A successful first probe is not
+  recorded. A failure is recorded and ends that outbound's cold start, as the single check would have.
+- **Samples.** Four more probes follow on the same probe client, the first at once and the others one second
+  apart. Each is recorded as it returns: the first recorded sample ends `pending` without waiting for the
+  rest. A failed sample is recorded and ends that outbound's cold start. Network-down results stay
+  unrecorded, as before.
+- **Scheduled rounds** start as before; a scheduled probe that falls due before every outbound's cold start
+  has ended waits for that end and then runs. Cancellation (a superseding round, Stop) is unchanged and
+  also cancels the cold start.
+- Built in, not configurable. It applies to every burst observatory, so leastPing and the other strategies
+  that read one get the same start. A one-time `Check` keeps its single recorded probe.
+- Cost: at start, five probes per observed outbound within about five seconds (24 outbounds on the fleet's
+  largest observatory), and `pending` lasts one probe longer.
+
 ## Control Plane (CP-1–CP-8)
 
 Owner: the existing `RoutingService` (`GetBalancerInfo`, `ListBalancers`). No new `api.services` entry.
@@ -302,6 +330,8 @@ Owner: the existing `RoutingService` (`GetBalancerInfo`, `ListBalancers`). No ne
   is bounded by the loaded graph. No credentials, URLs or endpoints are returned.
 - `xray api bi` reports the same fields; text output distinguishes reachable from over-limit and shows the
   observation time.
+- TL-10 adds no field: cold-start samples are ordinary samples, and the unrecorded first probe appears in
+  no count.
 
 Consumers (separate owners; not authorized by this spec): Sidecar's `/xray-debug.balancers` passes the
 fields through (Sidecar spec018); Portal's Balancers view (Config spec022) shows the limit, band, RTT,
@@ -318,6 +348,9 @@ deterministic choice's RTT. Neither reads node configuration to reconstruct a va
   to load the configuration rather than silently changing behaviour.
 - The observatory notification and the router computation are additive; with no thresholdLeastPing
   balancer configured, no computation runs and picks of every other strategy are unchanged.
+- TL-10 changes how every burst observatory starts, with or without a thresholdLeastPing balancer: the
+  first recorded sample comes one probe later, the window starts with up to four samples, and scheduled
+  samples due during the cold start run at its end instead.
 - Implementation follows the fork-line, format, build and control-plane rules in `spec/README.md`.
 
 ### Rollout Requirements (owned by xray-config; cases X01–X05)
@@ -347,6 +380,7 @@ synthetic identities and local endpoints.
 | TL-7 observed outbounds | O01–O08 | Load-time rejection at start, on each publication path and on AddOutbound; RemoveOutbound handling; other strategies unaffected |
 | TL-8 overrides/flows | H01–H08 | Override precedence with true state; track/force-down provenance; observatory recovery untouched; flows survive a decision change |
 | TL-9 leastPing guard | C11 | Focused error; other leastPing settings unchanged |
+| TL-10 cold start | K01–K05 | Real HealthPing against local probe targets whose answers the test orders; requests, recorded samples, publications and Stop |
 | Control plane | R01–R16 | Real started Core over local gRPC; one pass per response and per listing; old/new decoding; drop counter; `xray api bi` |
 | Real network | A01–A11 | The configuration repository's `threshold-check` on three test hosts (TL-3 to TL-6 and TL-8 over real paths) |
 | Rollout | X01–X05 | xray-config acceptance and switch tooling (owned there) |
@@ -385,14 +419,14 @@ identities, commands, exit codes, counts, skips) with PASS, FAIL or NOT RUN per 
 ## Decisions Confirmed By The Operator
 
 Items D1–D6 were first confirmed on 2026-11-14 by the previous maintainer and re-confirmed as written on
-2026-11-15 by the current operator, who took the project over. D7–D16 were confirmed on 2026-11-15.
-No question is open.
+2026-11-15 by the current operator, who took the project over. D7–D16 were confirmed on 2026-11-15, D17
+on 2026-11-17. No question is open.
 
 | ID | Decision | Where |
 |---|---|---|
 | D1 | No default thresholds: `maxRTT` is configured explicitly on every balancer | TL-1 |
 | D2 | Fallback is optional. With nothing usable: an explicit blackhole, otherwise drop; never the default outbound. This includes the pending window at start | TL-3 |
-| D3 | Start reuses the observatory's immediate first checks; a pick never waits or queues | TL-3, TL-5 |
+| D3 | Start reuses the observatory's first samples (its cold start since D17); a pick never waits or queues | TL-3, TL-5 |
 | D4 | A roundRobin/random child contributes the mean of its members, only to a thresholdLeastPing parent | TL-6 |
 | D5 | Manual override keeps its precedence; the target's true state is reported | TL-8 |
 | D6 | Runtime policy and decisions through `RoutingService`, consumed by Sidecar and Portal; xray-tui is a non-goal | Control Plane |
@@ -406,9 +440,10 @@ No question is open.
 | D14 | Drops are counted per balancer in the RPC and logged at info level, not as warnings | Control Plane |
 | D15 | Runtime `RemoveOutbound` stays unchecked; a removed option becomes unknown | TL-7 |
 | D16 | No ranking tolerance ("switch only when faster by X"); ranking churn at millisecond boundaries is accepted | Non-goals |
+| D17 | Cold start: a successful first probe of each outbound is not recorded; four samples follow, one second apart; scheduled probes due meanwhile wait; built in for every burst observatory | TL-10 |
 
 ## Evidence Status
 
-Core side implemented on 2026-11-15 (T002–T007); evidence index in [tasks](tasks.md). Consumers (T008),
-the dual-platform build and stability gate (T009) and any rollout (T010) are not done and need their own
-authorization.
+Core side implemented on 2026-11-15 (T002–T007), gated as `6a7a8c4e` (T009); TL-10 implemented on
+2026-11-17 (T011). Evidence index in [tasks](tasks.md). Consumers (T008) and further rollout (T010) need
+their own authorization.

@@ -29,7 +29,17 @@ type HealthPingSettings struct {
 	// the given prefix. Longest matching prefix wins; empty map means all tags
 	// use Destination.
 	DestinationsByPrefix map[string]string `json:"destinationsByPrefix,omitempty"`
+
+	// The scheduler's cold start (Core spec027 TL-10): samples recorded after the unrecorded first probe,
+	// and the wait between them. Not configurable; NewHealthPing sets them.
+	coldSamples int
+	coldSpacing time.Duration
 }
+
+const (
+	coldStartSamples = 4
+	coldStartSpacing = time.Second
+)
 
 // HealthPing is the health checker for balancers
 type HealthPing struct {
@@ -112,6 +122,7 @@ func NewHealthPing(ctx context.Context, dispatcher routing.Dispatcher, config *H
 		// a larger timeout could possibly makes checks run longer
 		settings.Timeout = time.Duration(5) * time.Second
 	}
+	settings.coldSamples, settings.coldSpacing = coldStartSamples, coldStartSpacing
 	return &HealthPing{
 		ctx:        ctx,
 		dispatcher: dispatcher,
@@ -137,15 +148,18 @@ func (h *HealthPing) StartScheduler(selector func() ([]string, error)) {
 	h.tickerClose = tickerClose
 	ctx, cancel := context.WithCancel(h.ctx)
 	h.cancel = cancel
+	// Scheduled probes that fall due during the cold start wait for its end (TL-10).
+	cold := make(chan struct{})
 	h.workers.Add(2)
 	go func() {
 		defer h.workers.Done()
+		defer close(cold)
 		tags, err := resolvePingTags(ctx, selector)
 		if err != nil {
 			errors.LogWarning(h.ctx, "error select outbounds for initial health check: ", err)
 			return
 		}
-		h.doCheckContext(ctx, tags, 0, 1)
+		h.coldStart(ctx, tags)
 	}()
 
 	go func() {
@@ -170,7 +184,7 @@ func (h *HealthPing) StartScheduler(selector func() ([]string, error)) {
 					errors.LogWarning(h.ctx, "error select outbounds for scheduled health check: ", err)
 					return
 				}
-				h.doCheckContext(roundCtx, tags, interval, h.Settings.SamplingCount)
+				h.doCheckContext(roundCtx, tags, interval, h.Settings.SamplingCount, cold)
 				h.access.Lock()
 				cleaned := roundCtx.Err() == nil
 				if cleaned {
@@ -254,10 +268,12 @@ type rtt struct {
 // doCheck performs the 'rounds' amount checks in given 'duration'. You should make
 // sure all tags are valid for current balancer
 func (h *HealthPing) doCheck(tags []string, duration time.Duration, rounds int) {
-	h.doCheckContext(h.ctx, tags, duration, rounds)
+	h.doCheckContext(h.ctx, tags, duration, rounds, nil)
 }
 
-func (h *HealthPing) doCheckContext(ctx context.Context, tags []string, duration time.Duration, rounds int) {
+// doCheckContext performs the checks of doCheck under ctx. A probe that falls due before after is closed
+// waits for it; nil waits for nothing.
+func (h *HealthPing) doCheckContext(ctx context.Context, tags []string, duration time.Duration, rounds int, after <-chan struct{}) {
 	count := len(tags) * rounds
 	if count == 0 {
 		return
@@ -266,21 +282,7 @@ func (h *HealthPing) doCheckContext(ctx context.Context, tags []string, duration
 	var probes sync.WaitGroup
 
 	for _, tag := range tags {
-		handler := tag
-		if h.Settings.ProbeOutboundTag != "" {
-			handler = h.Settings.ProbeOutboundTag
-		}
-		destination := h.Settings.destinationFor(tag)
-		client := newPingClient(
-			ctx,
-			h.dispatcher,
-			destination,
-			h.Settings.Timeout,
-			handler,
-			h.Settings.KeepAlive,
-			h.Settings.HTTP2,
-		)
-		client.retryPolicy = h.Settings.Retry
+		client, handler, destination := h.pingClientFor(ctx, tag)
 		defer client.CloseIdleConnections()
 		for i := 0; i < rounds; i++ {
 			delay := time.Duration(0)
@@ -297,35 +299,15 @@ func (h *HealthPing) doCheckContext(ctx context.Context, tags []string, duration
 					return
 				case <-timer.C:
 				}
-				errors.LogDebug(h.ctx, "checking ", handler)
-				delay, err := client.MeasureDelay(h.Settings.HttpMethod)
-				if err == nil {
-					ch <- &rtt{
-						handler: tag,
-						value:   delay,
+				if after != nil {
+					select {
+					case <-ctx.Done():
+						return
+					case <-after:
 					}
-					return
 				}
-				if ctx.Err() != nil {
-					return
-				}
-				if !h.checkConnectivityContext(ctx) {
-					errors.LogWarning(h.ctx, "network is down")
-					ch <- &rtt{
-						handler: tag,
-						value:   0,
-					}
-					return
-				}
-				errors.LogWarning(h.ctx, fmt.Sprintf(
-					"error ping %s with %s: %s",
-					destination,
-					handler,
-					err,
-				))
-				ch <- &rtt{
-					handler: tag,
-					value:   rttFailed,
+				if r := h.probe(ctx, client, tag, handler, destination); r != nil {
+					ch <- r
 				}
 			}()
 		}
@@ -342,18 +324,117 @@ func (h *HealthPing) doCheckContext(ctx context.Context, tags []string, duration
 		if ctx.Err() != nil {
 			return
 		}
-		if rtt.value > 0 {
-			// should not put results when network is down
-			h.access.Lock()
-			put := ctx.Err() == nil
-			if put {
-				h.putResultLocked(rtt.handler, rtt.value)
+		h.record(ctx, rtt)
+	}
+}
+
+// coldStart is the scheduler's first check (Core spec027 TL-10). An outbound's first probe may set up its
+// connection (a QUIC handshake and authentication, a Mux connection), which later probes reuse, so a successful
+// first probe is not recorded. coldSamples probes follow, the first at once and the others coldSpacing apart,
+// so a window starts from several samples of the reused connection. A failure is recorded and ends that
+// outbound's cold start, as one initial check would have; the scheduled rounds continue from there.
+func (h *HealthPing) coldStart(ctx context.Context, tags []string) {
+	var outbounds sync.WaitGroup
+	for _, tag := range tags {
+		outbounds.Add(1)
+		go func() {
+			defer outbounds.Done()
+			client, handler, destination := h.pingClientFor(ctx, tag)
+			defer client.CloseIdleConnections()
+			first := h.probe(ctx, client, tag, handler, destination)
+			if first == nil {
+				return
 			}
-			h.access.Unlock()
-			if put {
-				h.changed()
+			if !first.succeeded() {
+				h.record(ctx, first)
+				return
 			}
-		}
+			errors.LogDebug(h.ctx, "cold start: first probe of ", tag, " took ", first.value, ", not recorded")
+			for i := 0; i < h.Settings.coldSamples; i++ {
+				if i > 0 {
+					timer := time.NewTimer(h.Settings.coldSpacing)
+					select {
+					case <-ctx.Done():
+						timer.Stop()
+						return
+					case <-timer.C:
+					}
+				}
+				r := h.probe(ctx, client, tag, handler, destination)
+				if r == nil {
+					return
+				}
+				h.record(ctx, r)
+				if !r.succeeded() {
+					return
+				}
+			}
+		}()
+	}
+	outbounds.Wait()
+}
+
+// pingClientFor is the client that probes tag, with the handler it dials and the URL it requests.
+func (h *HealthPing) pingClientFor(ctx context.Context, tag string) (*pingClient, string, string) {
+	handler := tag
+	if h.Settings.ProbeOutboundTag != "" {
+		handler = h.Settings.ProbeOutboundTag
+	}
+	destination := h.Settings.destinationFor(tag)
+	client := newPingClient(
+		ctx,
+		h.dispatcher,
+		destination,
+		h.Settings.Timeout,
+		handler,
+		h.Settings.KeepAlive,
+		h.Settings.HTTP2,
+	)
+	client.retryPolicy = h.Settings.Retry
+	return client, handler, destination
+}
+
+// probe measures one sample of tag: its delay, rttFailed, or 0 when the network is down. It returns nil when
+// ctx ended first.
+func (h *HealthPing) probe(ctx context.Context, client *pingClient, tag, handler, destination string) *rtt {
+	errors.LogDebug(h.ctx, "checking ", handler)
+	delay, err := client.MeasureDelay(h.Settings.HttpMethod)
+	if err == nil {
+		return &rtt{handler: tag, value: delay}
+	}
+	if ctx.Err() != nil {
+		return nil
+	}
+	if !h.checkConnectivityContext(ctx) {
+		errors.LogWarning(h.ctx, "network is down")
+		return &rtt{handler: tag, value: 0}
+	}
+	errors.LogWarning(h.ctx, fmt.Sprintf(
+		"error ping %s with %s: %s",
+		destination,
+		handler,
+		err,
+	))
+	return &rtt{handler: tag, value: rttFailed}
+}
+
+func (r *rtt) succeeded() bool {
+	return r.value > 0 && r.value != rttFailed
+}
+
+// record publishes a sample unless ctx has ended. Nothing is put while the network is down.
+func (h *HealthPing) record(ctx context.Context, r *rtt) {
+	if r.value <= 0 {
+		return
+	}
+	h.access.Lock()
+	put := ctx.Err() == nil
+	if put {
+		h.putResultLocked(r.handler, r.value)
+	}
+	h.access.Unlock()
+	if put {
+		h.changed()
 	}
 }
 

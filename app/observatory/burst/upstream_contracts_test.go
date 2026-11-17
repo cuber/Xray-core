@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -35,8 +36,18 @@ func TestUpstreamZeroRTTSampleAndRecovery(t *testing.T) {
 func TestUpstreamSchedulerSupersedesInflightRound(t *testing.T) {
 	contractLoopbackDialer(t)
 	entered := make(chan context.Context, 64)
-	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+	releaseFirst := make(chan struct{})
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		entered <- r.Context()
+		if requests.Add(1) == 1 { // the cold start's first probe answers once released
+			select {
+			case <-releaseFirst:
+				w.WriteHeader(http.StatusNoContent)
+			case <-r.Context().Done():
+			}
+			return
+		}
 		<-r.Context().Done()
 	}))
 	defer server.Close()
@@ -44,23 +55,32 @@ func TestUpstreamSchedulerSupersedesInflightRound(t *testing.T) {
 		Destination: server.URL, Interval: int64(200 * time.Millisecond),
 		Timeout: int64(time.Minute), SamplingCount: 1,
 	})
+	h.Settings.coldSamples = 0 // the unrecorded first probe only
 	h.StartScheduler(func() ([]string, error) { return []string{"probe"}, nil })
 	defer h.StopScheduler()
-	request := func() context.Context {
+	request := func(what string) context.Context {
 		select {
 		case ctx := <-entered:
 			return ctx
 		case <-time.After(2 * time.Second):
-			t.Fatal("initial and scheduled probes did not start")
+			t.Fatal(what, " did not start")
 			return nil
 		}
 	}
-	first, second := request(), request()
-	// One request is the initial check, the other belongs to the first round.
-	// Only the scheduled request should be superseded by the next tick.
+	first := request("the cold start's first probe")
+	// Rounds tick while the first probe is held: they neither cancel it nor probe before it ends (TL-10).
 	select {
+	case ctx := <-entered:
+		t.Fatalf("a scheduled probe ran during the cold start (canceled=%v)", ctx.Err() != nil)
 	case <-first.Done():
-	case <-second.Done():
+		t.Fatal("a round canceled the cold start's probe")
+	case <-time.After(700 * time.Millisecond):
+	}
+	close(releaseFirst)
+	// A scheduled request follows the cold start and is superseded by the next tick.
+	scheduled := request("a scheduled probe after the cold start")
+	select {
+	case <-scheduled.Done():
 	case <-time.After(2 * time.Second):
 		t.Fatal("next round did not cancel an in-flight prior round")
 	}

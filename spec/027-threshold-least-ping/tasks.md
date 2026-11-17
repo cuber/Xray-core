@@ -1,7 +1,8 @@
 # Tasks: thresholdLeastPing
 
-Status: Core side implemented 2026-11-15 (T002-T007) and committed together on the operator's request. Build, push and rollout remain separate. Every design decision is confirmed (spec.md
-Decisions D1–D16).
+Status: Core side implemented 2026-11-15 (T002-T007) and committed together on the operator's request; gated as
+`6a7a8c4e` (T009); TL-10 cold start 2026-11-17 (T011). Push and further rollout remain separate. Every design
+decision is confirmed (spec.md Decisions D1–D17).
 
 - [x] T000 Inspect the baseline: leastPing, strategy/fallback split, dispatcher default, observatory update
   paths, relay refusal, outbound manager checks, statusReader, balancerMsg, M6 check (spec.md Current Evidence).
@@ -86,3 +87,19 @@ Decisions D1–D16).
     suspect of spec024 R5, present since spec024 and the same in `10da009`; fixed as spec024 T015, whose
     candidate takes the Hy2 suites again (spec024 T016).
 - [ ] T010 Rollout X01–X05, thresholds and paired restore plan (separate authorization; xray-config TODO-053).
+  2026-11-16, authorized for the LA Verizon aggregate only: `6a7a8c4e` first ran with unchanged configurations on
+  the four LA DMIT clients (X01), then the aggregate went live with `maxRTT` 100ms and `recoverRTT` 30ms, read
+  back from the RPC (X02, X03), with deep acceptance on each client. Records in xray-config TODO-053; the rest
+  of TODO-053 is not authorized.
+- [x] T011 TL-10 cold start (D17, operator 2026-11-17): `app/observatory/burst/healthping.go` `coldStart`,
+  the scheduled rounds' wait, K01–K05 in `coldstart_test.go` and the rewritten upstream round contract.
+  Evidence (2026-11-17, go1.27.0 darwin/arm64, each suite run alone): the baseline is the A06 polls of the seven
+  2026-11-15 runs (spec.md TL-10). `TestUpstreamSchedulerSupersedesInflightRound` assumed that the first round
+  probes while the initial check is in flight; it now holds the cold start's first probe and requires that rounds
+  neither cancel it nor probe before it ends, and that a round's probe is still superseded by the next tick.
+  Full suite `go test ./... -count=1 -timeout 1h`: 111 packages ok. `-race -count=3` on app/observatory/...,
+  app/router/..., main and main/commands/all/api: all ok, no data race; the cold-start and contract tests of
+  app/observatory/burst also pass `-race -count=10`. `go vet` and gofmt clean.
+- [ ] T012 Commit, dual-platform build and the gate `xrayctl gate plan` chooses for the T011 candidate, plus a
+  `threshold-check` run whose restart shows the first decision (results in xray-config TODO-053 until the next
+  Core code change); rollout separately authorized.

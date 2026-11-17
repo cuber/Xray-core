@@ -18,8 +18,7 @@
 - [x] T014 The gate for the T013 candidate, then the rollout on the nodes that run relays (xray-config spec026).
 - [x] T015 R5 stall timing (2026-11-16 amendment): a stall is timed from the first tick that sees the bytes
   outstanding, not from the last idle tick.
-- [ ] T016 The Hy2 suites of the gate for the T015 candidate (results in xray-config TODO-054 until the next Core
-  code change); rollout separately authorized.
+- [x] T016 The Hy2 suites of the gate for the T015 candidate `10a08a08`; rollout separately authorized.
 
 ## Evidence
 
@@ -113,7 +112,8 @@
     before the tick that followed an idle one therefore counted as a second without an acknowledgment.
   - Fix: a stall is timed from the first tick that sees the bytes outstanding. A tick with nothing in flight clears
     it, and an acknowledgment restarts it. On an idle connection a real stall is now found 1–2 s after its packet,
-    not 0–1 s; while acknowledgments flow nothing changes.
+    not 0–1 s; while acknowledgments flow nothing changes. The limit equals the tick, so when tick jitter puts a
+    reading just under a second after the first one, the next tick decides: up to 3 s (before, up to 2 s).
   - Tests: `TestPoolDoesNotSuspectAFreshPacketOnAnIdleConnection` puts a byte on a 200 ms path 20 ms before the
     tick that follows an idle one. It fails on the old code (3 of 3) and passes with the fix. In its second half
     the same connection is cut off, and it is suspect one tick after the tick that first sees its packet.
@@ -125,3 +125,17 @@
       `TestNetemBlackoutRecovery` once (113 ms against its 100 ms bound); that test's client has no pool.
     - Full suite: 109 of 111 packages ok. `proxy/anytls` and `testing/scenarios` failed with
       `can't assign requested address` and connection resets, and both passed when run alone.
+- 2026-11-16 T016: the gate of candidate `10a08a08` (Linux sha256 `26295696535f…`). `xrayctl gate plan --base 6a7a8c4e`
+  chose L1 (Hy2). All passed; no node was deployed.
+  - `singmux-check` smoke (hk.akile.lite server, 60 s chaos, 30 s quiet): PASS; peaks 975 goroutines, 192 FDs,
+    67 MiB; everything drained; no TCP failure in the quiet phase.
+  - `quic-check`: PASS in 292 s, no failure. Added latency per request at 15% loss (baseline / default / tuned /
+    copies): hk→tk 41 / 47 / 32 / 15 ms, tk→la 82 / 83 / 64 / 22 ms, la→hk 147 / 122 / 148 / 43 ms.
+  - `relay-check`: PASS in 1707 s. Each pair ran 600 streams on 4 connections with no failure and was back to 1
+    after 191 s; restart outage 1.12–1.23 s; no bulk stall. No suspect in 78 session samples (before the fix: 11 of
+    384). A first attempt stopped on an SSH timeout while staging, before anything was installed.
+  - `migration hy2-check --duration 600` on hk.akile.lite after `switch upgrade` (Core interruption 204 ms):
+    mihomo / sing-box TCP 11641 / 11640, churn 2360 / 2360, UDP 5910 / 5910, none failed; idle recovery, client
+    restart and the negative control passed; Core peak 53 MiB, no restart. `switch revert` afterwards (290 ms).
+  - xray-config `test/run.py` with the candidate: 2145 tests, one failure in a regional generation check that also
+    fails without the candidate (uncommitted configuration work), unrelated to Core.

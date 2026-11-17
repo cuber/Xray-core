@@ -99,7 +99,7 @@ update followed by one computation; the expected choice per step is literal.
 | E14 | a notification callback that calls `GetObservation`, `SetForceDown` and `Cleanup` | deterministic test completes; no deadlock; callbacks never run under the notifier's locks |
 | E15 | Start, then Close | a pass exists before the first routed connection; after Close returns no callback runs and no goroutine remains |
 | E16 | the observatory stops producing results | the last pass stays; RPC observation time ages; no fabricated change |
-| E17 | real burst observer with a long interval/window and a local HTTP probe target whose delay the test sets | pending until the immediate first check returns, without waiting for the window; then delay changes move the decision and the routed marker through probe → notification → pass → route |
+| E17 | real burst observer with a long interval/window and a local HTTP probe target whose delay the test sets | pending until the cold start's first recorded sample (TL-10), without waiting for the window; then delay changes move the decision and the routed marker through probe → notification → pass → route |
 | E18 | an option's samples all older than 2 × sampling × interval | unusable at the next pass |
 | E19 | a Hy2 relay outbound's relay status becomes `denied` with no probe result | a pass is published; the option is unusable (D12) |
 | E20 | runtime AddOutbound of an observed outbound matching a selector; RemoveOutbound of a candidate and of the fallback | each publishes a pass; the added one is pending until observed; removed ones are unknown |
@@ -161,6 +161,18 @@ a real inbound and routing rule. Observations are injected through the fixture a
 | H06 | leastPing balancer with identical selectors and fallback | its picks identical to the baseline Core |
 | H07 | override to an outbound outside the candidate set | wins with its true state, as override does today |
 | H08 | a probe goes unhealthy and recovers under the observatory's own health rule | usable exactly when the observatory reports alive again; the latch adds no recovery counter of its own |
+
+## K. Cold Start (TL-10)
+
+A real HealthPing against local probe targets whose answers the test orders by request number.
+
+| ID | Action | Required result |
+|---|---|---|
+| K01 | the first request answers after 300ms, the others at once; spacing 100ms | 5 requests, 4 recorded samples all under 300ms, alive; the second request follows the first at once, the later ones at least the spacing apart; defaults 4 samples, 1s |
+| K02 | the third request (second sample) held | the first sample is published (one change, All 1, alive) before the held one returns; 4 samples after release |
+| K03 | one outbound's target fails, another's answers | the failing one: 1 request, 1 recorded failure; the other: 5 requests, 4 samples |
+| K04 | the third request fails | 3 requests; 2 recorded, 1 failure; no further request |
+| K05 | rounds tick every millisecond while the cold start waits a long spacing; then Stop | only the first probe and one sample reach the target before Stop; Stop returns at once; nothing published afterwards. The rewritten upstream round contract: rounds neither cancel the cold start's first probe nor probe before it ends, and a round's probe is still superseded by the next tick |
 
 ## R. Control Plane
 
