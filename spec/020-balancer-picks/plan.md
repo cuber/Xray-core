@@ -33,6 +33,17 @@
 
 - `switch revert`; an older Core leaves the fields empty and the Sidecar shows them as unavailable.
 
+## 2026-11-19 amendment (P10)
+
+- Optional `routing.BalancerWeightedPolicy` on Router/balancerView, additive
+  `BalancerMsg.weighted_policy` field13 and two nanosecond fields; scalar reads only.
+  Regenerate command.pb.go using the existing generators; preserve field numbers and old descriptor indices.
+- `weighted_policy_test.go`: started Core gRPC with explicit/default/clamped settings,
+  replacement updates, pinned old view versus new map, scalar-copy isolation and unchanged weighted pick sequence.
+- `balancer_info_test.go`: loaded policy text, disabled zeros, older-provider absence and protobuf-aware JSON decoding.
+- Consumers: Sidecar018 B6, Config022 node cards. Build into a test-only artifact directory;
+  do not replace approved production build inputs, adopt release pins or deploy.
+
 ## 2026-11-08 amendment (P6–P9)
 
 ### Code

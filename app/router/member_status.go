@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 	"strconv"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 
@@ -271,6 +272,21 @@ func (v balancerView) GetStrategy(tag string) (string, error) {
 	return "", nil
 }
 
+// GetWeightedPolicy returns a scalar copy from this published map (spec020 P10).
+func (v balancerView) GetWeightedPolicy(tag string) (*routing.WeightedLeastPingPolicy, error) {
+	b, err := v.get(tag)
+	if err != nil {
+		return nil, err
+	}
+	s, ok := b.strategy.(*WeightedLeastPingStrategy)
+	if !ok {
+		return nil, nil
+	}
+	return &routing.WeightedLeastPingPolicy{
+		MaxRTT: time.Duration(s.settings.MaxRTT), RTTTolerance: time.Duration(s.settings.RttTolerance),
+	}, nil
+}
+
 // observationOf is the instance's current observation as b's context reaches it; nil without an
 // observatory or an observation.
 func observationOf(b *Balancer) []*observatory.OutboundStatus {
@@ -338,4 +354,8 @@ func (r *Router) GetStatus(tag string) (routing.BalancerStatus, error) {
 // GetStrategy implements routing.BalancerMembers on the current map.
 func (r *Router) GetStrategy(tag string) (string, error) {
 	return balancerView(*r.balancers.Load()).GetStrategy(tag)
+}
+
+func (r *Router) GetWeightedPolicy(tag string) (*routing.WeightedLeastPingPolicy, error) {
+	return balancerView(*r.balancers.Load()).GetWeightedPolicy(tag)
 }

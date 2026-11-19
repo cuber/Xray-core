@@ -103,6 +103,10 @@ func writeBalancerInfo(w io.Writer, tag string, b *routerService.BalancerMsg) {
 			sb.WriteString(" recoverRTT " + time.Duration(p.RecoverRttNs).String())
 		}
 	}
+	if p := b.WeightedPolicy; p != nil {
+		sb.WriteString("  maxRTT " + time.Duration(p.MaxRttNs).String())
+		sb.WriteString(" rttTolerance " + time.Duration(p.RttToleranceNs).String())
+	}
 	sb.WriteByte('\n')
 	if d := b.ThresholdDecision; d != nil {
 		sb.WriteString("  - Decision: " + thresholdDecisionText(d, time.Now()) + "\n")

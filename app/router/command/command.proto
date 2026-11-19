@@ -148,6 +148,8 @@ message BalancerMsg {
   // Core spec027: a thresholdLeastPing level's loaded limits and its decision, from one published pass.
   ThresholdPolicy threshold_policy = 11;
   ThresholdDecision threshold_decision = 12;
+  // Core spec020 P10: loaded weightedLeastPing limits; absent on other strategies and older Cores.
+  WeightedLeastPingPolicy weighted_policy = 13;
 }
 
 message GetBalancerInfoRequest {
@@ -276,4 +278,10 @@ message ThresholdDecision {
   // Connections this balancer dropped since it was published, and the reason of the last.
   uint64 dropped = 9;
   string last_drop_reason = 10;
+}
+
+message WeightedLeastPingPolicy {
+  // Zero disables the corresponding filter; not an unknown value.
+  int64 max_rtt_ns = 1;
+  int64 rtt_tolerance_ns = 2;
 }

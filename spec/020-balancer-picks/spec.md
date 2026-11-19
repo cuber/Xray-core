@@ -100,6 +100,22 @@ relay's own health fact and already in the observation.
 
 ## Functional Requirements
 
+### P10 Loaded Weighted Policy (2026-11-19)
+
+Approved with the Portal node-grid redesign. `BalancerMsg.weighted_policy` (new field13) contains
+`max_rtt_ns` and `rtt_tolerance_ns` from the loaded weightedLeastPing strategy on the same published
+balancer map as the response. It is absent for other strategies and older providers; present zeros
+mean disabled filters, not missing data. No recoverRTT is invented. Reads copy immutable scalar settings,
+perform no selection or observation, and change neither scheduling state nor the data plane.
+`GetBalancerInfo`, `ListBalancers` and `api bi` report it. Existing RoutingService registration suffices.
+
+Control Plane: Sidecar018 B6 forwards it as `weighted_policy.max_rtt_ms` and `.rtt_tolerance_ms`;
+Config022 renders those runtime values in the weighted strategy header, unavailable on older Cores.
+The TUI remains a dated non-goal (2026-11-19); `api bi` provides terminal access. Tests cover real started
+Core gRPC, explicit/default zero limits, non-weighted absence, reload coherence, copy isolation and
+read-only weighted pick sequence. Consumer tests cover stale conflicting configuration and absent
+fields. Local build/test authorization does not authorize production activation.
+
 | ID | Requirement | Verified by |
 |---|---|---|
 | FR-001 | P1: candidate statuses for outbounds (alive, down, unobserved) and member balancers (bubbled) | unit |
@@ -112,6 +128,7 @@ relay's own health fact and already in the observation.
 | FR-008 | P7, P8 (2026-11-08): delays as the observation has them, a dead candidate's included; shares and the next picks of roundrobin and weightedLeastPing unchanged after a read; `GetObservation`, `GetOutboundStatus` and `GetTrack` unchanged | unit |
 | FR-009 | P6 through a real gRPC server on a started instance (2026-11-08): a default configuration (a balancer over probed outbounds: `provenance` true, no `tracked_from`); spec021's shape with a track group and a forced probe, through `ListBalancers` and `GetBalancerInfo`; two started Hy2 instances where a denied relay outbound tracks its owner under a balancer (`hysteria relay denied`, `tracked_from` the owner) | started-instance CP-7 tests |
 | FR-010 | P9 (2026-11-08): the `source` column, row and level reasons; a Core without P6 prints `-`; `-json` carries the fields | CLI test |
+| FR-011 | P10 (2026-11-19): loaded weighted policy on the same published view, additive field13, explicit/default/clamped limits, absence on other strategies, replacement updates, scalar-copy/read-only semantics and CLI text/JSON | `TestWeightedPolicyRuntimeRPC`, `TestWeightedPolicyReadOnlyAndCopy`, `TestBalancerInfoShowsWeightedPolicy` |
 
 ## Control Plane
 

@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	routerService "github.com/xtls/xray-core/app/router/command"
 	"github.com/xtls/xray-core/main/commands/base"
@@ -251,5 +252,37 @@ func TestBalancerInfoShowsThresholdLeastPing(t *testing.T) {
 		if !strings.Contains(printed, want) {
 			t.Errorf("-json is missing %s:\n%s", want, printed)
 		}
+	}
+}
+
+func TestBalancerInfoShowsWeightedPolicy(t *testing.T) {
+	server := &fakeRouting{tags: []string{"w", "zero", "old"}, balancers: map[string]*routerService.BalancerMsg{
+		"w": {Strategy: "weightedleastping", WeightedPolicy: &routerService.WeightedLeastPingPolicy{
+			MaxRttNs: int64(250*time.Millisecond + 125*time.Microsecond), RttToleranceNs: int64(100 * time.Millisecond),
+		}},
+		"zero": {Strategy: "weightedleastping", WeightedPolicy: &routerService.WeightedLeastPingPolicy{}},
+		"old":  {Strategy: "weightedleastping"},
+	}}
+	printed := runBalancerInfo(t, server)
+	for _, want := range []string{
+		"w  weightedleastping  maxRTT 250.125ms rttTolerance 100ms\n",
+		"zero  weightedleastping  maxRTT 0s rttTolerance 0s\n",
+		"old  weightedleastping\n",
+	} {
+		if !strings.Contains(printed, want) {
+			t.Errorf("missing %q in:\n%s", want, printed)
+		}
+	}
+	if strings.Contains(printed, "recoverRTT") {
+		t.Fatal("weighted strategy has no recovery limit")
+	}
+	printed = runBalancerInfo(t, server, "-json", "w")
+	var response routerService.GetBalancerInfoResponse
+	if err := protojson.Unmarshal([]byte(printed), &response); err != nil {
+		t.Fatal(err)
+	}
+	policy := response.GetBalancer().GetWeightedPolicy()
+	if policy == nil || policy.MaxRttNs != 250125000 || policy.RttToleranceNs != 100000000 {
+		t.Fatalf("-json lost the loaded policy: %s", printed)
 	}
 }

@@ -755,8 +755,10 @@ type BalancerMsg struct {
 	// Core spec027: a thresholdLeastPing level's loaded limits and its decision, from one published pass.
 	ThresholdPolicy   *ThresholdPolicy   `protobuf:"bytes,11,opt,name=threshold_policy,json=thresholdPolicy,proto3" json:"threshold_policy,omitempty"`
 	ThresholdDecision *ThresholdDecision `protobuf:"bytes,12,opt,name=threshold_decision,json=thresholdDecision,proto3" json:"threshold_decision,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Core spec020 P10: loaded weightedLeastPing limits; absent on other strategies and older Cores.
+	WeightedPolicy *WeightedLeastPingPolicy `protobuf:"bytes,13,opt,name=weighted_policy,json=weightedPolicy,proto3" json:"weighted_policy,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *BalancerMsg) Reset() {
@@ -841,6 +843,13 @@ func (x *BalancerMsg) GetThresholdPolicy() *ThresholdPolicy {
 func (x *BalancerMsg) GetThresholdDecision() *ThresholdDecision {
 	if x != nil {
 		return x.ThresholdDecision
+	}
+	return nil
+}
+
+func (x *BalancerMsg) GetWeightedPolicy() *WeightedLeastPingPolicy {
+	if x != nil {
+		return x.WeightedPolicy
 	}
 	return nil
 }
@@ -1883,6 +1892,59 @@ func (x *ThresholdDecision) GetLastDropReason() string {
 	return ""
 }
 
+type WeightedLeastPingPolicy struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Zero disables the corresponding filter; not an unknown value.
+	MaxRttNs       int64 `protobuf:"varint,1,opt,name=max_rtt_ns,json=maxRttNs,proto3" json:"max_rtt_ns,omitempty"`
+	RttToleranceNs int64 `protobuf:"varint,2,opt,name=rtt_tolerance_ns,json=rttToleranceNs,proto3" json:"rtt_tolerance_ns,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *WeightedLeastPingPolicy) Reset() {
+	*x = WeightedLeastPingPolicy{}
+	mi := &file_app_router_command_command_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WeightedLeastPingPolicy) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WeightedLeastPingPolicy) ProtoMessage() {}
+
+func (x *WeightedLeastPingPolicy) ProtoReflect() protoreflect.Message {
+	mi := &file_app_router_command_command_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WeightedLeastPingPolicy.ProtoReflect.Descriptor instead.
+func (*WeightedLeastPingPolicy) Descriptor() ([]byte, []int) {
+	return file_app_router_command_command_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *WeightedLeastPingPolicy) GetMaxRttNs() int64 {
+	if x != nil {
+		return x.MaxRttNs
+	}
+	return 0
+}
+
+func (x *WeightedLeastPingPolicy) GetRttToleranceNs() int64 {
+	if x != nil {
+		return x.RttToleranceNs
+	}
+	return 0
+}
+
 var File_app_router_command_command_proto protoreflect.FileDescriptor
 
 const file_app_router_command_command_proto_rawDesc = "" +
@@ -1954,7 +2016,7 @@ const file_app_router_command_command_proto_rawDesc = "" +
 	"\x06reason\x18\x05 \x01(\tR\x06reason\x12\x1e\n" +
 	"\n" +
 	"provenance\x18\x06 \x01(\bR\n" +
-	"provenance\"\xbc\x04\n" +
+	"provenance\"\x97\x05\n" +
 	"\vBalancerMsg\x12A\n" +
 	"\boverride\x18\x05 \x01(\v2%.xray.app.router.command.OverrideInfoR\boverride\x12W\n" +
 	"\x10principle_target\x18\x06 \x01(\v2,.xray.app.router.command.PrincipleTargetInfoR\x0fprincipleTarget\x12A\n" +
@@ -1964,7 +2026,8 @@ const file_app_router_command_command_proto_rawDesc = "" +
 	"\bstrategy\x18\n" +
 	" \x01(\tR\bstrategy\x12S\n" +
 	"\x10threshold_policy\x18\v \x01(\v2(.xray.app.router.command.ThresholdPolicyR\x0fthresholdPolicy\x12Y\n" +
-	"\x12threshold_decision\x18\f \x01(\v2*.xray.app.router.command.ThresholdDecisionR\x11thresholdDecision\"*\n" +
+	"\x12threshold_decision\x18\f \x01(\v2*.xray.app.router.command.ThresholdDecisionR\x11thresholdDecision\x12Y\n" +
+	"\x0fweighted_policy\x18\r \x01(\v20.xray.app.router.command.WeightedLeastPingPolicyR\x0eweightedPolicy\"*\n" +
 	"\x16GetBalancerInfoRequest\x12\x10\n" +
 	"\x03tag\x18\x01 \x01(\tR\x03tag\"[\n" +
 	"\x17GetBalancerInfoResponse\x12@\n" +
@@ -2026,7 +2089,11 @@ const file_app_router_command_command_proto_rawDesc = "" +
 	"\x0eobserved_at_ms\x18\b \x01(\x03R\fobservedAtMs\x12\x18\n" +
 	"\adropped\x18\t \x01(\x04R\adropped\x12(\n" +
 	"\x10last_drop_reason\x18\n" +
-	" \x01(\tR\x0elastDropReason2\x86\b\n" +
+	" \x01(\tR\x0elastDropReason\"a\n" +
+	"\x17WeightedLeastPingPolicy\x12\x1c\n" +
+	"\n" +
+	"max_rtt_ns\x18\x01 \x01(\x03R\bmaxRttNs\x12(\n" +
+	"\x10rtt_tolerance_ns\x18\x02 \x01(\x03R\x0erttToleranceNs2\x86\b\n" +
 	"\x0eRoutingService\x12{\n" +
 	"\x15SubscribeRoutingStats\x125.xray.app.router.command.SubscribeRoutingStatsRequest\x1a'.xray.app.router.command.RoutingContext\"\x000\x01\x12a\n" +
 	"\tTestRoute\x12).xray.app.router.command.TestRouteRequest\x1a'.xray.app.router.command.RoutingContext\"\x00\x12v\n" +
@@ -2052,7 +2119,7 @@ func file_app_router_command_command_proto_rawDescGZIP() []byte {
 	return file_app_router_command_command_proto_rawDescData
 }
 
-var file_app_router_command_command_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
+var file_app_router_command_command_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_app_router_command_command_proto_goTypes = []any{
 	(*RoutingContext)(nil),                 // 0: xray.app.router.command.RoutingContext
 	(*SubscribeRoutingStatsRequest)(nil),   // 1: xray.app.router.command.SubscribeRoutingStatsRequest
@@ -2084,14 +2151,15 @@ var file_app_router_command_command_proto_goTypes = []any{
 	(*ThresholdPolicy)(nil),                // 27: xray.app.router.command.ThresholdPolicy
 	(*ThresholdSelection)(nil),             // 28: xray.app.router.command.ThresholdSelection
 	(*ThresholdDecision)(nil),              // 29: xray.app.router.command.ThresholdDecision
-	nil,                                    // 30: xray.app.router.command.RoutingContext.AttributesEntry
-	(net.Network)(0),                       // 31: xray.common.net.Network
-	(*serial.TypedMessage)(nil),            // 32: xray.common.serial.TypedMessage
-	(*router.RoutingRule)(nil),             // 33: xray.app.router.RoutingRule
+	(*WeightedLeastPingPolicy)(nil),        // 30: xray.app.router.command.WeightedLeastPingPolicy
+	nil,                                    // 31: xray.app.router.command.RoutingContext.AttributesEntry
+	(net.Network)(0),                       // 32: xray.common.net.Network
+	(*serial.TypedMessage)(nil),            // 33: xray.common.serial.TypedMessage
+	(*router.RoutingRule)(nil),             // 34: xray.app.router.RoutingRule
 }
 var file_app_router_command_command_proto_depIdxs = []int32{
-	31, // 0: xray.app.router.command.RoutingContext.Network:type_name -> xray.common.net.Network
-	30, // 1: xray.app.router.command.RoutingContext.Attributes:type_name -> xray.app.router.command.RoutingContext.AttributesEntry
+	32, // 0: xray.app.router.command.RoutingContext.Network:type_name -> xray.common.net.Network
+	31, // 1: xray.app.router.command.RoutingContext.Attributes:type_name -> xray.app.router.command.RoutingContext.AttributesEntry
 	0,  // 2: xray.app.router.command.TestRouteRequest.RoutingContext:type_name -> xray.app.router.command.RoutingContext
 	5,  // 3: xray.app.router.command.FallbackInfo.chain:type_name -> xray.app.router.command.FallbackHop
 	8,  // 4: xray.app.router.command.BalancerMember.status:type_name -> xray.app.router.command.BalancerStatus
@@ -2103,37 +2171,38 @@ var file_app_router_command_command_proto_depIdxs = []int32{
 	8,  // 10: xray.app.router.command.BalancerMsg.status:type_name -> xray.app.router.command.BalancerStatus
 	27, // 11: xray.app.router.command.BalancerMsg.threshold_policy:type_name -> xray.app.router.command.ThresholdPolicy
 	29, // 12: xray.app.router.command.BalancerMsg.threshold_decision:type_name -> xray.app.router.command.ThresholdDecision
-	9,  // 13: xray.app.router.command.GetBalancerInfoResponse.balancer:type_name -> xray.app.router.command.BalancerMsg
-	9,  // 14: xray.app.router.command.BalancerItem.balancer:type_name -> xray.app.router.command.BalancerMsg
-	13, // 15: xray.app.router.command.ListBalancersResponse.balancers:type_name -> xray.app.router.command.BalancerItem
-	32, // 16: xray.app.router.command.AddRuleRequest.config:type_name -> xray.common.serial.TypedMessage
-	33, // 17: xray.app.router.command.ListRuleItem.rule:type_name -> xray.app.router.RoutingRule
-	24, // 18: xray.app.router.command.ListRuleResponse.rules:type_name -> xray.app.router.command.ListRuleItem
-	8,  // 19: xray.app.router.command.ThresholdDecision.fallback_status:type_name -> xray.app.router.command.BalancerStatus
-	28, // 20: xray.app.router.command.ThresholdDecision.fallback_selection:type_name -> xray.app.router.command.ThresholdSelection
-	1,  // 21: xray.app.router.command.RoutingService.SubscribeRoutingStats:input_type -> xray.app.router.command.SubscribeRoutingStatsRequest
-	2,  // 22: xray.app.router.command.RoutingService.TestRoute:input_type -> xray.app.router.command.TestRouteRequest
-	10, // 23: xray.app.router.command.RoutingService.GetBalancerInfo:input_type -> xray.app.router.command.GetBalancerInfoRequest
-	17, // 24: xray.app.router.command.RoutingService.OverrideBalancerTarget:input_type -> xray.app.router.command.OverrideBalancerTargetRequest
-	12, // 25: xray.app.router.command.RoutingService.ListBalancers:input_type -> xray.app.router.command.ListBalancersRequest
-	15, // 26: xray.app.router.command.RoutingService.GetLoopGuards:input_type -> xray.app.router.command.GetLoopGuardsRequest
-	19, // 27: xray.app.router.command.RoutingService.AddRule:input_type -> xray.app.router.command.AddRuleRequest
-	21, // 28: xray.app.router.command.RoutingService.RemoveRule:input_type -> xray.app.router.command.RemoveRuleRequest
-	23, // 29: xray.app.router.command.RoutingService.ListRule:input_type -> xray.app.router.command.ListRuleRequest
-	0,  // 30: xray.app.router.command.RoutingService.SubscribeRoutingStats:output_type -> xray.app.router.command.RoutingContext
-	0,  // 31: xray.app.router.command.RoutingService.TestRoute:output_type -> xray.app.router.command.RoutingContext
-	11, // 32: xray.app.router.command.RoutingService.GetBalancerInfo:output_type -> xray.app.router.command.GetBalancerInfoResponse
-	18, // 33: xray.app.router.command.RoutingService.OverrideBalancerTarget:output_type -> xray.app.router.command.OverrideBalancerTargetResponse
-	14, // 34: xray.app.router.command.RoutingService.ListBalancers:output_type -> xray.app.router.command.ListBalancersResponse
-	16, // 35: xray.app.router.command.RoutingService.GetLoopGuards:output_type -> xray.app.router.command.GetLoopGuardsResponse
-	20, // 36: xray.app.router.command.RoutingService.AddRule:output_type -> xray.app.router.command.AddRuleResponse
-	22, // 37: xray.app.router.command.RoutingService.RemoveRule:output_type -> xray.app.router.command.RemoveRuleResponse
-	25, // 38: xray.app.router.command.RoutingService.ListRule:output_type -> xray.app.router.command.ListRuleResponse
-	30, // [30:39] is the sub-list for method output_type
-	21, // [21:30] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	30, // 13: xray.app.router.command.BalancerMsg.weighted_policy:type_name -> xray.app.router.command.WeightedLeastPingPolicy
+	9,  // 14: xray.app.router.command.GetBalancerInfoResponse.balancer:type_name -> xray.app.router.command.BalancerMsg
+	9,  // 15: xray.app.router.command.BalancerItem.balancer:type_name -> xray.app.router.command.BalancerMsg
+	13, // 16: xray.app.router.command.ListBalancersResponse.balancers:type_name -> xray.app.router.command.BalancerItem
+	33, // 17: xray.app.router.command.AddRuleRequest.config:type_name -> xray.common.serial.TypedMessage
+	34, // 18: xray.app.router.command.ListRuleItem.rule:type_name -> xray.app.router.RoutingRule
+	24, // 19: xray.app.router.command.ListRuleResponse.rules:type_name -> xray.app.router.command.ListRuleItem
+	8,  // 20: xray.app.router.command.ThresholdDecision.fallback_status:type_name -> xray.app.router.command.BalancerStatus
+	28, // 21: xray.app.router.command.ThresholdDecision.fallback_selection:type_name -> xray.app.router.command.ThresholdSelection
+	1,  // 22: xray.app.router.command.RoutingService.SubscribeRoutingStats:input_type -> xray.app.router.command.SubscribeRoutingStatsRequest
+	2,  // 23: xray.app.router.command.RoutingService.TestRoute:input_type -> xray.app.router.command.TestRouteRequest
+	10, // 24: xray.app.router.command.RoutingService.GetBalancerInfo:input_type -> xray.app.router.command.GetBalancerInfoRequest
+	17, // 25: xray.app.router.command.RoutingService.OverrideBalancerTarget:input_type -> xray.app.router.command.OverrideBalancerTargetRequest
+	12, // 26: xray.app.router.command.RoutingService.ListBalancers:input_type -> xray.app.router.command.ListBalancersRequest
+	15, // 27: xray.app.router.command.RoutingService.GetLoopGuards:input_type -> xray.app.router.command.GetLoopGuardsRequest
+	19, // 28: xray.app.router.command.RoutingService.AddRule:input_type -> xray.app.router.command.AddRuleRequest
+	21, // 29: xray.app.router.command.RoutingService.RemoveRule:input_type -> xray.app.router.command.RemoveRuleRequest
+	23, // 30: xray.app.router.command.RoutingService.ListRule:input_type -> xray.app.router.command.ListRuleRequest
+	0,  // 31: xray.app.router.command.RoutingService.SubscribeRoutingStats:output_type -> xray.app.router.command.RoutingContext
+	0,  // 32: xray.app.router.command.RoutingService.TestRoute:output_type -> xray.app.router.command.RoutingContext
+	11, // 33: xray.app.router.command.RoutingService.GetBalancerInfo:output_type -> xray.app.router.command.GetBalancerInfoResponse
+	18, // 34: xray.app.router.command.RoutingService.OverrideBalancerTarget:output_type -> xray.app.router.command.OverrideBalancerTargetResponse
+	14, // 35: xray.app.router.command.RoutingService.ListBalancers:output_type -> xray.app.router.command.ListBalancersResponse
+	16, // 36: xray.app.router.command.RoutingService.GetLoopGuards:output_type -> xray.app.router.command.GetLoopGuardsResponse
+	20, // 37: xray.app.router.command.RoutingService.AddRule:output_type -> xray.app.router.command.AddRuleResponse
+	22, // 38: xray.app.router.command.RoutingService.RemoveRule:output_type -> xray.app.router.command.RemoveRuleResponse
+	25, // 39: xray.app.router.command.RoutingService.ListRule:output_type -> xray.app.router.command.ListRuleResponse
+	31, // [31:40] is the sub-list for method output_type
+	22, // [22:31] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_app_router_command_command_proto_init() }
@@ -2147,7 +2216,7 @@ func file_app_router_command_command_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_app_router_command_command_proto_rawDesc), len(file_app_router_command_command_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   31,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

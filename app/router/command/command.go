@@ -106,6 +106,13 @@ func balancerMsg(ctx context.Context, r any, tr routing.ThresholdReader, tag str
 			msg.Fallback.Balancer = len(chain) > 0 && chain[0].Balancer
 		}
 	}
+	if wp, ok := r.(routing.BalancerWeightedPolicy); ok {
+		if policy, err := wp.GetWeightedPolicy(tag); err == nil && policy != nil {
+			msg.WeightedPolicy = &WeightedLeastPingPolicy{
+				MaxRttNs: int64(policy.MaxRTT), RttToleranceNs: int64(policy.RTTTolerance),
+			}
+		}
+	}
 	if tr != nil {
 		thresholdMsg(ctx, msg, tr, tag)
 	}

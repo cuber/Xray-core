@@ -123,6 +123,16 @@ type BalancerMembers interface {
 	GetStrategy(tag string) (string, error)
 }
 
+// WeightedLeastPingPolicy is the strategy's loaded limits (Core spec020 P10).
+type WeightedLeastPingPolicy struct {
+	MaxRTT, RTTTolerance time.Duration
+}
+
+// BalancerWeightedPolicy reads loaded limits without observing or selecting a candidate.
+type BalancerWeightedPolicy interface {
+	GetWeightedPolicy(tag string) (*WeightedLeastPingPolicy, error)
+}
+
 // BalancerView reads balancers from one published balancer map, so a chain never mixes two maps
 // (spec017 L-E).
 type BalancerView interface {
